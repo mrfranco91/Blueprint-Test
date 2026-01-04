@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import type { GeneratedPlan, UserRole } from './types';
 import { CURRENT_CLIENT } from './data/mockData';
 import RoleSwitcher from './components/RoleSwitcher';
@@ -79,6 +80,7 @@ const App: React.FC = () => {
                 {!isDbConnected ? <SetupScreen /> : <AppContent />}
             </PlanProvider>
         </AuthProvider>
+        <Analytics />
     </SettingsProvider>
   );
 };
