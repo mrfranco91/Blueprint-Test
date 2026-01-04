@@ -1,5 +1,5 @@
 
-import React, from 'react';
+import React from 'react';
 import type { GeneratedPlan, UserRole } from './types';
 import { CURRENT_CLIENT } from './data/mockData';
 import RoleSwitcher from './components/RoleSwitcher';
