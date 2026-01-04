@@ -12,6 +12,7 @@ import { supabase } from './lib/supabase';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlanProvider, usePlans } from './contexts/PlanContext';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import './styles/accessibility.css';
 import SquareCallback from './components/SquareCallback';
 
@@ -77,6 +78,7 @@ const App: React.FC = () => {
         <AuthProvider>
             <PlanProvider>
                 {!isDbConnected ? <SetupScreen /> : <AppContent />}
+                <SpeedInsights />
             </PlanProvider>
         </AuthProvider>
     </SettingsProvider>
