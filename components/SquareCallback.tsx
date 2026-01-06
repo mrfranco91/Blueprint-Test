@@ -2,15 +2,24 @@
 import React, { useEffect, useState } from 'react';
 import { SquareIntegrationService } from '../services/squareIntegration';
 import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { RefreshIcon } from './icons';
 
 const SquareCallback: React.FC = () => {
     const [status, setStatus] = useState('Processing authorization...');
     const [error, setError] = useState<string | null>(null);
     const { integration, updateIntegration, saveAll } = useSettings();
+    const { signUpClient, signInClient } = useAuth();
 
     useEffect(() => {
         const processCode = async () => {
+            if (!supabase) {
+                setError('Supabase client is not initialized.');
+                setStatus('Failed');
+                return;
+            }
+
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
 
@@ -24,15 +33,47 @@ const SquareCallback: React.FC = () => {
                 setStatus('Exchanging code for access token...');
                 const { accessToken, refreshToken, merchantId } = await SquareIntegrationService.exchangeCodeForToken(code, integration.environment);
 
-                setStatus('Saving connection...');
+                setStatus('Saving connection details...');
                 updateIntegration({
                     ...integration,
                     squareAccessToken: accessToken,
                     squareRefreshToken: refreshToken,
                     squareMerchantId: merchantId,
                 });
-                // Note: saveAll() is a synchronous localStorage write
                 saveAll();
+
+                setStatus('Resolving admin account...');
+                const { business_name } = await SquareIntegrationService.fetchMerchantDetails(accessToken, integration.environment, merchantId);
+                
+                const email = `admin+${merchantId}@blueprint.app`;
+                const password = `pass+${merchantId}+${process.env.VITE_SQUARE_APPLICATION_ID}`;
+
+                const { error: signInError } = await signInClient({ email, password });
+
+                if (signInError) {
+                    if (signInError.message.includes('Invalid login credentials')) {
+                        setStatus('Creating new admin account...');
+                        const { error: signUpError } = await signUpClient({
+                            email,
+                            password,
+                            options: {
+                                data: {
+                                    role: 'admin',
+                                    merchant_id: merchantId,
+                                    business_name: business_name,
+                                },
+                            },
+                        });
+
+                        if (signUpError) {
+                            throw new Error(`Failed to create admin account: ${signUpError.message}`);
+                        }
+                        // Successful signUp will trigger onAuthStateChange and log the user in
+                    } else {
+                        throw new Error(`Admin sign-in failed: ${signInError.message}`);
+                    }
+                }
+                // Successful signIn will also trigger onAuthStateChange
 
                 setStatus('Redirecting...');
                 sessionStorage.setItem('square_just_connected', 'true');

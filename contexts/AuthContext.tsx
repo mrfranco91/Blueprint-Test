@@ -9,7 +9,7 @@ interface AuthContextType {
     user: User | null;
     login: (role: UserRole, specificId?: string | number) => Promise<void>; // Mock login for stylist/admin
     signInClient: (credentials: {email: string, password: string}) => Promise<any>;
-    signUpClient: (credentials: {email: string, password: string}) => Promise<any>;
+    signUpClient: (credentials: {email: string, password: string, options?: { data: any } }) => Promise<any>;
     logout: () => Promise<void>;
     isAuthenticated: boolean;
 }
@@ -32,84 +32,66 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const authUser = session?.user;
 
             if (authUser) {
-                 // User is signed in. Check their role from the app's perspective.
-                 // For now, if there's an authUser, we assume 'client' role as stylist/admin are mocks.
-                try {
-                    // Reconciliation Logic: Ensure clients.id === auth.uid
-                    
-                    // 1. Look for a legacy client record with the same email but a different ID.
-                    const { data: legacyClient, error: legacyError } = await supabase.from('clients')
-                        .select('*')
-                        .eq('email', authUser.email)
-                        .not('id', 'eq', authUser.id)
-                        .single();
-                    
-                    if (legacyError && legacyError.code !== 'PGRST116') { // Ignore "single row not found"
-                         throw legacyError;
-                    }
+                const { role } = authUser.user_metadata || {};
 
-                    // 2. If a legacy record exists, migrate its data.
-                    if (legacyClient) {
-                        const oldClientId = legacyClient.id;
-                        const newClientId = authUser.id;
-
-                        await supabase.from('plans').update({ client_id: newClientId }).eq('client_id', oldClientId);
-                        await supabase.from('bookings').update({ client_id: newClientId }).eq('client_id', oldClientId);
-                        await supabase.from('clients').delete().eq('id', oldClientId);
-                    }
-                    
-                    // 3. Ensure a canonical client row exists.
-                    const { data: canonicalClient, error: canonicalError } = await supabase
-                        .from('clients')
-                        .select('*')
-                        .eq('id', authUser.id)
-                        .single();
-
-                    if (canonicalError && canonicalError.code !== 'PGRST116') {
-                        throw canonicalError;
-                    }
-                    
-                    let finalClientProfile = canonicalClient;
-
-                    if (!finalClientProfile) {
-                        // Create the canonical record if it doesn't exist
-                        const nameFromEmail = authUser.email?.split('@')[0] || 'New Client';
-                        const { data: newClientData, error: insertError } = await supabase.from('clients')
-                            .upsert({
-                                id: authUser.id,
-                                email: authUser.email,
-                                name: legacyClient?.name || nameFromEmail,
-                                phone: legacyClient?.phone,
-                                avatar_url: legacyClient?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameFromEmail)}&background=random`,
-                                external_id: legacyClient?.external_id
-                            })
-                            .select()
+                if (role === 'admin') {
+                    const { business_name } = authUser.user_metadata;
+                    setUser({
+                        id: authUser.id,
+                        name: business_name || 'Admin',
+                        role: 'admin',
+                        email: authUser.email,
+                        isMock: false
+                    });
+                } else {
+                    // Existing client logic
+                    try {
+                        const { data: canonicalClient, error: canonicalError } = await supabase
+                            .from('clients')
+                            .select('*')
+                            .eq('id', authUser.id)
                             .single();
+
+                        if (canonicalError && canonicalError.code !== 'PGRST116') {
+                            throw canonicalError;
+                        }
                         
-                        if (insertError) throw insertError;
-                        finalClientProfile = newClientData;
-                    }
+                        let finalClientProfile = canonicalClient;
 
-                    if (finalClientProfile) {
-                        const clientData: Client = {
-                            id: finalClientProfile.id,
-                            externalId: finalClientProfile.external_id,
-                            name: finalClientProfile.name,
-                            email: finalClientProfile.email,
-                            phone: finalClientProfile.phone,
-                            avatarUrl: finalClientProfile.avatar_url,
-                            historicalData: [], // Default value
-                        };
-                        setUser({ id: authUser.id, name: clientData.name, role: 'client', email: authUser.email, clientData, avatarUrl: clientData.avatarUrl });
-                    }
+                        if (!finalClientProfile) {
+                            const nameFromEmail = authUser.email?.split('@')[0] || 'New Client';
+                            const { data: newClientData, error: insertError } = await supabase.from('clients')
+                                .upsert({
+                                    id: authUser.id,
+                                    email: authUser.email,
+                                    name: nameFromEmail,
+                                    avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(nameFromEmail)}&background=random`,
+                                })
+                                .select()
+                                .single();
+                            
+                            if (insertError) throw insertError;
+                            finalClientProfile = newClientData;
+                        }
 
-                } catch (error) {
-                    console.error("Auth state change error:", error);
-                    setUser(null);
+                        if (finalClientProfile) {
+                            const clientData: Client = {
+                                id: finalClientProfile.id,
+                                externalId: finalClientProfile.external_id,
+                                name: finalClientProfile.name,
+                                email: finalClientProfile.email,
+                                phone: finalClientProfile.phone,
+                                avatarUrl: finalClientProfile.avatar_url,
+                                historicalData: [],
+                            };
+                            setUser({ id: authUser.id, name: clientData.name, role: 'client', email: authUser.email, clientData, avatarUrl: clientData.avatarUrl });
+                        }
+                    } catch (error) {
+                        console.error("Auth state change error for client:", error);
+                        setUser(null);
+                    }
                 }
-
             } else {
-                // User is signed out
                 setUser(null);
             }
             setLoading(false);
@@ -175,7 +157,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return await supabase.auth.signInWithPassword(credentials);
     };
 
-    const signUpClient = async (credentials: {email: string, password: string}) => {
+    const signUpClient = async (credentials: {email: string, password: string, options?: { data: any }}) => {
         if (!supabase) throw new Error("Supabase not initialized");
         return await supabase.auth.signUp(credentials);
     };

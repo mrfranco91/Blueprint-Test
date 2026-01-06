@@ -67,7 +67,11 @@ const App: React.FC = () => {
   if (window.location.pathname === '/square/callback') {
     return (
         <SettingsProvider>
-            <SquareCallback />
+            <AuthProvider>
+                <PlanProvider>
+                    <SquareCallback />
+                </PlanProvider>
+            </AuthProvider>
         </SettingsProvider>
     );
   }

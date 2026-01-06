@@ -537,7 +537,7 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
                                     <p className="text-xs font-bold text-green-700">Merchant ID: {integration.squareMerchantId}</p>
                                 </div>
                             ) : (
-                                <a href={`https://connect.squareup.com/oauth2/authorize?client_id=sq0idp-E9W5s_5Y3aZ4xDcVbN6gHw&scope=CUSTOMERS_READ%20ITEMS_READ%20MERCHANT_PROFILE_READ%20APPOINTMENTS_READ%20APPOINTMENTS_WRITE%20TEAM_MEMBERS_READ&session=false&redirect_uri=${window.location.origin}/square/callback`} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-blue-800 active:scale-95 transition-all">
+                                <a href={`https://connect.squareup.com/oauth2/authorize?client_id=${process.env.VITE_SQUARE_APPLICATION_ID}&scope=CUSTOMERS_READ%20ITEMS_READ%20MERCHANT_PROFILE_READ%20APPOINTMENTS_READ%20APPOINTMENTS_WRITE%20TEAM_MEMBERS_READ&session=false&redirect_uri=${window.location.origin}/square/callback`} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-blue-800 active:scale-95 transition-all">
                                     <span>Connect to Square</span>
                                 </a>
                             )}

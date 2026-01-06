@@ -16,10 +16,6 @@ const PROD_API_BASE = 'https://connect.squareup.com/v2';
 const SANDBOX_API_BASE = 'https://connect.squareupsandbox.com/v2';
 const PROXY_URL = 'https://corsproxy.io/?';
 
-// These placeholders would be replaced by a secure secrets management system in a real production build.
-const SQUARE_CLIENT_ID_PLACEHOLDER = 'YOUR_SQUARE_APP_ID_PLACEHOLDER';
-const SQUARE_CLIENT_SECRET_PLACEHOLDER = 'YOUR_SQUARE_APP_SECRET_PLACEHOLDER';
-
 /**
  * --- SYSTEM INVARIANT DOCUMENTATION (Development Safety) ---
  *
@@ -37,7 +33,34 @@ const SQUARE_CLIENT_SECRET_PLACEHOLDER = 'YOUR_SQUARE_APP_SECRET_PLACEHOLDER';
  *     canonical schema names (e.g., 'start_time'). The application database
  *     schema MUST NOT be changed to mirror Square's naming.
  */
-function formatRFC3339WithOffset(date: Date, timezone: string = 'UTC') {
+async function fetchFromSquare(endpoint: string, accessToken: string, environment: SquareEnvironment, options: { method?: string, body?: any } = {}) {
+    const { method = 'GET', body } = options;
+    const baseUrl = environment === 'sandbox' ? SANDBOX_API_BASE : PROD_API_BASE;
+    const targetUrl = `${baseUrl}${endpoint}`;
+    const proxiedUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
+
+    const response = await fetch(proxiedUrl, {
+        method: method,
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Square-Version': '2023-10-20'
+        },
+        body: body ? JSON.stringify(body) : undefined
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        const err = data.errors?.[0];
+        const fieldInfo = err?.field ? ` (Field: ${err.field})` : '';
+        throw new Error(err ? `${err.detail}${fieldInfo}` : `HTTP Error ${response.status}`);
+    }
+    return data;
+}
+
+export const SquareIntegrationService = {
+  // FIX: Moved and renamed formatRFC3339WithOffset to formatDate and added to the service object.
+  formatDate(date: Date, timezone: string = 'UTC') {
     if (!date || isNaN(date.getTime())) {
         return new Date().toISOString();
     }
@@ -85,34 +108,7 @@ function formatRFC3339WithOffset(date: Date, timezone: string = 'UTC') {
         console.error("[Date Formatter Error]", e);
         return date.toISOString();
     }
-}
-
-async function fetchFromSquare(endpoint: string, accessToken: string, environment: SquareEnvironment, options: { method?: string, body?: any } = {}) {
-    const { method = 'GET', body } = options;
-    const baseUrl = environment === 'sandbox' ? SANDBOX_API_BASE : PROD_API_BASE;
-    const targetUrl = `${baseUrl}${endpoint}`;
-    const proxiedUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
-
-    const response = await fetch(proxiedUrl, {
-        method: method,
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-            'Square-Version': '2023-10-20'
-        },
-        body: body ? JSON.stringify(body) : undefined
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-        const err = data.errors?.[0];
-        const fieldInfo = err?.field ? ` (Field: ${err.field})` : '';
-        throw new Error(err ? `${err.detail}${fieldInfo}` : `HTTP Error ${response.status}`);
-    }
-    return data;
-}
-
-export const SquareIntegrationService = {
+  },
   
   exchangeCodeForToken: async (code: string, env: SquareEnvironment): Promise<{ accessToken: string, refreshToken: string, merchantId: string }> => {
     const baseUrl = env === 'sandbox' ? SANDBOX_API_BASE : PROD_API_BASE;
@@ -125,8 +121,8 @@ export const SquareIntegrationService = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        client_id: SQUARE_CLIENT_ID_PLACEHOLDER,
-        client_secret: SQUARE_CLIENT_SECRET_PLACEHOLDER,
+        client_id: process.env.VITE_SQUARE_APPLICATION_ID,
+        client_secret: process.env.VITE_SQUARE_CLIENT_SECRET,
         code: code,
         grant_type: 'authorization_code',
         redirect_uri: `${window.location.origin}/square/callback`
@@ -156,6 +152,133 @@ export const SquareIntegrationService = {
   fetchBusinessDetails: async (accessToken: string, env: SquareEnvironment): Promise<string> => {
       const loc = await SquareIntegrationService.fetchLocation(accessToken, env);
       return loc.business_name || loc.name;
+  },
+
+  fetchMerchantDetails: async (accessToken: string, env: SquareEnvironment, merchantId: string): Promise<{ business_name: string }> => {
+      const data = await fetchFromSquare(`/merchants/${merchantId}`, accessToken, env);
+      const merchant = data.merchant;
+      if (!merchant) throw new Error("Could not retrieve merchant details.");
+      return { business_name: merchant.business_name || 'Admin' };
+  },
+
+  // FIX: Added fetchCatalog to fetch services from Square.
+  fetchCatalog: async (accessToken: string, env: SquareEnvironment): Promise<Service[]> => {
+    const data = await fetchFromSquare('/catalog/list?types=ITEM,ITEM_VARIATION,CATEGORY', accessToken, env);
+    const objects = data.objects || [];
+    const items = objects.filter((o: any) => o.type === 'ITEM');
+    const variations = objects.filter((o: any) => o.type === 'ITEM_VARIATION');
+    const categories = objects.filter((o: any) => o.type === 'CATEGORY');
+
+    const services: Service[] = [];
+
+    variations.forEach((variation: any) => {
+        const item = items.find((i: any) => i.id === variation.item_variation_data.item_id);
+        if (item) {
+            const categoryObj = categories.find((c: any) => c.id === item.item_data.category_id);
+            const priceMoney = variation.item_variation_data.price_money;
+            const durationMs = variation.item_variation_data.service_duration;
+
+            services.push({
+                id: variation.id, // Use variation ID as it's what's booked
+                version: variation.version,
+                name: `${item.item_data.name}${variation.item_variation_data.name !== 'Regular' ? ` - ${variation.item_variation_data.name}` : ''}`.trim(),
+                category: categoryObj?.category_data?.name || 'Uncategorized',
+                cost: priceMoney ? Number(priceMoney.amount) / 100 : 0,
+                duration: durationMs ? durationMs / 1000 / 60 : 0, // Convert ms to minutes
+            });
+        }
+    });
+    return services;
+  },
+
+  // FIX: Added fetchTeam to fetch stylists from Square.
+  fetchTeam: async (accessToken: string, env: SquareEnvironment): Promise<Stylist[]> => {
+      const data = await fetchFromSquare('/team-members/search', accessToken, env, {
+          method: 'POST',
+          body: {
+              query: {
+                  filter: {
+                      status: 'ACTIVE',
+                  }
+              }
+          }
+      });
+      const members = data.team_members || [];
+      return members.map((member: any) => ({
+          id: member.id, // external Square ID
+          name: `${member.given_name} ${member.family_name}`,
+          role: member.is_owner ? 'Owner' : 'Team Member',
+          email: member.email_address,
+          levelId: 'lvl_2', // Default level
+          permissions: { // Default permissions
+              canBookAppointments: true,
+              canOfferDiscounts: false,
+              requiresDiscountApproval: true,
+              viewGlobalReports: false,
+              viewClientContact: true,
+              viewAllSalonPlans: false,
+          }
+      }));
+  },
+
+  // FIX: Added fetchCustomers to fetch clients from Square.
+  fetchCustomers: async (accessToken: string, env: SquareEnvironment): Promise<Partial<Client>[]> => {
+      let cursor: string | undefined = undefined;
+      const allCustomers: any[] = [];
+
+      do {
+          const url = `/customers/list${cursor ? `?cursor=${cursor}` : ''}`;
+          const data = await fetchFromSquare(url, accessToken, env);
+          
+          if (data.customers) {
+              allCustomers.push(...data.customers);
+          }
+          cursor = data.cursor;
+      } while(cursor);
+      
+      return allCustomers.map((c: any) => ({
+        id: c.id,
+        externalId: c.id,
+        name: `${c.given_name || ''} ${c.family_name || ''}`.trim() || c.email_address || 'Unnamed Client',
+        email: c.email_address,
+        phone: c.phone_number,
+        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(`${c.given_name || ''} ${c.family_name || ''}`.trim() || c.email_address || 'UC')}&background=random`,
+      }));
+  },
+
+  // FIX: Added searchCustomer to find a client by name in Square.
+  searchCustomer: async (accessToken: string, env: SquareEnvironment, name: string): Promise<string | null> => {
+      const nameParts = name.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ');
+
+      const body: any = {
+          query: {
+              filter: {},
+              sort: {
+                  field: "CREATED_AT",
+                  order: "DESC"
+              }
+          },
+          limit: 1
+      };
+      
+      if (lastName) {
+          body.query.filter.given_name = { exact: firstName };
+          body.query.filter.family_name = { exact: lastName };
+      } else if (firstName) {
+          // Fallback for single name
+          body.query.filter.given_name = { exact: firstName };
+      }
+
+
+      const data = await fetchFromSquare('/customers/search', accessToken, env, {
+          method: 'POST',
+          body: body
+      });
+      
+      const customer = data.customers?.[0];
+      return customer ? customer.id : null;
   },
 
   findAvailableSlots: async (accessToken: string, env: SquareEnvironment, params: {
@@ -241,6 +364,7 @@ export const SquareIntegrationService = {
 
       if (isInvalidTeamMemberId) {
           // Fetch all bookable team members from Square.
+          // FIX: Call the newly added fetchTeam method correctly.
           const teamMembers = await SquareIntegrationService.fetchTeam(accessToken, env);
           if (!teamMembers || teamMembers.length === 0) {
               throw new Error("No bookable team members found in Square to assign this appointment to.");
@@ -248,127 +372,27 @@ export const SquareIntegrationService = {
           // Use the first available team member as the fallback default.
           resolvedTeamMemberId = teamMembers[0].id;
       }
+      
+      const serviceVersionMap = new Map<string, number>();
+      services.forEach(s => {
+          if (s.id && s.version) {
+              serviceVersionMap.set(s.id, s.version);
+          }
+      });
 
-      // INVARIANT D2 (LOCKED): This is the translation layer.
-      // The application uses `startAt`, and this service correctly maps it to
-      // Square's required `start_at` field in the API payload.
       const body = {
-          idempotency_key: crypto.randomUUID(),
           booking: {
               location_id: locationId,
               start_at: startAt,
               customer_id: customerId,
-              appointment_segments: services.map(s => {
-                  const segment: any = {
-                      duration_minutes: Math.round(s.duration || 60), 
-                      service_variation_id: s.id,
-                      service_variation_version: s.version,
-                      team_member_id: resolvedTeamMemberId,
-                  };
-                  return segment;
-              })
+              appointment_segments: services.map(service => ({
+                  team_member_id: resolvedTeamMemberId,
+                  service_variation_id: service.id,
+                  service_variation_version: serviceVersionMap.get(service.id) || undefined
+              }))
           }
       };
 
-      const data = await fetchFromSquare('/bookings', accessToken, env, { method: 'POST', body });
-      return data.booking;
+      return await fetchFromSquare('/bookings', accessToken, env, { method: 'POST', body });
   },
-
-  fetchCatalog: async (accessToken: string, env: SquareEnvironment): Promise<Service[]> => {
-    const data = await fetchFromSquare('/catalog/search-catalog-items', accessToken, env, { 
-        method: 'POST', 
-        body: { product_types: ["APPOINTMENTS_SERVICE"] } 
-    });
-    
-    const services: Service[] = [];
-    if (data.items) {
-        data.items.forEach((item: any) => {
-            item.item_data?.variations?.forEach((v: any) => {
-                if (v.item_variation_data.available_for_booking) {
-                    services.push({
-                        id: v.id,
-                        version: v.version,
-                        name: `${item.item_data.name}${v.item_variation_data.name !== 'Regular' ? ` - ${v.item_variation_data.name}` : ''}`,
-                        category: 'Square Import',
-                        cost: v.item_variation_data.price_money?.amount ? v.item_variation_data.price_money.amount / 100 : 0,
-                        duration: v.item_variation_data.service_duration ? v.item_variation_data.service_duration / 60000 : 60,
-                        tierPrices: {}
-                    });
-                }
-            });
-        });
-    }
-    return services;
-  },
-
-  fetchTeam: async (accessToken: string, env: SquareEnvironment): Promise<Stylist[]> => {
-      const data = await fetchFromSquare('/bookings/team-member-booking-profiles', accessToken, env);
-      return (data.team_member_booking_profiles || [])
-          .filter((p: any) => p.is_bookable)
-          .map((p: any) => ({
-              id: p.team_member_id,
-              name: p.display_name,
-              role: 'Stylist',
-              email: '', 
-              levelId: 'lvl_1', 
-              permissions: { 
-                  canBookAppointments: true, 
-                  canOfferDiscounts: false, 
-                  requiresDiscountApproval: false, 
-                  viewGlobalReports: false 
-              }
-          }));
-  },
-
-  fetchCustomers: async (accessToken: string, env: SquareEnvironment): Promise<Client[]> => {
-      let cursor = undefined;
-      const allClients: Client[] = [];
-      
-      do {
-          const url = `/customers${cursor ? `?cursor=${cursor}` : ''}`;
-          const data = await fetchFromSquare(url, accessToken, env);
-          const customers = data.customers || [];
-          
-          customers.forEach((c: any) => {
-              allClients.push({
-                  id: c.id, 
-                  externalId: c.id,
-                  name: `${c.given_name || ''} ${c.family_name || ''}`.trim() || 'Unnamed Customer',
-                  email: c.email_address || '',
-                  phone: c.phone_number || '',
-                  avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(c.given_name || 'U')}&background=random`,
-                  historicalData: [],
-              });
-          });
-
-          cursor = data.cursor;
-      } while (cursor);
-
-      return allClients;
-  },
-  
-  searchCustomer: async (accessToken: string, env: SquareEnvironment, name: string): Promise<string | null> => {
-      let cursor = undefined;
-      const searchName = name.toLowerCase().trim();
-      
-      do {
-          const url = `/customers${cursor ? `?cursor=${cursor}` : ''}`;
-          const data = await fetchFromSquare(url, accessToken, env);
-          const customers = data.customers || [];
-          
-          const match = customers.find((c: any) => {
-              const given = (c.given_name || '').toLowerCase().trim();
-              const family = (c.family_name || '').toLowerCase().trim();
-              const fullName = `${given} ${family}`.trim();
-              return fullName === searchName || given === searchName || family === searchName;
-          });
-
-          if (match) return match.id;
-          cursor = data.cursor;
-      } while (cursor);
-
-      return null;
-  },
-
-  formatDate: formatRFC3339WithOffset
 };

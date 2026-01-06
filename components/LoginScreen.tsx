@@ -67,6 +67,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   
   const safeAccentColor = ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#1E3A8A');
   const safePrimaryColor = ensureAccessibleColor(branding.primaryColor, '#FFFFFF', '#BE123C');
+  
+  const squareAuthUrl = `https://connect.squareup.com/oauth2/authorize?client_id=${process.env.VITE_SQUARE_APPLICATION_ID}&scope=CUSTOMERS_READ%20ITEMS_READ%20MERCHANT_PROFILE_READ%20APPOINTMENTS_READ%20APPOINTMENTS_WRITE%20TEAM_MEMBERS_READ&session=false&redirect_uri=${window.location.origin}/square/callback`;
 
   if (appMode === 'landing') {
       return (
@@ -217,34 +219,37 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                     </div>
                 </div>
             ) : (
-                <>
-                    <div className="mt-2 relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t-2 border-gray-100"></div>
-                        </div>
-                        <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
-                            <span className="px-4 bg-white text-gray-400">Dev Auto-Login</span>
-                        </div>
-                    </div>
-                    <div className="mt-6 space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                        {stylists.slice(0, 3).map(s => (
-                            <button key={s.id} onClick={() => onLogin('stylist', s.id)} className="w-full group flex items-center p-4 rounded-2xl border-4 border-gray-50 hover:border-brand-accent transition-all bg-white text-left">
-                                <div className="w-10 h-10 rounded-xl bg-brand-accent text-white flex items-center justify-center font-black text-sm">{s.name[0]}</div>
+                <div className="animate-fade-in">
+                    <a href={squareAuthUrl} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-blue-800 active:scale-95 transition-all text-lg">
+                        <span>Log in with Square</span>
+                    </a>
+                    <p className="text-center text-xs text-gray-500 mt-3 px-4">Admin accounts are created and managed via Square.</p>
+                    
+                    <details className="mt-8 text-gray-500">
+                        <summary className="text-xs font-black uppercase tracking-widest cursor-pointer text-center py-2">
+                            Advanced / Troubleshooting
+                        </summary>
+                        <div className="mt-4 pt-4 border-t-2 border-gray-100 space-y-3">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Dev Auto-Login</h3>
+                             {stylists.slice(0, 3).map(s => (
+                                <button key={s.id} onClick={() => onLogin('stylist', s.id)} className="w-full group flex items-center p-4 rounded-2xl border-4 border-gray-50 hover:border-brand-accent transition-all bg-white text-left">
+                                    <div className="w-10 h-10 rounded-xl bg-brand-accent text-white flex items-center justify-center font-black text-sm">{s.name[0]}</div>
+                                    <div className="ml-3">
+                                        <p className="text-sm font-black text-gray-950 leading-none">{s.name}</p>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">{s.role}</p>
+                                    </div>
+                                </button>
+                            ))}
+                            <button onClick={() => onLogin('admin')} className="w-full group flex items-center p-4 rounded-2xl border-4 border-gray-950 bg-gray-950 text-white transition-all text-left">
+                                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-black text-sm">A</div>
                                 <div className="ml-3">
-                                    <p className="text-sm font-black text-gray-950 leading-none">{s.name}</p>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">{s.role}</p>
+                                    <p className="text-sm font-black leading-none">System Admin (Manual)</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Full Controller</p>
                                 </div>
                             </button>
-                        ))}
-                        <button onClick={() => onLogin('admin')} className="w-full group flex items-center p-4 rounded-2xl border-4 border-gray-950 bg-gray-950 text-white transition-all text-left">
-                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-black text-sm">A</div>
-                            <div className="ml-3">
-                                <p className="text-sm font-black leading-none">System Admin</p>
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Full Controller</p>
-                            </div>
-                        </button>
-                    </div>
-                </>
+                        </div>
+                    </details>
+                </div>
             )}
             
             <button onClick={clearSupabaseConfig} className="w-full text-center mt-10 text-[9px] font-black text-gray-300 uppercase tracking-widest hover:text-brand-accent transition-colors">
