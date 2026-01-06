@@ -97,6 +97,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     const oauthUrl =
       `${authorizeBase}` +
       `?client_id=${encodeURIComponent(clientId)}` +
+      `&response_type=code` +
       `&scope=${encodeURIComponent(scopes)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}`;
   
