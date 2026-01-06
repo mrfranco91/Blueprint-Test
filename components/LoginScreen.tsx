@@ -89,9 +89,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       'MERCHANT_PROFILE_READ',
     ].join(' ');
   
-    const authorizeBase = clientId.startsWith('sandbox-')
-      ? 'https://connect.squareupsandbox.com/oauth2/authorize'
-      : 'https://connect.squareup.com/oauth2/authorize';
+    const authorizeBase = 'https://connect.squareup.com/oauth2/authorize';
   
     const state = crypto.randomUUID();
 
