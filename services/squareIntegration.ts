@@ -121,7 +121,9 @@ export const SquareIntegrationService = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        // FIX: Replaced import.meta.env with process.env to align with project conventions and fix TypeScript error.
         client_id: process.env.VITE_SQUARE_APPLICATION_ID,
+        // FIX: Replaced import.meta.env with process.env to align with project conventions and fix TypeScript error.
         client_secret: process.env.VITE_SQUARE_CLIENT_SECRET,
         code: code,
         grant_type: 'authorization_code',

@@ -46,6 +46,7 @@ const SquareCallback: React.FC = () => {
                 const { business_name } = await SquareIntegrationService.fetchMerchantDetails(accessToken, integration.environment, merchantId);
                 
                 const email = `admin+${merchantId}@blueprint.app`;
+                // FIX: Replaced import.meta.env with process.env to align with project conventions and fix TypeScript error.
                 const password = `pass+${merchantId}+${process.env.VITE_SQUARE_APPLICATION_ID}`;
 
                 const { error: signInError } = await signInClient({ email, password });

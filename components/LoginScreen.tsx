@@ -68,7 +68,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const safeAccentColor = ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#1E3A8A');
   const safePrimaryColor = ensureAccessibleColor(branding.primaryColor, '#FFFFFF', '#BE123C');
   
-  const squareAuthUrl = `https://connect.squareup.com/oauth2/authorize?client_id=${process.env.VITE_SQUARE_APPLICATION_ID}&scope=CUSTOMERS_READ%20ITEMS_READ%20MERCHANT_PROFILE_READ%20APPOINTMENTS_READ%20APPOINTMENTS_WRITE%20TEAM_MEMBERS_READ&session=false&redirect_uri=${window.location.origin}/square/callback`;
+  // FIX: Replaced import.meta.env with process.env to align with project conventions and fix TypeScript error.
+  const squareAppId = process.env.VITE_SQUARE_APPLICATION_ID;
+  const isSquareConfigured = !!squareAppId;
+  const squareAuthUrl = `https://connect.squareup.com/oauth2/authorize?client_id=${squareAppId}&scope=CUSTOMERS_READ%20ITEMS_READ%20MERCHANT_PROFILE_READ%20APPOINTMENTS_READ%20APPOINTMENTS_WRITE%20TEAM_MEMBERS_READ&session=false&redirect_uri=${window.location.origin}/square/callback`;
 
   if (appMode === 'landing') {
       return (
@@ -220,9 +223,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 </div>
             ) : (
                 <div className="animate-fade-in">
-                    <a href={squareAuthUrl} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-blue-800 active:scale-95 transition-all text-lg">
-                        <span>Log in with Square</span>
-                    </a>
+                    {isSquareConfigured ? (
+                        <a href={squareAuthUrl} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-blue-800 active:scale-95 transition-all text-lg">
+                            <span>Log in with Square</span>
+                        </a>
+                    ) : (
+                        <div className="p-4 bg-red-50 border-2 border-red-200 rounded-2xl text-center">
+                            <p className="text-sm font-bold text-red-800">Configuration Error</p>
+                            <p className="text-xs text-red-700 mt-1">Square login is unavailable. The application ID has not been configured by the developer.</p>
+                        </div>
+                    )}
                     <p className="text-center text-xs text-gray-500 mt-3 px-4">Admin accounts are created and managed via Square.</p>
                     
                     <details className="mt-8 text-gray-500">
