@@ -120,21 +120,35 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
   const handleConnectToSquare = () => {
     // @ts-ignore
     const clientId = import.meta.env.VITE_SQUARE_APPLICATION_ID;
+  
     if (!clientId) {
       setSyncError(
         'Square login is unavailable. The application ID has not been configured by the developer.'
       );
       return;
     }
-    const redirectUri =
-      window.location.origin + '/square/callback';
-    const scopes =
-      'CUSTOMERS_READ APPOINTMENTS_READ APPOINTMENTS_WRITE CATALOG_READ TEAM_MEMBERS_READ MERCHANT_PROFILE_READ';
+  
+    const redirectUri = window.location.origin + '/square/callback';
+  
+    const scopes = [
+      'CUSTOMERS_READ',
+      'APPOINTMENTS_READ',
+      'APPOINTMENTS_WRITE',
+      'CATALOG_READ',
+      'TEAM_MEMBERS_READ',
+      'MERCHANT_PROFILE_READ',
+    ].join(' ');
+  
+    const authorizeBase = clientId.startsWith('sandbox-')
+      ? 'https://connect.squareupsandbox.com/oauth2/authorize'
+      : 'https://connect.squareup.com/oauth2/authorize';
+  
     const oauthUrl =
-      `https://connect.squareup.com/oauth2/authorize` +
-      `?client_id=${clientId}` +
+      `${authorizeBase}` +
+      `?client_id=${encodeURIComponent(clientId)}` +
       `&scope=${encodeURIComponent(scopes)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  
     window.location.href = oauthUrl;
   };
 
