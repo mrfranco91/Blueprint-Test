@@ -85,7 +85,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       'CUSTOMERS_READ',
       'APPOINTMENTS_READ',
       'APPOINTMENTS_WRITE',
-      'CATALOG_READ',
+      'ITEMS_READ',
       'TEAM_MEMBERS_READ',
       'MERCHANT_PROFILE_READ',
     ].join(' ');

@@ -134,7 +134,7 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
       'CUSTOMERS_READ',
       'APPOINTMENTS_READ',
       'APPOINTMENTS_WRITE',
-      'CATALOG_READ',
+      'ITEMS_READ',
       'TEAM_MEMBERS_READ',
       'MERCHANT_PROFILE_READ',
     ].join(' ');
