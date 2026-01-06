@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import BottomNav from './BottomNav';
@@ -119,7 +118,6 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
   }
 
   const handleConnectToSquare = () => {
-    // FIX: Suppress TypeScript error for import.meta.env which is a Vite-specific feature.
     // @ts-ignore
     const clientId = import.meta.env.VITE_SQUARE_APPLICATION_ID;
     if (!clientId) {
@@ -131,7 +129,7 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
     const redirectUri =
       window.location.origin + '/square/callback';
     const scopes =
-      'CUSTOMERS_READ BOOKINGS_READ BOOKINGS_WRITE CATALOG_READ TEAM_MEMBERS_READ MERCHANT_PROFILE_READ';
+      'CUSTOMERS_READ APPOINTMENTS_READ APPOINTMENTS_WRITE CATALOG_READ TEAM_MEMBERS_READ MERCHANT_PROFILE_READ';
     const oauthUrl =
       `https://connect.squareup.com/oauth2/authorize` +
       `?client_id=${clientId}` +

@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import type { UserRole } from '../types';
 import { clearSupabaseConfig } from '../lib/supabase';
@@ -70,7 +69,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const safePrimaryColor = ensureAccessibleColor(branding.primaryColor, '#FFFFFF', '#BE123C');
   
   const handleSquareLogin = () => {
-    // FIX: Suppress TypeScript error for import.meta.env which is a Vite-specific feature.
     // @ts-ignore
     const clientId = import.meta.env.VITE_SQUARE_APPLICATION_ID;
 
@@ -85,7 +83,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       window.location.origin + '/square/callback';
 
     const scopes =
-      'CUSTOMERS_READ BOOKINGS_READ BOOKINGS_WRITE CATALOG_READ TEAM_MEMBERS_READ MERCHANT_PROFILE_READ';
+      'CUSTOMERS_READ APPOINTMENTS_READ APPOINTMENTS_WRITE CATALOG_READ TEAM_MEMBERS_READ MERCHANT_PROFILE_READ';
 
     const oauthUrl =
       `https://connect.squareup.com/oauth2/authorize` +
