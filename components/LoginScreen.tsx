@@ -104,7 +104,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       'LOYALTY_WRITE',
       'INVENTORY_READ',
       'INVENTORY_WRITE',
-      'LOCATIONS_READ',
       'DEVICES_READ',
       'GIFTCARDS_READ',
       'GIFTCARDS_WRITE',
