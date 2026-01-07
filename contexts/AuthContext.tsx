@@ -1,5 +1,4 @@
 
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { User, UserRole, Stylist, Client } from '../types';
 import { useSettings } from './SettingsContext';
@@ -18,7 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
-    const { stylists, clients: mockClients } = useSettings();
+    const { stylists } = useSettings();
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -44,47 +43,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         isMock: false
                     });
                 } else {
-                    // Existing client logic
+                    // CLIENT AUTHENTICATION FLOW
                     try {
-                        const { data: canonicalClient, error: canonicalError } = await supabase
+                        // RESOLVE CLIENT BY EMAIL
+                        // Requirement: clients.email = auth.user.email
+                        // DO NOT auto-create clients via login.
+                        const { data: clientRow, error: clientError } = await supabase
                             .from('clients')
                             .select('*')
-                            .eq('id', authUser.id)
-                            .single();
+                            .eq('email', authUser.email)
+                            .maybeSingle();
 
-                        if (canonicalError && canonicalError.code !== 'PGRST116') {
-                            throw canonicalError;
-                        }
-                        
-                        let finalClientProfile = canonicalClient;
-
-                        if (!finalClientProfile) {
-                            const nameFromEmail = authUser.email?.split('@')[0] || 'New Client';
-                            const { data: newClientData, error: insertError } = await supabase.from('clients')
-                                .upsert({
-                                    id: authUser.id,
-                                    email: authUser.email,
-                                    name: nameFromEmail,
-                                    avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(nameFromEmail)}&background=random`,
-                                })
-                                .select()
-                                .single();
-                            
-                            if (insertError) throw insertError;
-                            finalClientProfile = newClientData;
+                        if (clientError) {
+                            console.error("Error fetching client profile:", clientError);
+                            setUser(null);
+                            setLoading(false);
+                            return;
                         }
 
-                        if (finalClientProfile) {
+                        if (clientRow) {
                             const clientData: Client = {
-                                id: finalClientProfile.id,
-                                externalId: finalClientProfile.external_id,
-                                name: finalClientProfile.name,
-                                email: finalClientProfile.email,
-                                phone: finalClientProfile.phone,
-                                avatarUrl: finalClientProfile.avatar_url,
+                                id: clientRow.id,
+                                externalId: clientRow.external_id,
+                                name: clientRow.name,
+                                email: clientRow.email,
+                                phone: clientRow.phone,
+                                avatarUrl: clientRow.avatar_url,
                                 historicalData: [],
+                                source: clientRow.source
                             };
-                            setUser({ id: authUser.id, name: clientData.name, role: 'client', email: authUser.email, clientData, avatarUrl: clientData.avatarUrl });
+                            setUser({ 
+                                id: authUser.id, 
+                                name: clientData.name, 
+                                role: 'client', 
+                                email: authUser.email, 
+                                clientData, 
+                                avatarUrl: clientData.avatarUrl 
+                            });
+                        } else {
+                            // No record in clients table matching this auth email.
+                            // Per requirements: "Client record must already exist. Login only attaches session."
+                            console.warn("No client profile found for authorized email:", authUser.email);
+                            setUser(null);
                         }
                     } catch (error) {
                         console.error("Auth state change error for client:", error);
@@ -136,6 +136,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     phone: clientProfile.phone,
                     avatarUrl: clientProfile.avatar_url,
                     historicalData: [],
+                    source: clientProfile.source
                 };
                 setUser({
                     id: clientProfile.id,
