@@ -71,26 +71,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const handleSquareLogin = () => {
     // @ts-ignore
     const clientId = import.meta.env.VITE_SQUARE_APPLICATION_ID;
-  
+    // @ts-ignore
+    const redirectUri = import.meta.env.VITE_SQUARE_REDIRECT_URI;
+
     if (!clientId) {
       setAuthError(
         'Square login is unavailable. The application ID has not been configured by the developer.'
       );
       return;
     }
-  
-    // @ts-ignore
-    const redirectUri = import.meta.env.VITE_SQUARE_REDIRECT_URI;
-  
+
     const scopes = [
       'CUSTOMERS_READ',
       'ITEMS_READ',
       'TEAM_MEMBERS_READ',
       'MERCHANT_PROFILE_READ',
     ].join(' ');
-  
+
     const authorizeBase = 'https://connect.squareup.com/oauth2/authorize';
-  
     const state = crypto.randomUUID();
 
     const oauthUrl =
@@ -99,8 +97,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       `&response_type=code` +
       `&scope=${encodeURIComponent(scopes)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&state=${encodeURIComponent(state)}`;
-  
+      `&state=${encodeURIComponent(state)}` +
+      `&session=false`;
+
     window.location.href = oauthUrl;
   };
 
