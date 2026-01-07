@@ -81,10 +81,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                 avatarUrl: clientData.avatarUrl 
                             });
                         } else {
-                            // No record in clients table matching this auth email.
-                            // Per requirements: "Client record must already exist. Login only attaches session."
-                            console.warn("No client profile found for authorized email:", authUser.email);
-                            setUser(null);
+                            // NEW: Allow the user to be "authenticated" even without a database client record.
+                            // This prevents an infinite login loop and allows the UI to show the "Not Linked" state.
+                            setUser({ 
+                                id: authUser.id, 
+                                name: authUser.email?.split('@')[0] || 'Guest', 
+                                role: 'client', 
+                                email: authUser.email, 
+                                clientData: undefined // Explicitly undefined to indicate no linked record
+                            });
                         }
                     } catch (error) {
                         console.error("Auth state change error for client:", error);

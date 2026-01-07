@@ -35,7 +35,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
     try {
         if (clientAuthMode === 'signup') {
-            const { data, error } = await signUpClient({ email, password });
+            const { data, error } = await signUpClient({ 
+                email, 
+                password,
+                options: { data: { role: 'client' } } 
+            });
             if (error) throw error;
             if (data.user && !data.session) {
                 setAuthMessage("Success! Please check your email to confirm your account.");

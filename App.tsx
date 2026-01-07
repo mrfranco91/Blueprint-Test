@@ -107,7 +107,7 @@ const AppContent: React.FC = () => {
         // Load the REAL plan for this client
         const myPlan = user?.clientData ? getPlanForClient(user.clientData.id) : null;
         return <ClientDashboard 
-                  client={user?.clientData || CURRENT_CLIENT} 
+                  client={(user?.clientData || (user?.isMock ? CURRENT_CLIENT : null)) as any} 
                   plan={myPlan} 
                   role="client" 
                />;

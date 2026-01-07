@@ -27,11 +27,13 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ client: propClient, p
   const { logout, user } = useAuth();
   const { getClientHistory, getClientBookings } = usePlans();
 
+  // AUTHENTICATION CHECK: Handle the "Not Linked" state
+  const isUnlinked = !user?.isMock && !user?.clientData;
+
   // Effect for AUTHENTICATED (real) clients
   useEffect(() => {
     const hydrateRealClient = async () => {
       // This logic is only for real, authenticated users.
-      // It relies on the authUser object from Supabase, NOT the mock user.
       if (!supabase || user?.isMock) return;
       
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -41,10 +43,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ client: propClient, p
         .from("clients")
         .select("*")
         .eq("email", authUser.email)
-        .single();
+        .maybeSingle();
 
       if (clientError || !clientRow) {
-        console.warn("Could not find a matching client profile for the logged-in user.", clientError);
         return;
       }
       
@@ -91,7 +92,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ client: propClient, p
     };
 
     hydrateRealClient();
-  }, [user]); // Re-run if the user object changes (login/logout).
+  }, [user]);
 
   // FINALIZED Effect for SAMPLE (mock) clients in AI Studio preview
   useEffect(() => {
@@ -127,16 +128,34 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ client: propClient, p
                     date: new Date(a.date)
                 }))
             };
-            // Force the view to show only this single, most recent plan.
             setRealPlans([formattedPlan]);
         }
       }
     };
 
     loadMostRecentPlanForPreview();
-  }, [user?.isMock]); // Dependency ensures this runs only when the mock user logs in.
+  }, [user?.isMock]);
 
-  // Prioritize real data (from either Supabase effect) over initial props.
+  if (isUnlinked) {
+      return (
+          <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6 text-center">
+              <div className="bg-white p-10 rounded-[40px] shadow-2xl border-4 border-gray-950 max-w-sm">
+                  <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6 text-gray-400">
+                      <UsersIcon className="w-10 h-10" />
+                  </div>
+                  <h2 className="text-2xl font-black text-gray-950 tracking-tighter mb-4">Account Not Linked</h2>
+                  <p className="text-sm font-bold text-gray-500 leading-relaxed mb-8">
+                      Your account is not yet linked to a salon. Please contact the salon.
+                  </p>
+                  <button onClick={logout} className="w-full bg-gray-950 text-white font-black py-4 rounded-2xl shadow-xl active:scale-95 transition-all">
+                      SIGN OUT
+                  </button>
+              </div>
+          </div>
+      );
+  }
+
+  // Prioritize real data over initial props.
   const client = realClient || propClient;
   const allClientPlans = realPlans !== null ? realPlans : getClientHistory(client.id);
 
