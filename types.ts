@@ -47,6 +47,8 @@ export interface Client {
   nextAppointmentDate?: Date;
   lastAppointmentDate?: Date;
   membershipTierId?: string;
+  // FIX: Added optional source property to resolve TypeScript error in SelectClientStep.tsx where source is used to indicate origin
+  source?: string;
 }
 
 export type Step = 'select-client' | 'select-services' | 'set-dates' | 'set-frequency' | 'loading' | 'summary';

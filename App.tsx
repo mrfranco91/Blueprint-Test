@@ -9,15 +9,17 @@ import AdminDashboard from './components/AdminDashboard';
 import SetupScreen from './components/SetupScreen';
 import LoginScreen from './components/LoginScreen';
 import { supabase } from './lib/supabase';
-import { SettingsProvider } from './contexts/SettingsContext';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlanProvider, usePlans } from './contexts/PlanContext';
 import './styles/accessibility.css';
 import SquareCallback from './components/SquareCallback';
+import { SquareIntegrationService } from './services/squareIntegration';
 
 const AppContent: React.FC = () => {
   const { user, login, logout, isAuthenticated } = useAuth();
   const { getPlanForClient } = usePlans();
+  const { integration, updateIntegration } = useSettings();
 
   const squareAuthed = sessionStorage.getItem('square_oauth_complete') === 'true';
 
@@ -25,26 +27,62 @@ const AppContent: React.FC = () => {
     if (squareAuthed) {
       async function syncSquareCustomers() {
         try {
-          const res = await fetch('/api/square/customers', {
-            credentials: 'include',
+          const code = sessionStorage.getItem('square_oauth_code');
+          if (!code) return;
+
+          // 1. Exchange OAuth code for access token
+          // We use the environment from settings.
+          const tokens = await SquareIntegrationService.exchangeCodeForToken(code, integration.environment || 'production');
+          
+          // 2. Update persistent integration settings with the new tokens
+          updateIntegration({
+            ...integration,
+            squareAccessToken: tokens.accessToken,
+            squareRefreshToken: tokens.refreshToken,
+            squareMerchantId: tokens.merchantId
           });
 
-          if (!res.ok) return;
+          // 3. Fetch live customers from Square API
+          const squareCustomers = await SquareIntegrationService.fetchCustomers(tokens.accessToken, integration.environment || 'production');
 
-          const customers = await res.json();
+          // 4. Persist Square customers to the application's database
+          if (supabase && squareCustomers.length > 0) {
+              const upsertData = squareCustomers.map(c => ({
+                  external_id: c.id,
+                  name: c.name,
+                  email: c.email,
+                  phone: c.phone,
+                  avatar_url: c.avatarUrl,
+                  source: 'square'
+              }));
 
-          // Persist for app usage
+              const { error } = await supabase
+                .from('clients')
+                .upsert(upsertData, { onConflict: 'external_id' });
+              
+              if (error) {
+                  console.error('Failed to persist Square customers to database:', error);
+              } else {
+                  console.log(`Successfully synced ${squareCustomers.length} customers from Square to database.`);
+              }
+          }
+
+          // Store in localStorage for immediate frontend selector availability
           localStorage.setItem(
             'square_customers',
-            JSON.stringify(customers)
+            JSON.stringify(squareCustomers)
           );
+          
+          // Clear the code so we don't repeat the exchange/sync process on every mount
+          sessionStorage.removeItem('square_oauth_code');
+          
         } catch (e) {
           console.error('Failed to sync Square customers:', e);
         }
       }
       syncSquareCustomers();
     }
-  }, [squareAuthed]);
+  }, [squareAuthed, integration, updateIntegration]);
 
   if (!isAuthenticated && !squareAuthed) {
       // The onLogin prop is removed as client auth is now handled by Supabase,
