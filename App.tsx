@@ -19,16 +19,21 @@ const AppContent: React.FC = () => {
   const { user, login, logout, isAuthenticated } = useAuth();
   const { getPlanForClient } = usePlans();
 
-  if (!isAuthenticated) {
+  const squareAuthed = sessionStorage.getItem('square_oauth_complete') === 'true';
+
+  if (!isAuthenticated && !squareAuthed) {
       // The onLogin prop is removed as client auth is now handled by Supabase,
       // and mock stylist/admin login is passed directly via the component.
       return <LoginScreen onLogin={login} />;
   }
 
   const renderDashboard = () => {
-    if (!user) return null;
+    // Square-auth users are treated as ADMIN role if no other user is logged in
+    const effectiveRole = user?.role || (squareAuthed ? 'admin' : null);
 
-    switch (user.role) {
+    if (!effectiveRole) return null;
+
+    switch (effectiveRole) {
       case 'stylist':
         // Stylist dashboard needs to know who the client is. 
         // For MVP, StylistDashboard manages its own client selection state.
@@ -37,14 +42,14 @@ const AppContent: React.FC = () => {
                />;
       case 'client':
         // Load the REAL plan for this client
-        const myPlan = user.clientData ? getPlanForClient(user.clientData.id) : null;
+        const myPlan = user?.clientData ? getPlanForClient(user.clientData.id) : null;
         return <ClientDashboard 
-                  client={user.clientData || CURRENT_CLIENT} 
+                  client={user?.clientData || CURRENT_CLIENT} 
                   plan={myPlan} 
-                  role={user.role} 
+                  role="client" 
                />;
       case 'admin':
-        return <AdminDashboard role={user.role} />;
+        return <AdminDashboard role="admin" />;
       default:
         return <div>Unknown role</div>;
     }
