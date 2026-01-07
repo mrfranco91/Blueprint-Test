@@ -9,9 +9,10 @@ const SquareCallback = () => {
 
     console.log('Square OAuth callback received:', { code, state });
 
-    // Stage 2 ONLY.
-    // Stage 3 (token exchange) is intentionally not implemented yet.
-    // No API calls are allowed here.
+    if (code) {
+      sessionStorage.setItem('square_oauth_code', code);
+      sessionStorage.setItem('square_oauth_complete', 'true');
+    }
 
     window.location.href = '/';
   }, []);
