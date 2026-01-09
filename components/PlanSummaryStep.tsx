@@ -45,7 +45,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
   const [isViewingMembershipDetails, setIsViewingMembershipDetails] = useState(false);
   
   const { membershipConfig, integration, services: allServices, stylists: allStylists, branding } = useSettings();
-  const { savePlan } = usePlans();
+  const { savePlan, saveBooking } = usePlans();
   const { user } = useAuth();
 
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
@@ -292,13 +292,27 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
 
           const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
           
-          await SquareIntegrationService.createAppointment(token, env, {
+          const squareResponse = await SquareIntegrationService.createAppointment(token, env, {
               locationId: loc.id,
               startAt: slotTime,
               customerId,
               teamMemberId: stylistId,
               services: servicesToBook
           });
+
+          // PERSIST BOOKING TO LOCAL DATABASE (ROOT CAUSE FIX)
+          const squareBooking = squareResponse.booking;
+          if (squareBooking) {
+              await saveBooking({
+                  id: squareBooking.id, // Square ID as PK
+                  client_id: plan.client.id, // Internal UUID
+                  stylist_id: stylistId,
+                  start_time: slotTime,
+                  status: squareBooking.status,
+                  services: servicesToBook.map(s => ({ variation_id: s.id, name: s.name })),
+                  source: 'square'
+              });
+          }
           
           const bookedDate = new Date(slotTime);
           const recommendedDate = new Date(selectedVisit!.date);

@@ -8,7 +8,6 @@ import ClientDashboard from './components/ClientDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import SetupScreen from './components/SetupScreen';
 import LoginScreen from './components/LoginScreen';
-import ResetPassword from './components/ResetPassword';
 import { supabase } from './lib/supabase';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -139,19 +138,6 @@ const App: React.FC = () => {
             <AuthProvider>
                 <PlanProvider>
                     <SquareCallback />
-                </PlanProvider>
-            </AuthProvider>
-        </SettingsProvider>
-    );
-  }
-
-  // Routing for password reset
-  if (window.location.pathname === '/reset-password') {
-    return (
-        <SettingsProvider>
-            <AuthProvider>
-                <PlanProvider>
-                    <ResetPassword />
                 </PlanProvider>
             </AuthProvider>
         </SettingsProvider>

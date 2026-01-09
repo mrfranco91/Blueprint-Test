@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import type { UserRole } from '../types';
-import { clearSupabaseConfig, supabase } from '../lib/supabase';
+import { clearSupabaseConfig } from '../lib/supabase';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { UsersIcon, CheckCircleIcon, RefreshIcon, DocumentTextIcon, SettingsIcon, ChevronLeftIcon } from './icons';
@@ -12,7 +12,7 @@ interface LoginScreenProps {
 }
 
 type AppMode = 'landing' | 'professional' | 'client';
-type ClientAuthMode = 'signin' | 'signup' | 'forgot-password';
+type ClientAuthMode = 'signin' | 'signup';
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [appMode, setAppMode] = useState<AppMode>('landing');
@@ -44,13 +44,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             if (data.user && !data.session) {
                 setAuthMessage("Success! Please check your email to confirm your account.");
             }
-        } else if (clientAuthMode === 'forgot-password') {
-            if (!supabase) throw new Error("Supabase not initialized");
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password`,
-            });
-            if (error) throw error;
-            setAuthMessage("Recovery link sent! Please check your email.");
         } else {
             const { error } = await signInClient({ email, password });
             if (error) throw error;
@@ -196,19 +189,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       color: ensureAccessibleColor('#FFFFFF', branding.primaryColor, '#1F2937')
   };
 
-  const getTitle = () => {
-    if (clientAuthMode === 'signin') return 'Sign In';
-    if (clientAuthMode === 'signup') return 'Create Account';
-    return 'Forgot Password';
-  };
-
-  const getButtonLabel = () => {
-    if (isLoading) return <RefreshIcon className="w-6 h-6 animate-spin mx-auto" />;
-    if (clientAuthMode === 'signin') return 'SIGN IN';
-    if (clientAuthMode === 'signup') return 'SIGN UP';
-    return 'SEND RECOVERY LINK';
-  };
-
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500`} style={{ backgroundColor: appMode === 'professional' ? branding.accentColor : branding.primaryColor}}>
       <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-gray-950">
@@ -233,7 +213,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             {appMode === 'client' ? (
                 <div className="animate-fade-in">
                     <form onSubmit={handleClientAuth} className="space-y-4">
-                        <h2 className="text-xl font-black text-center mb-4 text-gray-800">{getTitle()}</h2>
+                        <h2 className="text-xl font-black text-center mb-4 text-gray-800">{clientAuthMode === 'signin' ? 'Sign In' : 'Create Account'}</h2>
                         <div>
                             <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">Email</label>
                             <input 
@@ -245,34 +225,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                 className="w-full p-4 border-4 border-gray-100 rounded-2xl focus:border-brand-primary outline-none transition-all bg-gray-50 font-bold"
                             />
                         </div>
-                        {clientAuthMode !== 'forgot-password' && (
-                            <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">Password</label>
-                                <input 
-                                    type="password" 
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    placeholder="••••••••"
-                                    className="w-full p-4 border-4 border-gray-100 rounded-2xl focus:border-brand-primary outline-none transition-all bg-gray-50 font-bold"
-                                />
-                                {clientAuthMode === 'signin' && (
-                                    <div className="mt-2 text-right">
-                                        <button 
-                                            type="button" 
-                                            onClick={() => {
-                                                setClientAuthMode('forgot-password');
-                                                setAuthError(null);
-                                                setAuthMessage(null);
-                                            }}
-                                            className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-brand-primary"
-                                        >
-                                            Forgot password?
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">Password</label>
+                            <input 
+                                type="password" 
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                placeholder="••••••••"
+                                className="w-full p-4 border-4 border-gray-100 rounded-2xl focus:border-brand-primary outline-none transition-all bg-gray-50 font-bold"
+                            />
+                        </div>
 
                         {authError && <p className="text-red-600 text-xs font-bold text-center p-3 bg-red-50 rounded-lg">{authError}</p>}
                         {authMessage && <p className="text-green-600 text-xs font-bold text-center p-3 bg-green-50 rounded-lg">{authMessage}</p>}
@@ -283,29 +246,19 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                             className="w-full text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-95 border-b-8 border-black/20 disabled:bg-gray-400"
                             style={buttonStyle}
                         >
-                            {getButtonLabel()}
+                            {isLoading ? <RefreshIcon className="w-6 h-6 animate-spin mx-auto" /> : (clientAuthMode === 'signin' ? 'SIGN IN' : 'SIGN UP')}
                         </button>
                     </form>
-                    
-                    <div className="flex flex-col items-center space-y-3 mt-6">
-                        <button 
-                            onClick={() => {
-                                if (clientAuthMode === 'forgot-password') {
-                                    setClientAuthMode('signin');
-                                } else {
-                                    setClientAuthMode(prev => prev === 'signin' ? 'signup' : 'signin');
-                                }
-                                setAuthError(null);
-                                setAuthMessage(null);
-                            }}
-                            className="text-center text-xs font-black text-gray-400 uppercase tracking-widest hover:text-brand-primary"
-                        >
-                            {clientAuthMode === 'signin' ? "Don't have an account? Sign Up" : 
-                             clientAuthMode === 'signup' ? "Already have an account? Sign In" : 
-                             "Back to Sign In"}
-                        </button>
-                    </div>
-
+                    <button 
+                        onClick={() => {
+                            setClientAuthMode(prev => prev === 'signin' ? 'signup' : 'signin');
+                            setAuthError(null);
+                            setAuthMessage(null);
+                        }}
+                        className="w-full text-center mt-6 text-xs font-black text-gray-400 uppercase tracking-widest hover:text-brand-primary"
+                    >
+                        {clientAuthMode === 'signin' ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+                    </button>
                     <div className="mt-8 pt-6 border-t-2 border-gray-100">
                         <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest mb-4">
                             <span className="px-4 bg-white text-gray-400">DEV ONLY</span>

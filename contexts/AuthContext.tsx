@@ -26,88 +26,127 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            setLoading(true);
+        // Shared function for resolving application-specific user data from a Supabase Auth session
+        const resolveUserFromSession = async (session: any) => {
             const authUser = session?.user;
+            if (!authUser) {
+                setUser(null);
+                return;
+            }
 
-            if (authUser) {
-                const { role } = authUser.user_metadata || {};
+            const { role } = authUser.user_metadata || {};
 
-                if (role === 'admin') {
-                    const { business_name } = authUser.user_metadata;
-                    setUser({
-                        id: authUser.id,
-                        name: business_name || 'Admin',
-                        role: 'admin',
-                        email: authUser.email,
-                        isMock: false
-                    });
-                } else {
-                    // CLIENT AUTHENTICATION FLOW
-                    try {
-                        // RESOLVE CLIENT BY EMAIL
-                        // Requirement: clients.email = auth.user.email
-                        // DO NOT auto-create clients via login.
-                        const { data: clientRow, error: clientError } = await supabase
-                            .from('clients')
-                            .select('*')
-                            .eq('email', authUser.email)
-                            .maybeSingle();
+            if (role === 'admin') {
+                const { business_name } = authUser.user_metadata;
+                setUser({
+                    id: authUser.id,
+                    name: business_name || 'Admin',
+                    role: 'admin',
+                    email: authUser.email,
+                    isMock: false
+                });
+            } else {
+                // CLIENT AUTHENTICATION RESOLUTION
+                try {
+                    // RESOLVE CLIENT BY EMAIL
+                    const { data: clientRow, error: clientError } = await supabase
+                        .from('clients')
+                        .select('*')
+                        .eq('email', authUser.email)
+                        .maybeSingle();
 
-                        if (clientError) {
-                            console.error("Error fetching client profile:", clientError);
-                            setUser(null);
-                            setLoading(false);
-                            return;
-                        }
+                    if (clientError) {
+                        console.error("Error fetching client profile during resolution:", clientError);
+                        setUser(null);
+                        return;
+                    }
 
-                        if (clientRow) {
-                            const clientData: Client = {
-                                id: clientRow.id,
-                                externalId: clientRow.external_id,
-                                name: clientRow.name,
-                                email: clientRow.email,
-                                phone: clientRow.phone,
-                                avatarUrl: clientRow.avatar_url,
-                                historicalData: [],
-                                source: clientRow.source
-                            };
-                            setUser({ 
-                                id: authUser.id, 
-                                name: clientData.name, 
-                                role: 'client', 
-                                email: authUser.email, 
-                                clientData, 
-                                avatarUrl: clientData.avatarUrl 
-                            });
-                        } else {
-                            // NEW: Allow the user to be "authenticated" even without a database client record.
-                            // This prevents an infinite login loop and allows the UI to show the "Not Linked" state.
-                            setUser({ 
-                                id: authUser.id, 
-                                name: authUser.email?.split('@')[0] || 'Guest', 
-                                role: 'client', 
-                                email: authUser.email, 
-                                clientData: undefined // Explicitly undefined to indicate no linked record
-                            });
-                        }
-                    } catch (error) {
-                        console.error("Auth state change error for client:", error);
+                    if (clientRow) {
+                        const clientData: Client = {
+                            id: clientRow.id,
+                            externalId: clientRow.external_id,
+                            name: clientRow.name,
+                            email: clientRow.email,
+                            phone: clientRow.phone,
+                            avatarUrl: clientRow.avatar_url,
+                            historicalData: [],
+                            source: clientRow.source
+                        };
+                        setUser({ 
+                            id: authUser.id, 
+                            name: clientData.name, 
+                            role: 'client', 
+                            email: authUser.email, 
+                            clientData, 
+                            avatarUrl: clientData.avatarUrl 
+                        });
+                    } else {
+                        // Keep the user authenticated as a guest if no linked record exists
+                        // This allows the ClientDashboard to show the "Not Linked" state
+                        setUser({ 
+                            id: authUser.id, 
+                            name: authUser.email?.split('@')[0] || 'Guest', 
+                            role: 'client', 
+                            email: authUser.email, 
+                            clientData: undefined 
+                        });
+                    }
+                } catch (error) {
+                    console.error("Fatal error during user resolution:", error);
+                    setUser(null);
+                }
+            }
+        };
+
+        let mounted = true;
+
+        const bootstrap = async () => {
+            try {
+                // 🔴 CRITICAL FIX: Check for session immediately on mount
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (mounted) {
+                    if (session) {
+                        await resolveUserFromSession(session);
+                    } else {
+                        // No session means logged out user
                         setUser(null);
                     }
                 }
-            } else {
-                setUser(null);
+            } catch (err) {
+                console.error("Bootstrap auth error:", err);
+            } finally {
+                // 🔴 CRITICAL FIX: Always clear loading to unblock the LoginScreen
+                if (mounted) {
+                    setLoading(false);
+                }
             }
-            setLoading(false);
+        };
+
+        // Start initialization
+        bootstrap();
+
+        // Subscribe to auth state changes for real-time updates (login/logout/signup)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (!mounted) return;
+
+            if (event === 'SIGNED_OUT') {
+                setUser(null);
+                setLoading(false);
+            } else if (session) {
+                // Re-resolve user data on successful sign-in or session refresh
+                await resolveUserFromSession(session);
+                setLoading(false);
+            }
         });
 
         return () => {
+            mounted = false;
             subscription.unsubscribe();
         };
     }, []);
 
-    // Mock login for stylists and admin
+    // Mock login for stylists and admin (dev/demo purposes)
     const login = async (role: UserRole, specificId?: string | number) => {
         if (role === 'stylist' || role === 'admin') {
             let newUser: User | null = null;
@@ -176,9 +215,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(null);
     };
 
-    // AUTH LOADING GUARD: Ensure reset-password page can pass through during recovery session
-    const isResetPage = typeof window !== 'undefined' && window.location.pathname === '/reset-password';
-    if (loading && !isResetPage) {
+    if (loading) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <div className="w-16 h-16 border-4 border-brand-accent border-t-transparent rounded-full animate-spin"></div>

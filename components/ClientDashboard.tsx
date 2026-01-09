@@ -7,7 +7,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlans } from '../contexts/PlanContext';
 import { supabase } from '../lib/supabase';
-import { CheckCircleIcon, TrashIcon, DocumentTextIcon, RefreshIcon, SettingsIcon, UsersIcon, ChevronLeftIcon, CalendarIcon } from './icons';
+import { CheckCircleIcon, TrashIcon, DocumentTextIcon, RefreshIcon, SettingsIcon, UsersIcon, ChevronLeftIcon, CalendarIcon, PlusIcon } from './icons';
 import AccountSettings from './AccountSettings';
 
 interface ClientDashboardProps {
@@ -236,6 +236,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ client: propClient, p
           services: a.services,
           type: 'roadmap',
           stylist: p.stylistName,
+          plan: p,
           id: `roadmap-${p.id}-${a.date}`
         }))
       );
@@ -328,7 +329,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ client: propClient, p
                 </div>
   
                 <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Included Services for this Visit:</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Included Services:</p>
                   <div className="space-y-2">
                     {item.services.map((s: any, idx: number) => (
                         <div key={idx} className="bg-gray-100/50 p-3 rounded-xl border-2 border-gray-100 flex justify-between">
@@ -337,8 +338,18 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ client: propClient, p
                     ))}
                   </div>
                 </div>
-                <p className="text-center text-[11px] font-bold text-gray-400 mt-4 px-2">Appointments vary based on what your hair needs at each visit to achieve your goals.</p>
-                <p className="text-right text-[10px] font-black text-gray-400 uppercase tracking-widest mt-3">With {item.stylist}</p>
+                
+                {item.type === 'roadmap' && (
+                    <button 
+                        onClick={() => { setViewingPlan(item.plan); setActiveTab('plan'); }}
+                        className="mt-6 w-full py-4 bg-gray-950 text-white font-black rounded-2xl shadow-xl flex items-center justify-center space-x-3 active:scale-95 transition-all border-b-4 border-gray-800"
+                    >
+                        <CalendarIcon className="w-5 h-5 text-brand-secondary" />
+                        <span>BOOK THIS VISIT</span>
+                    </button>
+                )}
+
+                <p className="text-center text-[10px] font-bold text-gray-400 mt-4 px-2 italic">With {item.stylist}</p>
             </div>
           );
       };
@@ -388,7 +399,13 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ client: propClient, p
              if (allClientPlans.length === 0) return (
                  <div className="p-8 text-center h-full flex flex-col items-center justify-center text-gray-400 font-black uppercase text-sm tracking-widest">
                      <DocumentTextIcon className="w-16 h-16 mb-4 opacity-20" />
-                     <p className="px-10 leading-tight">Your stylist is currently building your maintenance blueprint.</p>
+                     <p className="px-10 leading-tight mb-8">Your stylist is currently building your maintenance blueprint.</p>
+                     <button 
+                        onClick={() => setActiveTab('appointments')}
+                        className="bg-brand-primary text-white font-black py-4 px-8 rounded-2xl shadow-xl border-b-4 border-black/20"
+                     >
+                        Check Appointments
+                     </button>
                  </div>
              );
 

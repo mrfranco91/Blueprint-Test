@@ -19,6 +19,7 @@ interface PlanContextType {
     plans: GeneratedPlan[];
     bookings: BookingRecord[];
     savePlan: (plan: GeneratedPlan) => Promise<GeneratedPlan>; // Returns the confirmed plan
+    saveBooking: (booking: Omit<BookingRecord, 'id'> & { id?: string }) => Promise<{ data: any, error: any }>;
     getPlanForClient: (clientId: string) => GeneratedPlan | null; // Gets latest
     getClientHistory: (clientId: string) => GeneratedPlan[]; // Gets all
     getClientBookings: (clientId: string) => BookingRecord[];
@@ -196,6 +197,23 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const saveBooking = async (booking: Omit<BookingRecord, 'id'> & { id?: string }) => {
+        if (!supabase) return { data: null, error: new Error("No database connection") };
+        const { data, error } = await supabase.from('bookings').upsert(booking).select().single();
+        if (!error && data) {
+            setBookings(prev => {
+                const index = prev.findIndex(b => b.id === data.id);
+                if (index > -1) {
+                    const next = [...prev];
+                    next[index] = data;
+                    return next;
+                }
+                return [...prev, data];
+            });
+        }
+        return { data, error };
+    };
+
     const getPlanForClient = (clientId: string) => {
         const clientPlans = plans.filter(p => p.client.id === clientId);
         if (clientPlans.length === 0) return null;
@@ -222,7 +240,7 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <PlanContext.Provider value={{ plans, bookings, savePlan, getPlanForClient, getClientHistory, getClientBookings, getStats }}>
+        <PlanContext.Provider value={{ plans, bookings, savePlan, saveBooking, getPlanForClient, getClientHistory, getClientBookings, getStats }}>
             {children}
         </PlanContext.Provider>
     );
