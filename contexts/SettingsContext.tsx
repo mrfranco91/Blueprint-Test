@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { ALL_SERVICES, STYLIST_LEVELS, MEMBERSHIP_TIERS, MOCK_CLIENTS } from '../data/mockData';
 import type { Service, StylistLevel, Stylist, MembershipTier, Client, ServiceLinkingConfig, BrandingSettings, MembershipConfig, AppTextSize, User } from '../types';
 import { supabase } from '../lib/supabase';
+import { isSquareCallbackRoute } from '../utils/isSquareCallbackRoute';
 
 export interface IntegrationSettings {
     provider: 'vagaro' | 'square' | 'mindbody';
@@ -174,6 +175,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
 
     useEffect(() => {
+        if (isSquareCallbackRoute()) return;
+
         document.documentElement.style.setProperty('--color-brand-primary', branding.primaryColor);
         document.documentElement.style.setProperty('--color-brand-secondary', branding.secondaryColor);
         document.documentElement.style.setProperty('--color-brand-accent', branding.accentColor);
@@ -191,14 +194,20 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                 link.rel = 'stylesheet';
                 document.head.appendChild(link);
             }
-            document.body.style.fontFamily = `'${font}', sans-serif`;
+            if(document.body) {
+                document.body.style.fontFamily = `'${font}', sans-serif`;
+            }
         } else {
-             document.body.classList.add(font);
-             document.body.style.fontFamily = '';
+             if(document.body) {
+                document.body.classList.add(font);
+                document.body.style.fontFamily = '';
+             }
         }
     }, [branding]);
 
     useEffect(() => {
+        if (isSquareCallbackRoute()) return;
+        if (!document.body) return;
         document.body.classList.remove('text-size-s', 'text-size-m', 'text-size-l');
         document.body.classList.add(`text-size-${textSize.toLowerCase()}`);
     }, [textSize]);

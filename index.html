@@ -47,6 +47,9 @@
       // IMMEDIATE BRANDING & PREFERENCE RESTORATION
       // This runs before React loads to ensure settings are correct instantly.
       (function() {
+        if (window.location.pathname.startsWith('/square/callback')) {
+          return;
+        }
         try {
           const primary = localStorage.getItem('admin_brand_primary');
           const secondary = localStorage.getItem('admin_brand_secondary');
