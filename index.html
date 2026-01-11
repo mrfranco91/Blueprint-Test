@@ -58,17 +58,25 @@
           if (secondary) document.documentElement.style.setProperty('--color-brand-secondary', secondary);
           if (accent) document.documentElement.style.setProperty('--color-brand-accent', accent);
           
+          // FIX: Guard document.body access as it may be null if script runs in <head> 
+          // or during certain redirect conditions (like Square OAuth callback).
           if (font && !['font-sans', 'font-serif', 'font-mono'].includes(font)) {
             const link = document.createElement('link');
             link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@400;700;900&display=swap`;
             link.rel = 'stylesheet';
             document.head.appendChild(link);
-            document.body.style.fontFamily = `'${font}', sans-serif`;
+            if (document.body) {
+              document.body.style.fontFamily = `'${font}', sans-serif`;
+            }
           } else if (font) {
-            document.body.classList.add(font);
+            if (document.body) {
+              document.body.classList.add(font);
+            }
           }
 
-          if (textSize) document.body.classList.add(`text-size-${textSize.toLowerCase()}`);
+          if (textSize && document.body) {
+            document.body.classList.add(`text-size-${textSize.toLowerCase()}`);
+          }
 
         } catch (e) {
           console.log('Error loading preferences', e);

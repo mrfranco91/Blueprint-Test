@@ -88,10 +88,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSelectRole }) => {
   const safePrimaryColor = ensureAccessibleColor(branding.primaryColor, '#FFFFFF', '#BE123C');
   
   const handleSquareLogin = () => {
-    // @ts-ignore
-    const clientId = import.meta.env.VITE_SQUARE_APPLICATION_ID;
-    // @ts-ignore
-    const redirectUri = import.meta.env.VITE_SQUARE_REDIRECT_URI;
+    const clientId = process.env.VITE_SQUARE_APPLICATION_ID;
+    const redirectUri = process.env.VITE_SQUARE_REDIRECT_URI;
 
     if (!clientId) {
       setAuthError('Square login is unavailable. The application ID is missing.');

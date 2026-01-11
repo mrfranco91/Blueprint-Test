@@ -118,8 +118,7 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
   }
 
   const handleConnectToSquare = () => {
-    // @ts-ignore
-    const clientId = import.meta.env.VITE_SQUARE_APPLICATION_ID;
+    const clientId = process.env.VITE_SQUARE_APPLICATION_ID;
   
     if (!clientId) {
       setSyncError(
@@ -128,8 +127,7 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
       return;
     }
   
-    // @ts-ignore
-    const redirectUri = import.meta.env.VITE_SQUARE_REDIRECT_URI;
+    const redirectUri = process.env.VITE_SQUARE_REDIRECT_URI;
   
     const scopes = [
       'CUSTOMERS_READ',

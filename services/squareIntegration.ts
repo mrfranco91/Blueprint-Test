@@ -99,61 +99,32 @@ export const SquareIntegrationService = {
   },
   
   /**
-   * DIRECT OAUTH TOKEN EXCHANGE
-   * Exchanged via client-side proxy to bypass non-existent server endpoint.
+   * SERVER-SIDE TOKEN EXCHANGE
+   * Calls the application's backend endpoint to securely exchange the authorization code.
+   * This prevents leaking the Square Client Secret to the frontend.
    */
-  exchangeCodeForToken: async (
-    code: string,
-    env: SquareEnvironment
-  ): Promise<{ accessToken: string; refreshToken: string; merchantId: string }> => {
-    const clientId = process.env.VITE_SQUARE_APPLICATION_ID;
-    const clientSecret =
-      process.env.VITE_SQUARE_APPLICATION_SECRET ||
-      process.env.VITE_SQUARE_CLIENT_SECRET;
-    const redirectUri = process.env.VITE_SQUARE_REDIRECT_URI;
-
-    if (!clientId || !clientSecret || !redirectUri) {
-      throw new Error(
-        'Square OAuth token exchange is unavailable. Missing VITE_SQUARE_APPLICATION_ID, VITE_SQUARE_APPLICATION_SECRET (or VITE_SQUARE_CLIENT_SECRET), or VITE_SQUARE_REDIRECT_URI.'
-      );
-    }
-
-    // IMPORTANT: Square OAuth token endpoint is NOT under /v2
-    const oauthBase =
-      env === 'sandbox'
-        ? 'https://connect.squareupsandbox.com'
-        : 'https://connect.squareup.com';
-
-    const tokenUrl = `${oauthBase}/oauth2/token`;
-    const proxiedUrl = `${PROXY_URL}${encodeURIComponent(tokenUrl)}`;
-
-    const response = await fetch(proxiedUrl, {
+  exchangeCodeForToken: async (code: string, env: SquareEnvironment): Promise<{ accessToken: string, refreshToken: string, merchantId: string }> => {
+    // The server endpoint handles the Square API call directly using its secure client_secret.
+    const response = await fetch('/api/square/oauth/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
         code,
-        grant_type: 'authorization_code',
-        redirect_uri: redirectUri,
+        environment: env
       }),
     });
 
-    const data = await response.json().catch(() => ({}));
-
+    const data = await response.json();
     if (!response.ok) {
-      const msg =
-        (data && (data.message || data.error_description || data.error)) ||
-        `Square OAuth exchange failed: ${response.status}`;
-      throw new Error(msg);
+        throw new Error(data.message || `Server-side OAuth exchange failed: ${response.status}`);
     }
-
+    
     return {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      merchantId: data.merchant_id,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        merchantId: data.merchantId,
     };
   },
   
