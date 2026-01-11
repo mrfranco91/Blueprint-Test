@@ -9,12 +9,13 @@ import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
 
 interface LoginScreenProps {
   onLogin: (role: UserRole, id?: string) => void;
+  onSelectRole?: (role: UserRole) => void; // Support post-auth role selection
 }
 
 type AppMode = 'landing' | 'professional' | 'client';
 type ClientAuthMode = 'signin' | 'signup';
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSelectRole }) => {
   const [appMode, setAppMode] = useState<AppMode>('landing');
   const [clientAuthMode, setClientAuthMode] = useState<ClientAuthMode>('signin');
   
@@ -25,7 +26,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   const { stylists, branding } = useSettings();
-  const { signInClient, signUpClient } = useAuth();
+  const { signInClient, signUpClient, isAuthenticated, user } = useAuth();
+  const squareAuthed = sessionStorage.getItem('square_oauth_complete') === 'true';
 
   const handleClientAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,13 +49,29 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         } else {
             const { error } = await signInClient({ email, password });
             if (error) throw error;
-            // Successful sign-in will be handled by the onAuthStateChange listener
+            // Successful sign-in will be handled by the onAuthStateChange listener in AuthContext
+            // App.tsx will then re-render LoginScreen in 'landing' mode
         }
     } catch (err: any) {
         setAuthError(err.message || 'An unexpected error occurred.');
     } finally {
         setIsLoading(false);
     }
+  };
+
+  const handleClientPortalClick = () => {
+    // If already authed as a client, just select the role
+    if (isAuthenticated && user?.role === 'client' && onSelectRole) {
+        onSelectRole('client');
+    } else {
+        setAppMode('client');
+    }
+  };
+
+  const handleProfessionalPortalClick = () => {
+    // Admins via Square don't have a supabase 'user' object immediately, but squareAuthed is true.
+    // We proceed to professional mode to let them pick 'Admin' or 'Stylist'
+    setAppMode('professional');
   };
   
   const handleDevClientLogin = async () => {
@@ -62,11 +80,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setAuthMessage(null);
     try {
         await onLogin('client');
+        onSelectRole?.('client');
     } catch (err: any) {
         setAuthError(`Dev login failed: ${err.message}. Ensure at least one client exists in the database.`);
     } finally {
         setIsLoading(false);
     }
+  };
+
+  const handleStylistLogin = async (id: string) => {
+      await onLogin('stylist', id);
+      onSelectRole?.('stylist');
+  };
+
+  const handleAdminManualLogin = async () => {
+      await onLogin('admin');
+      onSelectRole?.('admin');
   };
   
   const safeAccentColor = ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#1E3A8A');
@@ -79,52 +108,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     const redirectUri = import.meta.env.VITE_SQUARE_REDIRECT_URI;
 
     if (!clientId) {
-      setAuthError(
-        'Square login is unavailable. The application ID has not been configured by the developer.'
-      );
+      setAuthError('Square login is unavailable. Missing application ID.');
       return;
     }
 
     const scopes = [
-      'CUSTOMERS_READ',
-      'CUSTOMERS_WRITE',
-      'EMPLOYEES_READ',
-      'EMPLOYEES_WRITE',
-      'ITEMS_READ',
-      'ITEMS_WRITE',
-      'APPOINTMENTS_READ',
-      'APPOINTMENTS_WRITE',
-      'MERCHANT_PROFILE_READ',
-      'MERCHANT_PROFILE_WRITE',
-      'ORDERS_READ',
-      'ORDERS_WRITE',
-      'PAYMENTS_READ',
-      'PAYMENTS_WRITE',
-      'INVOICES_READ',
-      'INVOICES_WRITE',
-      'SUBSCRIPTIONS_READ',
-      'SUBSCRIPTIONS_WRITE',
-      'INVENTORY_READ',
-      'INVENTORY_WRITE',
-      'LOYALTY_READ',
-      'LOYALTY_WRITE',
-      'GIFTCARDS_READ',
-      'GIFTCARDS_WRITE',
-      'PAYOUTS_READ',
+      'CUSTOMERS_READ', 'CUSTOMERS_WRITE', 'EMPLOYEES_READ', 'EMPLOYEES_WRITE',
+      'ITEMS_READ', 'ITEMS_WRITE', 'APPOINTMENTS_READ', 'APPOINTMENTS_WRITE',
+      'MERCHANT_PROFILE_READ', 'MERCHANT_PROFILE_WRITE', 'ORDERS_READ', 'ORDERS_WRITE',
+      'PAYMENTS_READ', 'PAYMENTS_WRITE', 'INVOICES_READ', 'INVOICES_WRITE',
+      'SUBSCRIPTIONS_READ', 'SUBSCRIPTIONS_WRITE', 'INVENTORY_READ', 'INVENTORY_WRITE',
+      'LOYALTY_READ', 'LOYALTY_WRITE', 'GIFTCARDS_READ', 'GIFTCARDS_WRITE', 'PAYOUTS_READ',
     ].map(s => s.trim()).join(' ');
 
     const authorizeBase = 'https://connect.squareup.com/oauth2/authorize';
     const state = crypto.randomUUID();
 
-    const oauthUrl =
-      `${authorizeBase}` +
-      `?client_id=${encodeURIComponent(clientId)}` +
-      `&response_type=code` +
-      `&scope=${encodeURIComponent(scopes)}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&state=${encodeURIComponent(state)}` +
-      `&session=false`;
-
+    const oauthUrl = `${authorizeBase}?client_id=${encodeURIComponent(clientId)}&response_type=code&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}&session=false`;
     window.location.href = oauthUrl;
   };
 
@@ -141,11 +141,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 )}
                 <h1 className="text-3xl font-bold text-gray-900 tracking-tighter">{branding.salonName}</h1>
                 <p className="text-gray-500 mt-2 font-medium">Select your application portal</p>
+                {(isAuthenticated || squareAuthed) && (
+                    <div className="mt-4 px-4 py-1 bg-green-100 text-green-800 rounded-full text-[10px] font-black uppercase tracking-widest inline-block">
+                        Already Authenticated
+                    </div>
+                )}
             </div>
 
             <div className="w-full max-w-md space-y-4">
                 <button 
-                    onClick={() => setAppMode('professional')}
+                    onClick={handleProfessionalPortalClick}
                     className="w-full bg-white p-6 rounded-[32px] shadow-lg border-4 border-transparent hover:border-brand-accent transition-all group text-left flex items-center"
                 >
                     <div className="bg-brand-accent/10 p-4 rounded-2xl mr-5 group-hover:bg-brand-accent group-hover:text-white transition-colors" style={{ color: safeAccentColor }}>
@@ -158,7 +163,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 </button>
 
                 <button 
-                    onClick={() => setAppMode('client')}
+                    onClick={handleClientPortalClick}
                     className="w-full bg-white p-6 rounded-[32px] shadow-lg border-4 border-transparent hover:border-brand-primary transition-all group text-left flex items-center"
                 >
                     <div className="bg-brand-primary/10 p-4 rounded-2xl mr-5 group-hover:bg-brand-primary group-hover:text-white transition-colors" style={{ color: safePrimaryColor }}>
@@ -171,7 +176,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 </button>
             </div>
             
-            <p className="mt-12 text-gray-400 text-[10px] font-black uppercase tracking-widest">v1.5.0 • Enterprise Core</p>
+            <p className="mt-12 text-gray-400 text-[10px] font-black uppercase tracking-widest">v1.5.1 • Enterprise Core</p>
         </div>
       );
   }
@@ -179,7 +184,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const headerStyle = {
       color: ensureAccessibleColor(
           appMode === 'professional' ? branding.accentColor : branding.primaryColor,
-          '#F9FAFB', // bg-gray-50
+          '#F9FAFB', 
           appMode === 'professional' ? '#1E3A8A' : '#BE123C'
       )
   };
@@ -271,27 +276,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                         >
                             {isLoading ? <RefreshIcon className="w-6 h-6 animate-spin mx-auto" /> : "Login as Test Client (Dev Only)"}
                         </button>
-                        <p className="text-center text-[10px] text-gray-400 mt-2 px-4">
-                            Bypasses Supabase Auth. Logs in as first client in database.
-                        </p>
                     </div>
                 </div>
             ) : (
                 <div className="animate-fade-in">
-                    <button type="button" onClick={handleSquareLogin} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-blue-800 active:scale-95 transition-all text-lg">
-                        <span>Log in with Square</span>
-                    </button>
-                    {authError && <p className="text-red-600 text-xs font-bold text-center p-3 mt-4 bg-red-50 rounded-lg">{authError}</p>}
-                    <p className="text-center text-xs text-gray-500 mt-3 px-4">Admin accounts are created and managed via Square.</p>
+                    {squareAuthed || user?.role === 'admin' ? (
+                        <button 
+                            onClick={() => onSelectRole?.('admin')} 
+                            className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-blue-800 active:scale-95 transition-all text-lg mb-6"
+                        >
+                            <span>Enter as Administrator</span>
+                        </button>
+                    ) : (
+                        <button type="button" onClick={handleSquareLogin} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-blue-800 active:scale-95 transition-all text-lg mb-6">
+                            <span>Log in with Square</span>
+                        </button>
+                    )}
                     
-                    <details className="mt-8 text-gray-500">
-                        <summary className="text-xs font-black uppercase tracking-widest cursor-pointer text-center py-2">
-                            Advanced / Troubleshooting
-                        </summary>
+                    {authError && <p className="text-red-600 text-xs font-bold text-center p-3 mt-4 bg-red-50 rounded-lg">{authError}</p>}
+                    
+                    <div className="mt-8 text-gray-500">
                         <div className="mt-4 pt-4 border-t-2 border-gray-100 space-y-3">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Dev Auto-Login</h3>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Stylist Access</h3>
                              {stylists.slice(0, 3).map(s => (
-                                <button key={s.id} onClick={() => onLogin('stylist', s.id)} className="w-full group flex items-center p-4 rounded-2xl border-4 border-gray-50 hover:border-brand-accent transition-all bg-white text-left">
+                                <button key={s.id} onClick={() => handleStylistLogin(s.id)} className="w-full group flex items-center p-4 rounded-2xl border-4 border-gray-50 hover:border-brand-accent transition-all bg-white text-left">
                                     <div className="w-10 h-10 rounded-xl bg-brand-accent text-white flex items-center justify-center font-black text-sm">{s.name[0]}</div>
                                     <div className="ml-3">
                                         <p className="text-sm font-black text-gray-950 leading-none">{s.name}</p>
@@ -299,20 +307,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                     </div>
                                 </button>
                             ))}
-                            <button onClick={() => onLogin('admin')} className="w-full group flex items-center p-4 rounded-2xl border-4 border-gray-950 bg-gray-950 text-white transition-all text-left">
+                            <button onClick={handleAdminManualLogin} className="w-full group flex items-center p-4 rounded-2xl border-4 border-gray-950 bg-gray-950 text-white transition-all text-left">
                                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-black text-sm">A</div>
                                 <div className="ml-3">
-                                    <p className="text-sm font-black leading-none">System Admin (Manual)</p>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Full Controller</p>
+                                    <p className="text-sm font-black leading-none">Manual Admin Access</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Dev Override</p>
                                 </div>
                             </button>
                         </div>
-                    </details>
+                    </div>
                 </div>
             )}
             
             <button onClick={clearSupabaseConfig} className="w-full text-center mt-10 text-[9px] font-black text-gray-300 uppercase tracking-widest hover:text-brand-accent transition-colors">
-                Reset System Database Config
+                Reset System Config
             </button>
         </div>
       </div>
