@@ -58,17 +58,32 @@
           if (secondary) document.documentElement.style.setProperty('--color-brand-secondary', secondary);
           if (accent) document.documentElement.style.setProperty('--color-brand-accent', accent);
           
-          if (font && !['font-sans', 'font-serif', 'font-mono'].includes(font)) {
-            const link = document.createElement('link');
-            link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@400;700;900&display=swap`;
-            link.rel = 'stylesheet';
-            document.head.appendChild(link);
-            document.body.style.fontFamily = `'${font}', sans-serif`;
-          } else if (font) {
-            document.body.classList.add(font);
-          }
+          const applyBodyPreferences = () => {
+            // This function is guaranteed to run only after document.body is available.
+            if (!document.body) return;
 
-          if (textSize) document.body.classList.add(`text-size-${textSize.toLowerCase()}`);
+            if (font && !['font-sans', 'font-serif', 'font-mono'].includes(font)) {
+              const link = document.createElement('link');
+              link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@400;700;900&display=swap`;
+              link.rel = 'stylesheet';
+              document.head.appendChild(link);
+              document.body.style.fontFamily = `'${font}', sans-serif`;
+            } else if (font) {
+              document.body.classList.add(font);
+            }
+
+            if (textSize) {
+              document.body.classList.add(`text-size-${textSize.toLowerCase()}`);
+            }
+          };
+
+          if (document.readyState === 'loading') {
+            // The DOM is not yet ready, so we must wait.
+            document.addEventListener('DOMContentLoaded', applyBodyPreferences, { once: true });
+          } else {
+            // The DOM is already loaded, we can apply styles immediately.
+            applyBodyPreferences();
+          }
 
         } catch (e) {
           console.log('Error loading preferences', e);
