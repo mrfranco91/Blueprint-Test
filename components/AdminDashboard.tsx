@@ -133,32 +133,9 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
   
     const scopes = [
       'CUSTOMERS_READ',
-      'CUSTOMERS_WRITE',
-      'EMPLOYEES_READ',
-      'EMPLOYEES_WRITE',
       'ITEMS_READ',
-      'ITEMS_WRITE',
-      'APPOINTMENTS_READ',
-      'APPOINTMENTS_WRITE',
+      'EMPLOYEES_READ',
       'MERCHANT_PROFILE_READ',
-      'MERCHANT_PROFILE_WRITE',
-      'ORDERS_READ',
-      'ORDERS_WRITE',
-      'PAYMENTS_READ',
-      'PAYMENTS_WRITE',
-      'INVOICES_READ',
-      'INVOICES_WRITE',
-      'SUBSCRIPTIONS_READ',
-      'SUBSCRIPTIONS_WRITE',
-      'LOYALTY_READ',
-      'LOYALTY_WRITE',
-      'INVENTORY_READ',
-      'INVENTORY_WRITE',
-      'LOCATIONS_READ',
-      'DEVICES_READ',
-      'GIFTCARDS_READ',
-      'GIFTCARDS_WRITE',
-      'PAYOUTS_READ',
     ].map(s => s.trim()).join(' ');
   
     const authorizeBase = 'https://connect.squareup.com/oauth2/authorize';
