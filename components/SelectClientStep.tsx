@@ -25,10 +25,41 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({ clients: propClient
 
   const isAdmin = user?.role === 'admin';
 
-  const clients = propClients;
+  const clients = useMemo(() => {
+    const squareSyncedData = localStorage.getItem('square_customers');
+    const squareSynced: any[] = squareSyncedData ? JSON.parse(squareSyncedData) : [];
+    
+    const combined = [...propClients];
+    
+    squareSynced.forEach((sc: any) => {
+      const exists = combined.some(c => c.externalId === sc.id || (c.email && sc.email && c.email === sc.email));
+      if (!exists) {
+        combined.push({
+          id: sc.id,
+          externalId: sc.id,
+          name: sc.name,
+          email: sc.email,
+          phone: sc.phone,
+          avatarUrl: sc.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(sc.name)}&background=random`,
+          source: 'square',
+          historicalData: []
+        });
+      }
+    });
+    
+    return combined;
+  }, [propClients]);
 
   const filteredClients = useMemo(() => {
-    return clients.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    return clients.filter(c => {
+      const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const hasSquareId = !!c.externalId;
+      const isSquareSource = c.source === 'square';
+      const isSample = !c.source || c.id.startsWith('c');
+      
+      return matchesSearch && (hasSquareId || isSquareSource || isSample);
+    });
   }, [clients, searchTerm]);
 
   const handleCreateClient = async (e: React.FormEvent) => {
@@ -41,7 +72,7 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({ clients: propClient
       setCreateError(null);
       try {
           const newClient = await createClient({ name: newName, email: newEmail });
-          onSelect(newClient); // This moves to the next step
+          onSelect(newClient); 
       } catch (error: any) {
           if (error.message.includes('duplicate key value violates unique constraint')) {
               setCreateError("A client with this email already exists.");
