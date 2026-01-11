@@ -21,17 +21,24 @@ const AppContent: React.FC = () => {
   const { integration, updateIntegration } = useSettings();
 
   // The 'square_oauth_complete' flag is set in index.tsx before redirect.
-  // We check it here after the app has loaded on the root path.
+  // It is used for the *initial render* to prevent the login screen from flashing.
   const squareAuthed = sessionStorage.getItem('square_oauth_complete') === 'true';
 
   useEffect(() => {
-    // This effect now runs safely after the redirect, once the main app is mounted.
-    if (squareAuthed) {
+    // BUG FIX: This effect now runs once on app mount to handle any pending OAuth flow.
+    const isOauthRedirect = sessionStorage.getItem('square_oauth_complete') === 'true';
+    const code = sessionStorage.getItem('square_oauth_code');
+
+    // Per patch request, immediately and forcefully clear all temporary OAuth markers
+    // after reading them. This is the primary fix for the infinite loop bug, as it
+    // prevents stale state from persisting across refreshes or sessions.
+    sessionStorage.removeItem('square_oauth_code');
+    sessionStorage.removeItem('square_oauth_complete');
+    
+    // Only proceed with the one-time sync if both markers were present.
+    if (isOauthRedirect && code) {
       async function syncSquareCustomers() {
         try {
-          const code = sessionStorage.getItem('square_oauth_code');
-          if (!code) return;
-
           // 1. Exchange OAuth code for access token
           const tokens = await SquareIntegrationService.exchangeCodeForToken(code, integration.environment || 'production');
           
@@ -74,30 +81,25 @@ const AppContent: React.FC = () => {
             JSON.stringify(squareCustomers)
           );
           
-          // Clear auth state from sessionStorage now that the process is complete
-          sessionStorage.removeItem('square_oauth_code');
-          sessionStorage.removeItem('square_oauth_complete');
-          
         } catch (e) {
           console.error('Failed to sync Square customers:', e);
-          // Also clear state on failure to prevent re-running a failed flow
-          sessionStorage.removeItem('square_oauth_code');
-          sessionStorage.removeItem('square_oauth_complete');
+          // Keys are already cleared upfront, so no further cleanup is needed on failure.
         }
       }
       syncSquareCustomers();
     }
-  // This effect should only run once after the initial authentication flow.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [squareAuthed]);
+  // An empty dependency array ensures this cleanup and sync logic runs only ONCE per app load.
+  }, []);
 
-  if (!isAuthenticated && !squareAuthed) {
+  // The login check now includes the persistent access token as the source of truth,
+  // in addition to the transient `squareAuthed` flag for the initial redirect.
+  if (!isAuthenticated && !squareAuthed && !integration.squareAccessToken) {
       return <LoginScreen onLogin={login} />;
   }
 
   const renderDashboard = () => {
-    // Square-auth users are treated as ADMIN role if no other user is logged in
-    const effectiveRole = user?.role || (squareAuthed ? 'admin' : null);
+    // Square-auth users are treated as ADMIN role if the access token exists or if the OAuth flow is in progress.
+    const effectiveRole = user?.role || (squareAuthed || integration.squareAccessToken ? 'admin' : null);
 
     if (!effectiveRole) return null;
 
@@ -132,9 +134,6 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   // Basic check for connection config existence
   const isDbConnected = !!supabase;
-  
-  // The routing for '/square/callback' has been moved to index.tsx to prevent
-  // the React app from mounting on that route, which was causing a crash.
   
   return (
     <SettingsProvider>
