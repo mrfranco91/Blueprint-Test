@@ -17,7 +17,7 @@ import SquareCallback from './components/SquareCallback';
 import { SquareIntegrationService } from './services/squareIntegration';
 
 const AppContent: React.FC = () => {
-  const { user, login, logout, isAuthenticated } = useAuth();
+  const { user, login, logout, isAuthenticated, isLoading } = useAuth();
   const { getPlanForClient } = usePlans();
   const { integration, updateIntegration } = useSettings();
 
@@ -84,27 +84,54 @@ const AppContent: React.FC = () => {
     }
   }, [squareAuthed, integration, updateIntegration]);
 
+  // 🔴 AUTHORIZED FIX: Safety Fallback for Loading State
+  if (isLoading) {
+    return (
+      <div style={{ padding: 24, minHeight: '100vh', backgroundColor: '#F8F9FA' }}>
+        <h1 style={{ fontWeight: 900, fontSize: '2rem', marginBottom: 8 }}>Loading application…</h1>
+        <p>If this screen persists, authentication or session resolution is stuck.</p>
+        <div className="mt-8 w-12 h-12 border-4 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // 🔴 AUTHORIZED FIX: Safety Fallback for Unauthenticated State
   if (!isAuthenticated && !squareAuthed) {
-      // The onLogin prop is removed as client auth is now handled by Supabase,
-      // and mock stylist/admin login is passed directly via the component.
-      return <LoginScreen onLogin={login} />;
+    // If we have no session and no square auth, show login. 
+    // This is the normal flow, but we wrap it to ensure visibility.
+    return <LoginScreen onLogin={login} />;
+  }
+
+  if (!user && !squareAuthed && !isLoading) {
+    return (
+      <div style={{ padding: 24, minHeight: '100vh', backgroundColor: '#F8F9FA' }}>
+        <h1 style={{ fontWeight: 900, fontSize: '2rem', marginBottom: 8 }}>Not authenticated</h1>
+        <p>User session could not be resolved.</p>
+        <button onClick={() => window.location.reload()} className="mt-4 px-6 py-2 bg-gray-900 text-white font-bold rounded-lg">Retry Loading</button>
+      </div>
+    );
   }
 
   const renderDashboard = () => {
     // Square-auth users are treated as ADMIN role if no other user is logged in
     const effectiveRole = user?.role || (squareAuthed ? 'admin' : null);
 
-    if (!effectiveRole) return null;
+    if (!effectiveRole) {
+      return (
+        <div className="p-8 text-center bg-gray-50 rounded-3xl border-4 border-gray-200">
+          <h1 className="text-2xl font-black text-gray-900 mb-2">Role Resolution Error</h1>
+          <p className="text-gray-500 font-bold mb-6">Could not determine your access permissions. Please contact your administrator.</p>
+          <button onClick={logout} className="px-8 py-3 bg-brand-primary text-white font-black rounded-2xl shadow-xl">Sign Out & Try Again</button>
+        </div>
+      );
+    }
 
     switch (effectiveRole) {
       case 'stylist':
-        // Stylist dashboard needs to know who the client is. 
-        // For MVP, StylistDashboard manages its own client selection state.
         return <StylistDashboard 
                   onLogout={logout} 
                />;
       case 'client':
-        // Load the REAL plan for this client
         const myPlan = user?.clientData ? getPlanForClient(user.clientData.id) : null;
         return <ClientDashboard 
                   client={(user?.clientData || (user?.isMock ? CURRENT_CLIENT : null)) as any} 
@@ -114,7 +141,12 @@ const AppContent: React.FC = () => {
       case 'admin':
         return <AdminDashboard role="admin" />;
       default:
-        return <div>Unknown role</div>;
+        return (
+          <div className="p-8 text-center">
+            <h2 className="text-xl font-black">Unknown role: {effectiveRole}</h2>
+            <button onClick={logout} className="mt-4 text-brand-primary font-black underline">Sign Out</button>
+          </div>
+        );
     }
   };
 
