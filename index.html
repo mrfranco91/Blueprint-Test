@@ -47,9 +47,6 @@
       // IMMEDIATE BRANDING & PREFERENCE RESTORATION
       // This runs before React loads to ensure settings are correct instantly.
       (function() {
-        if (window.location.pathname.startsWith('/square/callback')) {
-          return;
-        }
         try {
           const primary = localStorage.getItem('admin_brand_primary');
           const secondary = localStorage.getItem('admin_brand_secondary');
@@ -80,11 +77,9 @@
             }
           };
 
-          // THE FIX: The previous `if/else` on `document.readyState` was unreliable and could
-          // cause a crash if it ran after the document was 'interactive' but before the `<body>`
-          // tag was parsed. The most robust solution is to always attach the event listener.
-          // The browser will execute it immediately if the DOM is already loaded, or wait if it is not.
-          // This completely eliminates the race condition.
+          // Using 'DOMContentLoaded' ensures this script only runs after the DOM is fully
+          // parsed, preventing any race conditions where `document.body` might be null.
+          // This is the correct and safe way to apply initial styles.
           document.addEventListener('DOMContentLoaded', applyBodyPreferences, { once: true });
 
         } catch (e) {
