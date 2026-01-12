@@ -1,24 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-let supabaseClient: ReturnType<typeof createClient> | null = null;
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Supabase env vars missing', {
+    supabaseUrl,
+    supabaseAnonKey,
+  });
+}
 
-if (supabaseUrl && supabaseAnonKey) {
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+// Create client ONLY ONCE
+export const supabase = createClient(
+  supabaseUrl ?? '',
+  supabaseAnonKey ?? '',
+  {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: false, // Square OAuth is removed.
+      detectSessionInUrl: false, // OAuth disabled for now
     },
-  });
-} else {
-  // The MissingCredentialsScreen handles this, so a console warn is sufficient.
-  console.warn(
-    'Supabase environment variables are missing. App will show configuration error screen.'
-  );
-}
-
-// Export nullable client — app must guard against null
-export const supabase = supabaseClient;
+  }
+);

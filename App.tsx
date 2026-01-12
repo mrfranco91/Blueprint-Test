@@ -1,16 +1,16 @@
 
+
 import React from 'react';
 import type { GeneratedPlan, UserRole } from './types';
 import StylistDashboard from './components/StylistDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import LoginScreen from './components/LoginScreen';
 import { supabase } from './lib/supabase';
-import { isSquareTokenMissing } from './services/squareIntegration';
-import MissingCredentialsScreen from './components/MissingCredentialsScreen';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlanProvider } from './contexts/PlanContext';
 import './styles/accessibility.css';
+import MissingCredentialsScreen from './components/MissingCredentialsScreen';
 
 const AppContent: React.FC = () => {
   const { user, login, logout, isAuthenticated, authInitialized } = useAuth();
@@ -63,13 +63,8 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  // Gate the entire app on the presence of all critical environment variables.
-  const areCredentialsMissing = supabase === null || isSquareTokenMissing;
-  if (areCredentialsMissing) {
-    return <MissingCredentialsScreen />;
-  }
-  
-  // The app now relies exclusively on build-time environment variables.
+  // The blocking check for credentials has been removed per stabilization patch.
+  // Warnings are now logged to the console from the respective service files.
   return (
     <SettingsProvider>
         <AuthProvider>
