@@ -6,9 +6,7 @@ import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
     user: User | null;
-    login: (role: UserRole, specificId?: string | number) => Promise<void>; // Mock login for stylist/admin
-    signInClient: (credentials: {email: string, password: string}) => Promise<any>;
-    signUpClient: (credentials: {email: string, password: string, options?: { data: any } }) => Promise<any>;
+    login: (role: UserRole, specificId?: string | number) => Promise<void>;
     logout: () => Promise<void>;
     isAuthenticated: boolean;
     authInitialized: boolean;
@@ -27,6 +25,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
+        // With client auth disabled, this only checks for a potential admin session.
         const resolveUserFromSession = async (session: any) => {
             const authUser = session?.user;
             if (!authUser) {
@@ -46,58 +45,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     isMock: false
                 });
             } else {
-                try {
-                    const { data: clientRow, error: clientError } = await supabase
-                        .from('clients')
-                        .select('*')
-                        .eq('email', authUser.email)
-                        .maybeSingle();
-
-                    if (clientError) {
-                        console.error("Error fetching client profile during resolution:", clientError);
-                        setUser(null);
-                        return;
-                    }
-
-                    if (clientRow) {
-                        const clientData: Client = {
-                            id: clientRow.id,
-                            externalId: clientRow.external_id,
-                            name: clientRow.name,
-                            email: clientRow.email,
-                            phone: clientRow.phone,
-                            avatarUrl: clientRow.avatar_url,
-                            historicalData: [],
-                            source: clientRow.source
-                        };
-                        setUser({ 
-                            id: authUser.id, 
-                            name: clientData.name, 
-                            role: 'client', 
-                            email: authUser.email, 
-                            clientData, 
-                            avatarUrl: clientData.avatarUrl 
-                        });
-                    } else {
-                        setUser({ 
-                            id: authUser.id, 
-                            name: authUser.email?.split('@')[0] || 'Guest', 
-                            role: 'client', 
-                            email: authUser.email, 
-                            clientData: undefined 
-                        });
-                    }
-                } catch (error) {
-                    console.error("Fatal error during user resolution:", error);
-                    setUser(null);
-                }
+                // Client role resolution is disabled in this patch.
+                setUser(null);
             }
         };
 
         let subscribed = true;
 
-        // onAuthStateChange fires an initial event with the session, which fulfills
-        // the requirement of checking the session on load.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (subscribed) {
                 await resolveUserFromSession(session);
@@ -124,52 +78,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             }
             setUser(newUser);
-        } else if (role === 'client') { // DEV-ONLY mock client login
-             if (!supabase) {
-                throw new Error("Supabase not initialized for mock client login");
-            }
-            const { data, error } = await supabase.from('clients').select('*').limit(1).single();
-
-            if (error) {
-                console.error("Error fetching a client for dev login:", error);
-                throw new Error("Could not find a client in the database to log in with.");
-            }
-
-            if (data) {
-                const clientProfile = data;
-                const clientData: Client = {
-                    id: clientProfile.id,
-                    externalId: clientProfile.external_id,
-                    name: clientProfile.name,
-                    email: clientProfile.email,
-                    phone: clientProfile.phone,
-                    avatarUrl: clientProfile.avatar_url,
-                    historicalData: [],
-                    source: clientProfile.source
-                };
-                setUser({
-                    id: clientProfile.id,
-                    name: clientData.name,
-                    role: 'client',
-                    email: clientData.email,
-                    clientData,
-                    avatarUrl: clientData.avatarUrl,
-                    isMock: true
-                });
-            } else {
-                 throw new Error("No client found in the database.");
-            }
         }
-    };
-
-    const signInClient = async (credentials: {email: string, password: string}) => {
-        if (!supabase) throw new Error("Supabase not initialized");
-        return await supabase.auth.signInWithPassword(credentials);
-    };
-
-    const signUpClient = async (credentials: {email: string, password: string, options?: { data: any }}) => {
-        if (!supabase) throw new Error("Supabase not initialized");
-        return await supabase.auth.signUp(credentials);
+        // Client mock login is disabled.
     };
 
     const logout = async () => {
@@ -181,7 +91,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, signInClient, signUpClient, logout, isAuthenticated: !!user, authInitialized }}>
+        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, authInitialized }}>
             {children}
         </AuthContext.Provider>
     );

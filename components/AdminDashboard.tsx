@@ -117,102 +117,24 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
       setTimeout(() => setSyncMessage(null), 2000);
   }
 
-  const handleConnectToSquare = () => {
-    // @ts-ignore
-    const clientId = import.meta.env.VITE_SQUARE_APPLICATION_ID;
-  
-    if (!clientId) {
-      setSyncError(
-        'Square login is unavailable. The application ID has not been configured by the developer.'
-      );
-      return;
-    }
-  
-    // @ts-ignore
-    const redirectUri = import.meta.env.VITE_SQUARE_REDIRECT_URI;
-  
-    const scopes = [
-        'CUSTOMERS_READ',
-        'APPOINTMENTS_READ',
-        'APPOINTMENTS_WRITE',
-        'ITEMS_READ',
-        'EMPLOYEES_READ',
-        'MERCHANT_PROFILE_READ'
-    ].join(' ');
-  
-    const authorizeBase = 'https://connect.squareup.com/oauth2/authorize';
-  
-    const state = crypto.randomUUID();
-
-    const oauthUrl =
-      `${authorizeBase}` +
-      `?client_id=${encodeURIComponent(clientId)}` +
-      `&response_type=code` +
-      `&scope=${encodeURIComponent(scopes)}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&state=${encodeURIComponent(state)}`;
-  
-    window.location.href = oauthUrl;
-  };
-
-  /**
-   * --- SYSTEM INVARIANT DOCUMENTATION (Admin Sync) ---
-   *
-   * This `handleSync` function is a BOOTSTRAP operation for the INITIAL connection
-   * between the salon's Square account and this application. It is fundamentally
-   * different from the ongoing booking/plan creation flow.
-   *
-   * INVARIANT B: INITIAL SQUARE SYNC RULES
-   * B1) This is a BOOTSTRAP operation ONLY. It populates the initial set of
-   *     services, clients, and team members.
-   * B2) This function MUST tolerate missing tables (e.g., 'stylists'). If a table
-   *     does not exist, it must SKIP that part of the sync gracefully without
-   *     crashing. Schema cache errors indicate a missing table, which must not
-   *     be created by this flow.
-   * B3) This function MUST NOT write to 'bookings' or 'plans' tables. Those
-   *     tables are managed by separate, ongoing operational flows.
-   *
-   * INVARIANT A: ID MANAGEMENT RULES
-   * A1) Supabase `id` columns of type UUID are for INTERNAL use ONLY.
-   * A2) Square object IDs MUST be stored ONLY in `external_id` text columns.
-   *     FORBIDDEN: `client_id: squareCustomer.id` (where client_id is a UUID FK)
-   *     CORRECT:   `external_id: squareCustomer.id`
-   * A3) The Supabase database's `gen_random_uuid()` is the source of truth for all
-   *     internal UUID primary keys. This function does not generate UUIDs.
-   */
   const handleSync = async () => {
       if (!supabase) { setSyncError("Database connection not ready."); return; }
-      const token = integration.squareAccessToken;
-      const env = integration.environment;
-      if (!token) { setSyncError("Access Token Required."); return; }
-
+      
       setIsSyncing(true);
       setSyncMessage(null);
       setSyncError(null);
 
       try {
-          const loc = await SquareIntegrationService.fetchLocation(token, env);
+          const loc = await SquareIntegrationService.fetchLocation();
           
-          const [newServices, newStylists, newSquareClients, newBooknings] = await Promise.all([
-              SquareIntegrationService.fetchCatalog(token, env),
-              SquareIntegrationService.fetchTeam(token, env),
-              SquareIntegrationService.fetchCustomers(token, env),
-              SquareIntegrationService.fetchAllBookings(token, env, loc.id)
+          const [newServices, newStylists, newSquareClients] = await Promise.all([
+              SquareIntegrationService.fetchCatalog(),
+              SquareIntegrationService.fetchTeam(),
+              SquareIntegrationService.fetchCustomers(),
           ]);
           
-          // --- STYLIST SYNC ---
-          // INVARIANT B2 (LOCKED): Gracefully skip if 'stylists' table is missing.
-          // This behavior is correct and MUST be preserved. Do not add table creation logic.
-          // A schema cache error here means the deployment is missing the table, which is
-          // a deployment issue, not a sync logic issue.
           console.warn("SYSTEM INVARIANT: Skipping persistence of Square team members because the 'stylists' table was not found in the schema. This is correct behavior for initial bootstrap sync.");
           
-          // Consequence of skipping stylist sync: we cannot create an ID map.
-          // Therefore, any downstream sync that depends on stylist IDs (like bookings)
-          // must also be skipped gracefully.
-          const squareTeamIdToInternalId = new Map<string, string>();
-          
-          // --- CLIENT SYNC (REPLACED LOGIC) ---
           if (newSquareClients.length > 0) {
               setSyncMessage(`Syncing ${newSquareClients.length} clients...`);
               const resolvedClients: Client[] = [];
@@ -232,10 +154,7 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
               updateClients(resolvedClients);
           }
 
-          // --- SERVICE SYNC ---
           if (newServices.length > 0) {
-            // INVARIANT A2 (LOCKED): Square Catalog Object ID is used as the primary key for services,
-            // as this is a text field, not a UUID field. This is a valid exception to the UUID rule.
             const servicePayload = newServices.map(s => ({
                 id: s.id,
                 name: s.name,
@@ -249,11 +168,6 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
             updateServices(newServices);
           }
 
-          // --- BOOKING SYNC ---
-          // INVARIANT B3 (LOCKED): This initial sync MUST NOT persist bookings.
-          // The current logic correctly attempts to map to internal IDs and would fail
-          // because the stylist map is empty. This prevents writing to the booking table
-          // during initial sync, which is the desired invariant behavior.
           console.warn("SYSTEM INVARIANT: Skipping booking sync. This is an initial bootstrap sync and must not write to transactional tables like 'bookings'. This is correct and expected behavior.");
           
           setSyncMessage("Client & Service sync completed successfully!");
@@ -266,18 +180,6 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
           setIsSyncing(false);
       }
   };
-
-  useEffect(() => {
-    const justConnected = sessionStorage.getItem('square_just_connected');
-    if (justConnected) {
-        sessionStorage.removeItem('square_just_connected');
-        setActiveTab('settings');
-        setActiveSettingsView('integrations');
-        setSyncMessage("Square connected successfully! Starting initial sync...");
-        handleSync();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleSaveNewBenefit = (tierIndex: number) => {
     if (newBenefitValue && newBenefitValue.trim()) {
@@ -531,41 +433,16 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
                     <div className="space-y-6 animate-fade-in">
                         <div className="bg-white p-6 rounded-[32px] border-4 border-gray-100 text-gray-950">
                             <h3 className="text-xl font-black mb-1">Square Integration</h3>
-                            <p className="text-xs font-bold text-gray-500 mb-6">Connect to Square to sync your service catalog, team, and clients automatically.</p>
+                            <p className="text-xs font-bold text-gray-500 mb-6">Sync your service catalog, team, and clients automatically.</p>
                             
-                            {integration.squareMerchantId ? (
-                                <div className="bg-green-50 p-6 rounded-2xl border-2 border-green-200 text-center">
-                                    <CheckCircleIcon className="w-10 h-10 text-green-500 mx-auto mb-2" />
-                                    <p className="font-black text-green-900">Square Connected</p>
-                                    <p className="text-xs font-bold text-green-700">Merchant ID: {integration.squareMerchantId}</p>
-                                </div>
-                            ) : (
-                                <button type="button" onClick={handleConnectToSquare} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-blue-800 active:scale-95 transition-all">
-                                    <span>Connect to Square</span>
-                                </button>
-                            )}
-
-                            <div className="relative flex items-center my-6">
-                                <div className="flex-grow border-t border-gray-300"></div>
-                                <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold uppercase">Or Enter Manually</span>
-                                <div className="flex-grow border-t border-gray-300"></div>
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] uppercase font-black tracking-widest mb-1">Square Access Token</label>
-                                <input type="password" value={integration.squareAccessToken} onChange={e => { updateIntegration({...integration, squareAccessToken: e.target.value }); markUnsaved(); }} className="w-full p-4 border-2 border-gray-300 text-gray-900 rounded-xl font-mono text-xs focus:ring-brand-accent focus:border-brand-accent outline-none transition-all" />
-                            </div>
-
-                            <div className="mt-4">
-                                <label className="block text-[10px] uppercase font-black tracking-widest mb-1">Environment</label>
-                                <select value={integration.environment} onChange={e => { updateIntegration({...integration, environment: e.target.value as 'sandbox' | 'production' }); markUnsaved(); }} className="w-full p-4 border-2 border-gray-300 text-gray-900 rounded-xl font-bold focus:ring-brand-accent focus:border-brand-accent outline-none transition-all">
-                                    <option value="production">Production</option>
-                                    <option value="sandbox">Sandbox (Testing)</option>
-                                </select>
+                            <div className="bg-green-50 p-6 rounded-2xl border-2 border-green-200 text-center">
+                                <CheckCircleIcon className="w-10 h-10 text-green-500 mx-auto mb-2" />
+                                <p className="font-black text-green-900">Square Connected</p>
+                                <p className="text-xs font-bold text-green-700">Using static access token.</p>
                             </div>
                         </div>
 
-                        <button onClick={handleSync} disabled={isSyncing || !integration.squareAccessToken} className="w-full bg-gray-950 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-gray-800 active:scale-95 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        <button onClick={handleSync} disabled={isSyncing} className="w-full bg-gray-950 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center space-x-3 border-b-4 border-gray-800 active:scale-95 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed">
                             {isSyncing ? <RefreshIcon className="w-6 h-6 animate-spin" /> : <DatabaseIcon className="w-6 h-6" />}
                             <span>{isSyncing ? 'SYNCING DATA...' : 'FORCE SYNC WITH SQUARE'}</span>
                         </button>

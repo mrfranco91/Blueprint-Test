@@ -1,4 +1,3 @@
-
 import { Service, Stylist, Client, PlanAppointment } from '../types';
 
 // Square API Types (Simplified)
@@ -10,19 +9,29 @@ interface SquareLocation {
     status: string;
 }
 
-type SquareEnvironment = 'sandbox' | 'production';
+const SQUARE_ACCESS_TOKEN = process.env.SQUARE_ACCESS_TOKEN;
+const SQUARE_ENV = process.env.SQUARE_ENV || 'production';
 
-async function squareProxyFetch<T>(accessToken: string, path: string, options: { method?: string, body?: any } = {}): Promise<T> {
+const baseUrl = SQUARE_ENV === 'sandbox'
+    ? 'https://connect.squareupsandbox.com'
+    : 'https://connect.squareup.com';
+
+async function squareApiFetch<T>(path: string, options: { method?: string, body?: any } = {}): Promise<T> {
     const { method = 'GET', body } = options;
-    const response = await fetch('/api/square/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            accessToken,
-            path,
-            method,
-            body,
-        }),
+    
+    if (!SQUARE_ACCESS_TOKEN) {
+        throw new Error('Square Access Token is not configured. Check SQUARE_ACCESS_TOKEN.');
+    }
+    
+    const response = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers: {
+            'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Square-Version': '2023-10-20',
+        },
+        body: body ? JSON.stringify(body) : undefined,
     });
     
     const text = await response.text();
@@ -36,10 +45,11 @@ async function squareProxyFetch<T>(accessToken: string, path: string, options: {
     if (!response.ok) {
         const err = data.errors?.[0];
         const fieldInfo = err?.field ? ` (Field: ${err.field})` : '';
-        throw new Error(err ? `${err.detail}${fieldInfo}` : `Square API Error via proxy: ${response.status}`);
+        throw new Error(err ? `${err.detail}${fieldInfo}` : `Square API Error: ${response.status}`);
     }
     return data as T;
 }
+
 
 export const SquareIntegrationService = {
   formatDate(date: Date, timezone: string = 'UTC') {
@@ -92,47 +102,27 @@ export const SquareIntegrationService = {
     }
   },
   
-  exchangeCodeForToken: async (code: string, env: SquareEnvironment): Promise<{ accessToken: string, refreshToken: string, merchantId: string }> => {
-    const response = await fetch('/api/square/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-        const msg = data?.message || data?.error_description || data?.errors?.[0]?.detail || `OAuth Token Exchange Failed: ${response.status}`;
-        throw new Error(msg);
-    }
-    
-    return {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        merchantId: data.merchant_id,
-    };
-  },
-  
-  fetchLocation: async (accessToken: string, env: SquareEnvironment): Promise<SquareLocation> => {
-      const data: any = await squareProxyFetch(accessToken, '/v2/locations');
+  fetchLocation: async (): Promise<SquareLocation> => {
+      const data: any = await squareApiFetch('/v2/locations');
       const activeLocation = data.locations?.find((loc: any) => loc.status === 'ACTIVE');
       if (!activeLocation) throw new Error("No active location found.");
       return activeLocation;
   },
 
-  fetchBusinessDetails: async (accessToken: string, env: SquareEnvironment): Promise<string> => {
-      const loc = await SquareIntegrationService.fetchLocation(accessToken, env);
+  fetchBusinessDetails: async (): Promise<string> => {
+      const loc = await SquareIntegrationService.fetchLocation();
       return loc.business_name || loc.name;
   },
 
-  fetchMerchantDetails: async (accessToken: string, env: SquareEnvironment, merchantId: string): Promise<{ business_name: string }> => {
-      const data: any = await squareProxyFetch(accessToken, `/v2/merchants/${merchantId}`);
+  fetchMerchantDetails: async (merchantId: string): Promise<{ business_name: string }> => {
+      const data: any = await squareApiFetch(`/v2/merchants/${merchantId}`);
       const merchant = data.merchant;
       if (!merchant) throw new Error("Could not retrieve merchant details.");
       return { business_name: merchant.business_name || 'Admin' };
   },
 
-  fetchCatalog: async (accessToken: string, env: SquareEnvironment): Promise<Service[]> => {
-    const data: any = await squareProxyFetch(accessToken, '/v2/catalog/list?types=ITEM,ITEM_VARIATION,CATEGORY');
+  fetchCatalog: async (): Promise<Service[]> => {
+    const data: any = await squareApiFetch('/v2/catalog/list?types=ITEM,ITEM_VARIATION,CATEGORY');
     const objects = data.objects || [];
     const items = objects.filter((o: any) => o.type === 'ITEM');
     const variations = objects.filter((o: any) => o.type === 'ITEM_VARIATION');
@@ -160,8 +150,8 @@ export const SquareIntegrationService = {
     return services;
   },
 
-  fetchTeam: async (accessToken: string, env: SquareEnvironment): Promise<Stylist[]> => {
-      const data: any = await squareProxyFetch(accessToken, '/v2/team-members/search', {
+  fetchTeam: async (): Promise<Stylist[]> => {
+      const data: any = await squareApiFetch('/v2/team-members/search', {
           method: 'POST',
           body: {
               query: {
@@ -189,13 +179,13 @@ export const SquareIntegrationService = {
       }));
   },
 
-  fetchCustomers: async (accessToken: string, env: SquareEnvironment): Promise<Partial<Client>[]> => {
+  fetchCustomers: async (): Promise<Partial<Client>[]> => {
       let cursor: string | undefined = undefined;
       const allCustomers: any[] = [];
 
       do {
           const path = `/v2/customers/list${cursor ? `?cursor=${cursor}` : ''}`;
-          const data: any = await squareProxyFetch(accessToken, path);
+          const data: any = await squareApiFetch(path);
           
           if (data.customers) {
               allCustomers.push(...data.customers);
@@ -213,7 +203,7 @@ export const SquareIntegrationService = {
       }));
   },
 
-  searchCustomer: async (accessToken: string, env: SquareEnvironment, name: string): Promise<string | null> => {
+  searchCustomer: async (name: string): Promise<string | null> => {
       const nameParts = name.trim().split(/\s+/);
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ');
@@ -236,7 +226,7 @@ export const SquareIntegrationService = {
           body.query.filter.given_name = { exact: firstName };
       }
 
-      const data: any = await squareProxyFetch(accessToken, '/v2/customers/search', {
+      const data: any = await squareApiFetch('/v2/customers/search', {
           method: 'POST',
           body: body
       });
@@ -245,7 +235,7 @@ export const SquareIntegrationService = {
       return customer ? customer.id : null;
   },
 
-  findAvailableSlots: async (accessToken: string, env: SquareEnvironment, params: {
+  findAvailableSlots: async (params: {
       locationId: string,
       startAt: string,
       teamMemberId: string,
@@ -283,20 +273,20 @@ export const SquareIntegrationService = {
           }
       };
 
-      const data: any = await squareProxyFetch(accessToken, '/v2/bookings/availability/search', { method: 'POST', body });
+      const data: any = await squareApiFetch('/v2/bookings/availability/search', { method: 'POST', body });
       const slots = (data.availabilities || [])
           .map((a: any) => a.start_at);
       
       return slots;
   },
 
-  fetchAllBookings: async (accessToken: string, env: SquareEnvironment, locationId: string): Promise<any[]> => {
+  fetchAllBookings: async (locationId: string): Promise<any[]> => {
     let cursor: string | undefined = undefined;
     const allBookings: any[] = [];
     
     do {
         const path = `/v2/bookings?location_id=${locationId}${cursor ? `&cursor=${cursor}` : ''}`;
-        const data: any = await squareProxyFetch(accessToken, path);
+        const data: any = await squareApiFetch(path);
         if (data.bookings) {
             allBookings.push(...data.bookings);
         }
@@ -306,7 +296,7 @@ export const SquareIntegrationService = {
     return allBookings;
   },
 
-  createAppointment: async (accessToken: string, env: SquareEnvironment, bookingDetails: {
+  createAppointment: async (bookingDetails: {
       locationId: string;
       startAt: string; 
       customerId: string;
@@ -322,7 +312,7 @@ export const SquareIntegrationService = {
       const isInvalidTeamMemberId = !teamMemberId || teamMemberId.startsWith('TM-') || teamMemberId === 'admin';
 
       if (isInvalidTeamMemberId) {
-          const teamMembers = await SquareIntegrationService.fetchTeam(accessToken, env);
+          const teamMembers = await SquareIntegrationService.fetchTeam();
           if (!teamMembers || teamMembers.length === 0) {
               throw new Error("No bookable team members found in Square to assign this appointment to.");
           }
@@ -349,6 +339,6 @@ export const SquareIntegrationService = {
           }
       };
 
-      return await squareProxyFetch(accessToken, '/v2/bookings', { method: 'POST', body });
+      return await squareApiFetch('/v2/bookings', { method: 'POST', body });
   },
 };

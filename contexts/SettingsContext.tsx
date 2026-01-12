@@ -3,13 +3,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { ALL_SERVICES, STYLIST_LEVELS, MEMBERSHIP_TIERS, MOCK_CLIENTS } from '../data/mockData';
 import type { Service, StylistLevel, Stylist, MembershipTier, Client, ServiceLinkingConfig, BrandingSettings, MembershipConfig, AppTextSize, User } from '../types';
 import { supabase } from '../lib/supabase';
-import { isSquareCallbackRoute } from '../utils/isSquareCallbackRoute';
 
 export interface IntegrationSettings {
     provider: 'vagaro' | 'square' | 'mindbody';
-    squareAccessToken?: string;
-    squareRefreshToken?: string;
-    squareMerchantId?: string;
     environment: 'sandbox' | 'production';
 }
 
@@ -156,13 +152,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             const parsed = saved ? JSON.parse(saved) : {};
             return { 
                 provider: 'square', 
-                squareAccessToken: '',
-                squareRefreshToken: '',
-                squareMerchantId: '',
                 environment: 'production', 
                 ...parsed 
             };
-        } catch { return { provider: 'square', squareAccessToken: '', squareRefreshToken: '', squareMerchantId: '', environment: 'production' }; }
+        } catch { return { provider: 'square', environment: 'production' }; }
     });
 
     const [textSize, setTextSize] = useState<AppTextSize>(() => (localStorage.getItem('admin_text_size') as AppTextSize) || 'M');
@@ -175,13 +168,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
 
     useEffect(() => {
-        if (isSquareCallbackRoute()) return;
-
         document.documentElement.style.setProperty('--color-brand-primary', branding.primaryColor);
         document.documentElement.style.setProperty('--color-brand-secondary', branding.secondaryColor);
         document.documentElement.style.setProperty('--color-brand-accent', branding.accentColor);
         
-        // Font logic
         document.body.classList.remove('font-sans', 'font-serif', 'font-mono');
         const font = branding.font;
 
@@ -206,7 +196,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, [branding]);
 
     useEffect(() => {
-        if (isSquareCallbackRoute()) return;
         if (!document.body) return;
         document.body.classList.remove('text-size-s', 'text-size-m', 'text-size-l');
         document.body.classList.add(`text-size-${textSize.toLowerCase()}`);
@@ -232,9 +221,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                     if (dbClients.length > 0) {
                         setClients(prev => {
                             const clientMap = new Map();
-                            // Keep mock clients as fallback
                             MOCK_CLIENTS.forEach(c => clientMap.set(c.id, c));
-                            // Overwrite with DB data
                             dbClients.forEach(c => clientMap.set(c.id, c));
                             return Array.from(clientMap.values());
                         });

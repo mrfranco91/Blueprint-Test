@@ -147,7 +147,6 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         setIsViewingMembershipDetails(false);
     } catch(e) {
         console.error("Failed to accept membership:", e);
-        // Optionally show an error to the client
     } finally {
         setIsAccepting(false);
     }
@@ -166,10 +165,8 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
     setFetchError(null);
     try {
         if (!visit) throw new Error("No visit selected.");
-        const token = integration.squareAccessToken;
-        if (!token) throw new Error("Missing Square Token in Settings.");
-        const env = integration.environment || 'production';
-        const loc = await SquareIntegrationService.fetchLocation(token, env);
+        
+        const loc = await SquareIntegrationService.fetchLocation();
         
         const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
         if (!stylistId) throw new Error("No team member selected or found.");
@@ -184,7 +181,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         now.setHours(0,0,0,0);
         if (searchStart < now) searchStart.setTime(now.getTime());
 
-        const slots = await SquareIntegrationService.findAvailableSlots(token, env, {
+        const slots = await SquareIntegrationService.findAvailableSlots({
             locationId: loc.id,
             startAt: SquareIntegrationService.formatDate(searchStart, loc.timezone),
             teamMemberId: stylistId,
@@ -220,10 +217,8 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
 
     try {
         if (!selectedVisit || !bookingDate) throw new Error("No visit selected.");
-        const token = integration.squareAccessToken;
-        if (!token) throw new Error("Missing Square Token in Settings.");
-        const env = integration.environment || 'production';
-        const loc = await SquareIntegrationService.fetchLocation(token, env);
+        
+        const loc = await SquareIntegrationService.fetchLocation();
         
         const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
         if (!stylistId) throw new Error("No team member selected or found.");
@@ -238,7 +233,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         const now = new Date();
         if (searchStart < now) searchStart.setTime(now.getTime());
 
-        const slots = await SquareIntegrationService.findAvailableSlots(token, env, {
+        const slots = await SquareIntegrationService.findAvailableSlots({
             locationId: loc.id,
             startAt: SquareIntegrationService.formatDate(searchStart, loc.timezone),
             teamMemberId: stylistId,
@@ -276,23 +271,19 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
       setIsBooking(true);
       setFetchError(null);
       try {
-          const token = integration.squareAccessToken;
-          if (!token) throw new Error("Missing Square Token.");
-          const env = integration.environment || 'production';
-          
           const servicesToBook = selectedVisit!.services;
           if (!servicesToBook || servicesToBook.length === 0) {
               throw new Error("No services were selected for this visit.");
           }
 
-          const loc = await SquareIntegrationService.fetchLocation(token, env);
+          const loc = await SquareIntegrationService.fetchLocation();
           
-          let customerId = plan.client.externalId || await SquareIntegrationService.searchCustomer(token, env, plan.client.name);
+          let customerId = plan.client.externalId || await SquareIntegrationService.searchCustomer(plan.client.name);
           if (!customerId) throw new Error(`Could not find client "${plan.client.name}" in Square.`);
 
           const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
           
-          const squareResponse = await SquareIntegrationService.createAppointment(token, env, {
+          const squareResponse = await SquareIntegrationService.createAppointment({
               locationId: loc.id,
               startAt: slotTime,
               customerId,
@@ -300,12 +291,11 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               services: servicesToBook
           });
 
-          // PERSIST BOOKING TO LOCAL DATABASE (ROOT CAUSE FIX)
           const squareBooking = squareResponse.booking;
           if (squareBooking) {
               await saveBooking({
-                  id: squareBooking.id, // Square ID as PK
-                  client_id: plan.client.id, // Internal UUID
+                  id: squareBooking.id,
+                  client_id: plan.client.id,
                   stylist_id: stylistId,
                   start_time: slotTime,
                   status: squareBooking.status,
