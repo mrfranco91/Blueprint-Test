@@ -14,16 +14,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const {
-    SQUARE_APPLICATION_ID: clientId,
-    SQUARE_APPLICATION_SECRET: clientSecret,
-    SQUARE_REDIRECT_URI: redirectUri,
-    SQUARE_ENV: env = 'production',
+    SQUARE_APPLICATION_ID,
+    SQUARE_APPLICATION_SECRET,
+    SQUARE_REDIRECT_URI,
+    SQUARE_ENV,
   } = process.env;
 
-  if (!clientId || !clientSecret || !redirectUri) {
-    console.error('Missing Square OAuth environment variables on the server.');
+  if (!SQUARE_APPLICATION_ID || !SQUARE_APPLICATION_SECRET || !SQUARE_REDIRECT_URI) {
     return res.status(500).json({ message: 'OAuth configuration is incomplete on the server.' });
   }
+
+  const env = SQUARE_ENV || 'production';
 
   const tokenUrl = env === 'sandbox'
     ? 'https://connect.squareupsandbox.com/oauth2/token'
@@ -37,11 +38,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
+        client_id: SQUARE_APPLICATION_ID,
+        client_secret: SQUARE_APPLICATION_SECRET,
         code,
         grant_type: 'authorization_code',
-        redirect_uri: redirectUri,
+        redirect_uri: SQUARE_REDIRECT_URI,
       }),
     });
 
