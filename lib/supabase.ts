@@ -1,57 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 
-// PERMANENT CREDENTIALS (Hardcoded for persistence)
-const DEFAULT_URL = 'https://szsrnzbwtrvsxzasaphs.supabase.co';
-const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6c3JuemJ3dHJ2c3h6YXNhcGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU2MTI3MTQsImV4cCI6MjA4MTE4ODcxNH0.otzF6gnfVkQAJj-Z1lte4ml6tJ5nZQQh2kwLJJOb6aU';
+//  DO NOT hardcode credentials
+//  Supabase credentials must come ONLY from build-time env vars
 
-// Helper to get keys from local storage or defaults
-export const getSupabaseConfig = () => {
-    const localUrl = localStorage.getItem('VITE_SUPABASE_URL');
-    const localKey = localStorage.getItem('VITE_SUPABASE_ANON_KEY');
-    
-    // Prefer local storage if set (allows overriding), otherwise use hardcoded defaults
-    return { 
-        url: localUrl || DEFAULT_URL, 
-        key: localKey || DEFAULT_KEY 
-    };
-};
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const saveSupabaseConfig = (url: string, key: string) => {
-    const cleanUrl = url ? url.trim() : '';
-    const cleanKey = key ? key.trim() : '';
-
-    localStorage.setItem('VITE_SUPABASE_URL', cleanUrl);
-    localStorage.setItem('VITE_SUPABASE_ANON_KEY', cleanKey);
-    
-    // Simple reload to pick up new config
-    window.location.reload();
-};
-
-export const clearSupabaseConfig = () => {
-    localStorage.removeItem('VITE_SUPABASE_URL');
-    localStorage.removeItem('VITE_SUPABASE_ANON_KEY');
-    window.location.reload();
-};
-
-// Initialize the client
-const { url, key } = getSupabaseConfig();
-
-let supabaseInstance = null;
-
-if (url && key) {
-    try {
-        // PATCH: Added recommended auth options to createClient to improve session handling.
-        supabaseInstance = createClient(url, key, {
-            auth: {
-                persistSession: true,
-                autoRefreshToken: true,
-                detectSessionInUrl: true,
-            }
-        });
-    } catch (e) {
-        console.error("Failed to initialize Supabase client:", e);
-        // Leaving instance as null will trigger SetupScreen
-    }
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Supabase environment variables are missing. ' +
+    'Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+  );
 }
 
-export const supabase = supabaseInstance;
+//  SINGLETON — created exactly once
+export const supabase = createClient(
+  supabaseUrl,
+  supabaseAnonKey,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true, // REQUIRED for OAuth redirects
+    },
+  }
+);
