@@ -26,7 +26,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        // Shared function for resolving application-specific user data from a Supabase Auth session
         const resolveUserFromSession = async (session: any) => {
             const authUser = session?.user;
             if (!authUser) {
@@ -97,51 +96,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             }
         };
+        
+        // Set loading to true to show spinner while the first auth state is being determined.
+        setLoading(true);
 
-        let mounted = true;
-
-        const bootstrap = async () => {
-            try {
-                // 🔴 CRITICAL FIX: Check for session immediately on mount
-                const { data: { session } } = await supabase.auth.getSession();
-                
-                if (mounted) {
-                    if (session) {
-                        await resolveUserFromSession(session);
-                    } else {
-                        // No session means logged out user
-                        setUser(null);
-                    }
-                }
-            } catch (err) {
-                console.error("Bootstrap auth error:", err);
-            } finally {
-                // 🔴 CRITICAL FIX: Always clear loading to unblock the LoginScreen
-                if (mounted) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        // Start initialization
-        bootstrap();
-
-        // Subscribe to auth state changes for real-time updates (login/logout/signup)
+        // onAuthStateChange is the single source of truth. It fires immediately with the
+        // current session, and then for any subsequent changes.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (!mounted) return;
-
-            if (event === 'SIGNED_OUT') {
-                setUser(null);
-                setLoading(false);
-            } else if (session) {
-                // Re-resolve user data on successful sign-in or session refresh
+            if (session) {
                 await resolveUserFromSession(session);
-                setLoading(false);
+            } else {
+                setUser(null);
             }
+            // This is the critical fix: once the initial state is determined (or any
+            // subsequent state change occurs), the app is no longer in its initial
+            // loading phase. This breaks the deadlock.
+            setLoading(false);
         });
 
         return () => {
-            mounted = false;
             subscription.unsubscribe();
         };
     }, []);
