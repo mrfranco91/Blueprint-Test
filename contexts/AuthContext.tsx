@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import type { User, UserRole, Stylist, Client } from '../types';
 import { useSettings } from './SettingsContext';
 import { supabase } from '../lib/supabase';
@@ -19,12 +19,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [user, setUser] = useState<User | null>(null);
     const { stylists } = useSettings();
     const [loading, setLoading] = useState(true);
+    const authInitialized = useRef(false);
 
     useEffect(() => {
+        if (authInitialized.current) {
+            return;
+        }
         if (!supabase) {
             setLoading(false);
             return;
         }
+        authInitialized.current = true;
 
         const resolveUserFromSession = async (session: any) => {
             const authUser = session?.user;
@@ -45,9 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     isMock: false
                 });
             } else {
-                // CLIENT AUTHENTICATION RESOLUTION
                 try {
-                    // RESOLVE CLIENT BY EMAIL
                     const { data: clientRow, error: clientError } = await supabase
                         .from('clients')
                         .select('*')
@@ -80,8 +83,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             avatarUrl: clientData.avatarUrl 
                         });
                     } else {
-                        // Keep the user authenticated as a guest if no linked record exists
-                        // This allows the ClientDashboard to show the "Not Linked" state
                         setUser({ 
                             id: authUser.id, 
                             name: authUser.email?.split('@')[0] || 'Guest', 
@@ -96,26 +97,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             }
         };
-        
-        // Set loading to true to show spinner while the first auth state is being determined.
-        setLoading(true);
 
-        // onAuthStateChange is the single source of truth. It fires immediately with the
-        // current session, and then for any subsequent changes.
+        // Perform the initial session check, handling AbortError gracefully.
+        (async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    await resolveUserFromSession(session);
+                } else {
+                    setUser(null);
+                }
+            } catch (error: any) {
+                if (error.name === 'AbortError') {
+                    console.warn('Supabase auth init aborted — safe to ignore. This can happen in development with React Strict Mode.');
+                } else {
+                    console.error('Supabase auth init failed', error);
+                }
+                setUser(null);
+            } finally {
+                // This is the critical fix: always clear the loading state.
+                setLoading(false);
+            }
+        })();
+
+        // Listen for subsequent auth state changes.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session) {
                 await resolveUserFromSession(session);
             } else {
                 setUser(null);
             }
-            // This is the critical fix: once the initial state is determined (or any
-            // subsequent state change occurs), the app is no longer in its initial
-            // loading phase. This breaks the deadlock.
-            setLoading(false);
         });
 
         return () => {
-            subscription.unsubscribe();
+            subscription?.unsubscribe();
         };
     }, []);
 

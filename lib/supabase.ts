@@ -40,7 +40,14 @@ let supabaseInstance = null;
 
 if (url && key) {
     try {
-        supabaseInstance = createClient(url, key);
+        // PATCH: Added recommended auth options to createClient to improve session handling.
+        supabaseInstance = createClient(url, key, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true,
+            }
+        });
     } catch (e) {
         console.error("Failed to initialize Supabase client:", e);
         // Leaving instance as null will trigger SetupScreen
