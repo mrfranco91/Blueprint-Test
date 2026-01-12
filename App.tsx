@@ -4,7 +4,9 @@ import type { GeneratedPlan, UserRole } from './types';
 import StylistDashboard from './components/StylistDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import LoginScreen from './components/LoginScreen';
-import { supabase } from './lib/supabase';
+import { areSupabaseCredentialsMissing } from './lib/supabase';
+import { isSquareTokenMissing } from './services/squareIntegration';
+import MissingCredentialsScreen from './components/MissingCredentialsScreen';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlanProvider } from './contexts/PlanContext';
@@ -61,7 +63,12 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  // SetupScreen and dynamic DB connection logic removed per stabilization patch.
+  // Gate the entire app on the presence of all critical environment variables.
+  const areCredentialsMissing = areSupabaseCredentialsMissing || isSquareTokenMissing;
+  if (areCredentialsMissing) {
+    return <MissingCredentialsScreen />;
+  }
+  
   // The app now relies exclusively on build-time environment variables.
   return (
     <SettingsProvider>

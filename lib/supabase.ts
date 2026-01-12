@@ -1,25 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase credentials must come ONLY from build-time env vars
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+console.log('DEBUG import.meta.env:', import.meta.env);
+console.log('DEBUG SUPABASE URL:', import.meta.env?.VITE_SUPABASE_URL);
+console.log('DEBUG SUPABASE ANON:', import.meta.env?.VITE_SUPABASE_ANON_KEY);
+
+const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     'Supabase environment variables are missing. ' +
-    'Check SUPABASE_URL and SUPABASE_ANON_KEY.'
+    'Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
   );
 }
 
-// SINGLETON — created exactly once
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: false, // Square OAuth is removed.
-    },
-  }
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});

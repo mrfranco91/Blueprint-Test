@@ -10,6 +10,8 @@ interface SquareLocation {
 }
 
 const SQUARE_ACCESS_TOKEN = process.env.SQUARE_ACCESS_TOKEN;
+export const isSquareTokenMissing = !SQUARE_ACCESS_TOKEN;
+
 const SQUARE_ENV = process.env.SQUARE_ENV || 'production';
 
 const baseUrl = SQUARE_ENV === 'sandbox'
