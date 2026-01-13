@@ -1,7 +1,4 @@
-
-
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { GeneratedPlan, UserRole } from './types';
 import StylistDashboard from './components/StylistDashboard';
 import AdminDashboard from './components/AdminDashboard';
@@ -16,6 +13,35 @@ import { isSquareTokenMissing } from './services/squareIntegration';
 
 const AppContent: React.FC = () => {
   const { user, login, logout, isAuthenticated, authInitialized } = useAuth();
+
+  // Square OAuth completion (code stored by /square-callback)
+  useEffect(() => {
+    const squareAuthed = sessionStorage.getItem('square_oauth_complete') === 'true';
+    if (!squareAuthed) return;
+
+    (async () => {
+      const code = sessionStorage.getItem('square_oauth_code');
+      if (!code) return;
+
+      try {
+        const res = await fetch('/api/square/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data?.access_token) {
+          localStorage.setItem('square_access_token', data.access_token);
+          window.location.reload(); // Reload to apply the new token everywhere
+        }
+      } finally {
+        // Always clear to prevent loops/retries on every load
+        sessionStorage.removeItem('square_oauth_complete');
+        sessionStorage.removeItem('square_oauth_code');
+      }
+    })();
+  }, []);
 
   // AUTH INITIALIZATION GATE:
   // Do not render anything until the auth state has been confirmed. This prevents

@@ -10,11 +10,24 @@ interface SquareLocation {
 }
 
 const SQUARE_ACCESS_TOKEN = process.env.VITE_SQUARE_ACCESS_TOKEN;
+const TOKEN_STORAGE_KEY = 'square_access_token';
 
-export const isSquareTokenMissing = !SQUARE_ACCESS_TOKEN;
+const getSquareAccessToken = () => {
+  try {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (stored) return stored;
+    }
+  } catch {
+    // ignore
+  }
+  return SQUARE_ACCESS_TOKEN;
+};
+
+export const isSquareTokenMissing = !getSquareAccessToken();
 
 if (isSquareTokenMissing) {
-  console.warn('VITE_SQUARE_ACCESS_TOKEN is missing. App will show configuration error screen.');
+  console.warn('VITE_SQUARE_ACCESS_TOKEN is missing, and no OAuth token is present. App will show configuration error screen.');
 }
 
 const SQUARE_ENV = process.env.VITE_SQUARE_ENV || 'production';
@@ -26,14 +39,15 @@ const baseUrl = SQUARE_ENV === 'sandbox'
 async function squareApiFetch<T>(path: string, options: { method?: string, body?: any } = {}): Promise<T> {
     const { method = 'GET', body } = options;
     
-    if (!SQUARE_ACCESS_TOKEN) {
-        throw new Error('Square Access Token is not configured. Check VITE_SQUARE_ACCESS_TOKEN.');
+    const token = getSquareAccessToken();
+    if (!token) {
+        throw new Error('Square Access Token is not configured. Check VITE_SQUARE_ACCESS_TOKEN or connect via Square OAuth.');
     }
     
     const response = await fetch(`${baseUrl}${path}`, {
         method,
         headers: {
-            'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'Square-Version': '2023-10-20',

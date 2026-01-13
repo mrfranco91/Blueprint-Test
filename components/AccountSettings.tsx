@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { User, AppTextSize } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
@@ -23,6 +22,36 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
 
   const isMockUser = !!user?.isMock;
 
+  // Square OAuth (reintroduced)
+  const squareAppId = import.meta.env.VITE_SQUARE_APPLICATION_ID || import.meta.env.VITE_SQUARE_CLIENT_ID;
+  const squareRedirectUri = import.meta.env.VITE_SQUARE_REDIRECT_URI;
+  const squareEnv = (import.meta.env.VITE_SQUARE_ENV || 'production').toLowerCase();
+  const oauthScopes =
+    (import.meta.env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ||
+    'CUSTOMERS_READ CUSTOMERS_WRITE BOOKINGS_READ BOOKINGS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
+
+  const startSquareOAuth = () => {
+    if (!squareAppId || !squareRedirectUri) return;
+
+    const authorizeBase =
+      squareEnv === 'sandbox'
+        ? 'https://connect.squareupsandbox.com/oauth2/authorize'
+        : 'https://connect.squareup.com/oauth2/authorize';
+
+    const state = crypto.randomUUID();
+
+    const oauthUrl =
+      `${authorizeBase}` +
+      `?client_id=${encodeURIComponent(squareAppId)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent(oauthScopes)}` +
+      `&redirect_uri=${encodeURIComponent(squareRedirectUri)}` +
+      `&state=${encodeURIComponent(state)}` +
+      `&session=false`;
+
+    window.location.href = oauthUrl;
+  };
+
   return (
     <div className="p-4 flex flex-col h-full bg-gray-50 overflow-y-auto pb-48">
         <h1 className="text-3xl font-black tracking-tighter px-2 pt-2 mb-8" style={{ color: ensureAccessibleColor(branding.accentColor, '#F9FAFB', '#1E3A8A') }}>Account</h1>
@@ -37,6 +66,23 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
                 <h2 className="text-2xl font-black text-gray-950 tracking-tighter leading-none mb-2">{user?.name}</h2>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: ensureAccessibleColor(branding.primaryColor, '#FFFFFF', '#BE123C') }}>{subtitle}</p>
             </div>
+
+            {squareAppId && squareRedirectUri && (
+              <div className="bg-white p-6 rounded-[32px] border-4 border-gray-950 shadow-sm">
+                <h3 className="font-black text-sm tracking-widest uppercase text-gray-400 mb-4">
+                  Square Connection
+                </h3>
+                <p className="text-xs font-bold text-gray-700 leading-relaxed mb-4">
+                  Connect this Pro/Admin app to your Square account via OAuth.
+                </p>
+                <button
+                  onClick={startSquareOAuth}
+                  className="w-full bg-gray-950 text-white font-black py-3 rounded-2xl border-4 border-gray-950 shadow-lg"
+                >
+                  Connect Square
+                </button>
+              </div>
+            )}
 
             <div className="bg-white p-6 rounded-[32px] border-4 border-gray-100 shadow-sm space-y-6">
                 <div>

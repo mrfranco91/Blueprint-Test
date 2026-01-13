@@ -437,7 +437,8 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
                             cursor={{fill: '#f8fafc'}}
                             contentStyle={{backgroundColor: '#000', color: '#fff', borderRadius: '16px', border: 'none', fontWeight: 900}} 
                         />
-                        {serviceLegend.map(name => (
+                        {/* FIX: Explicitly type 'name' as string to resolve TS inference error. */}
+                        {serviceLegend.map((name: string) => (
                             <Bar 
                                 key={name} 
                                 dataKey={name} 
@@ -450,7 +451,8 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
                 </ResponsiveContainer>
             </div>
             <div className="mt-6 flex flex-wrap gap-3 justify-center">
-                {serviceLegend.map(name => (
+                {/* FIX: Explicitly type 'name' as string to resolve TS inference error. */}
+                {serviceLegend.map((name: string) => (
                     <div key={name} className="flex items-center space-x-2">
                         <div className="w-3 h-3 rounded-full" style={{backgroundColor: SERVICE_COLORS[name] || '#cbd5e1'}}></div>
                         <span className="text-[10px] font-black text-gray-600 uppercase">{name}</span>
