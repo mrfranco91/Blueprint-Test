@@ -88,8 +88,9 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  // Gate the entire app on the presence of all critical environment variables.
-  const areCredentialsMissing = supabase === null || isSquareTokenMissing;
+  // Gate the entire app on the presence of critical environment variables.
+  // Square token is now optional on boot to prevent OAuth loops.
+  const areCredentialsMissing = supabase === null;
   if (areCredentialsMissing) {
     return <MissingCredentialsScreen />;
   }
