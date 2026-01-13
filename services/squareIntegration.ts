@@ -9,8 +9,7 @@ interface SquareLocation {
     status: string;
 }
 
-// FIX: Replaced `import.meta.env` with `process.env` to resolve TypeScript error.
-const SQUARE_ACCESS_TOKEN = process.env.VITE_SQUARE_ACCESS_TOKEN;
+const SQUARE_ACCESS_TOKEN = import.meta.env.VITE_SQUARE_ACCESS_TOKEN;
 
 export const isSquareTokenMissing = !SQUARE_ACCESS_TOKEN;
 
@@ -18,8 +17,7 @@ if (isSquareTokenMissing) {
   console.warn('VITE_SQUARE_ACCESS_TOKEN is missing. App will show configuration error screen.');
 }
 
-// FIX: Replaced `import.meta.env` with `process.env` to resolve TypeScript error.
-const SQUARE_ENV = process.env.VITE_SQUARE_ENV || 'production';
+const SQUARE_ENV = import.meta.env.VITE_SQUARE_ENV || 'production';
 
 const baseUrl = SQUARE_ENV === 'sandbox'
     ? 'https://connect.squareupsandbox.com'
