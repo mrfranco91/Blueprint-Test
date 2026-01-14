@@ -57,36 +57,6 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  // Handle Square OAuth completion (code stored by /square-callback)
-  // This must run on every load to catch the redirect from Square.
-  useEffect(() => {
-    const squareAuthed = sessionStorage.getItem('square_oauth_complete') === 'true';
-    if (!squareAuthed) return;
-
-    (async () => {
-      const code = sessionStorage.getItem('square_oauth_code');
-      if (!code) return;
-
-      try {
-        const res = await fetch('/api/square/oauth/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code }),
-        });
-
-        const data = await res.json();
-        if (res.ok && data?.access_token) {
-          localStorage.setItem('square_access_token', data.access_token);
-          window.location.reload(); // Reload to apply the new token and pass the gate
-        }
-      } finally {
-        // Always clear to prevent loops/retries on every load
-        sessionStorage.removeItem('square_oauth_complete');
-        sessionStorage.removeItem('square_oauth_code');
-      }
-    })();
-  }, []);
-
   // 🔒 Square OAuth is the FIRST gate — before Supabase/Auth providers are mounted.
   if (isSquareTokenMissing) {
     return (
