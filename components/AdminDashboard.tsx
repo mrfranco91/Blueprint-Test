@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import BottomNav from './BottomNav';
@@ -26,8 +25,8 @@ import AccountSettings from './AccountSettings';
 import ReportsPage from './ReportsPage';
 import SettingsPage from './SettingsPage';
 
-const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+const AdminDashboard: React.FC<{ role: UserRole; initialTab?: string; onNavigate: (view: string) => void; }> = ({ role, initialTab = 'dashboard', onNavigate }) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isViewingReports, setIsViewingReports] = useState(false);
   
   const { 
@@ -187,15 +186,10 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
                     existingPlan={adminPlan} 
                     onPlanChange={setAdminPlan}
                     initialStep={adminPlan ? 'summary' : undefined}
+                    onNavigate={onNavigate}
                 />;
-      case 'settings':
-        return (
-          <SettingsProvider>
-            <SettingsPage />
-          </SettingsProvider>
-        );
       default:
-        return <div>Unknown Tab</div>;
+        return renderDashboard();
     }
   };
 
@@ -205,9 +199,13 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
         {renderContent()}
       </div>
       <BottomNav role={role} activeTab={activeTab} onNavigate={(tab) => {
-          setActiveTab(tab);
-          setAdminPlan(null);
-          setIsViewingReports(false);
+          if (tab === 'settings' || tab === 'account') {
+              onNavigate('settings');
+          } else {
+              setActiveTab(tab);
+              setAdminPlan(null);
+              setIsViewingReports(false);
+          }
       }} />
     </div>
   );

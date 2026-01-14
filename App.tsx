@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import type { GeneratedPlan, UserRole } from './types';
 import StylistDashboard from './components/StylistDashboard';
 import AdminDashboard from './components/AdminDashboard';
@@ -9,9 +10,11 @@ import { PlanProvider } from './contexts/PlanContext';
 import './styles/accessibility.css';
 import MissingCredentialsScreen from './components/MissingCredentialsScreen';
 import { isSquareTokenMissing } from './services/squareIntegration';
+import SettingsPage from './components/SettingsPage';
 
 const AppContent: React.FC = () => {
   const { user, logout, authInitialized } = useAuth();
+  const [view, setView] = useState('dashboard');
 
   // AUTH INITIALIZATION GATE:
   // Do not render anything until the auth state has been confirmed. This prevents
@@ -24,18 +27,29 @@ const AppContent: React.FC = () => {
     );
   }
 
-  const renderDashboard = () => {
-    // By defaulting to 'stylist', the app shell renders correctly even when
-    // no user is present (e.g., immediately after OAuth), restoring navigation.
+  const renderCurrentView = () => {
+    if (view === 'settings') {
+        // Settings is a top-level view and gets its own provider to ensure
+        // it's always self-contained and correctly initialized, regardless of
+        // which user role accessed it.
+        return (
+            <SettingsProvider>
+                <SettingsPage onClose={() => setView('dashboard')} />
+            </SettingsProvider>
+        );
+    }
+    
+    // Default to the user's role-specific dashboard.
     const effectiveRole: UserRole = user?.role || 'stylist';
 
     switch (effectiveRole) {
       case 'stylist':
         return <StylistDashboard 
                   onLogout={logout} 
+                  onNavigate={setView}
                />;
       case 'admin':
-        return <AdminDashboard role="admin" />;
+        return <AdminDashboard role="admin" onNavigate={setView} />;
       default:
         return <div>Unknown role</div>;
     }
@@ -44,7 +58,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="bg-brand-bg min-h-screen">
       <div className="max-w-md mx-auto bg-white shadow-lg min-h-screen relative pb-12">
-        {renderDashboard()}
+        {renderCurrentView()}
       </div>
     </div>
   );

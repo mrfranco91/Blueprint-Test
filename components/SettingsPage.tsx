@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,7 +20,7 @@ import { GOOGLE_FONTS_LIST } from '../data/fonts';
 
 type SettingsView = 'menu' | 'branding' | 'team' | 'memberships' | 'integrations' | 'account';
 
-const SettingsPage: React.FC = () => {
+const SettingsPage: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [activeSettingsView, setActiveSettingsView] = useState<SettingsView>('menu');
   const [editingStylist, setEditingStylist] = useState<Stylist | null>(null);
   const [addingBenefitTierId, setAddingBenefitTierId] = useState<string | null>(null);
@@ -340,15 +339,21 @@ const SettingsPage: React.FC = () => {
     return (
         <div className="p-6 pb-24 h-full flex flex-col">
             <div className="flex items-center mb-8">
-                {(isEditing || isSubMenu) && (
-                    <button 
-                        onClick={() => isEditing ? setEditingStylist(null) : setActiveSettingsView('menu')} 
-                        className="mr-4 p-2 bg-white text-gray-900 rounded-full shadow-sm border-2 border-gray-200 hover:bg-gray-100 transition-colors"
-                        aria-label="Go back"
-                    >
-                        <ChevronLeftIcon className="w-6 h-6" />
-                    </button>
-                )}
+                <button 
+                    onClick={() => {
+                        if (isEditing) {
+                            setEditingStylist(null);
+                        } else if (isSubMenu) {
+                            setActiveSettingsView('menu');
+                        } else {
+                            onClose();
+                        }
+                    }} 
+                    className="mr-4 p-2 bg-white text-gray-900 rounded-full shadow-sm border-2 border-gray-200 hover:bg-gray-100 transition-colors"
+                    aria-label="Go back"
+                >
+                    <ChevronLeftIcon className="w-6 h-6" />
+                </button>
                 <h1 className="text-3xl font-black text-brand-accent tracking-tighter capitalize">{headerTitle}</h1>
             </div>
 
