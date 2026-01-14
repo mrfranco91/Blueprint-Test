@@ -11,15 +11,9 @@ import MissingCredentialsScreen from './components/MissingCredentialsScreen';
 import { isSquareTokenMissing } from './services/squareIntegration';
 
 const AppContent: React.FC = () => {
-  // 🔒 ABSOLUTE GATE: Square OAuth is REQUIRED to access the app.
-  // This is the first check before any other component logic.
-  if (isSquareTokenMissing) {
-    return <MissingCredentialsScreen />;
-  }
-  
   const { user, logout, authInitialized } = useAuth();
 
-  // Square OAuth completion (code stored by /square-callback)
+  // Handle Square OAuth completion (code stored by /square-callback)
   useEffect(() => {
     const squareAuthed = sessionStorage.getItem('square_oauth_complete') === 'true';
     if (!squareAuthed) return;
@@ -47,6 +41,12 @@ const AppContent: React.FC = () => {
       }
     })();
   }, []);
+
+  // 🔒 ABSOLUTE GATE: Square OAuth is REQUIRED to access the app.
+  // Providers are now mounted, so hooks are safe.
+  if (isSquareTokenMissing) {
+    return <MissingCredentialsScreen />;
+  }
 
   // AUTH INITIALIZATION GATE:
   // Do not render anything until the auth state has been confirmed. This prevents
@@ -92,20 +92,13 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  // Gate the entire app on the presence of critical environment variables.
-  const areCredentialsMissing = supabase === null;
-
   return (
     <SettingsProvider>
-      {areCredentialsMissing ? (
-        <MissingCredentialsScreen />
-      ) : (
-        <AuthProvider>
-          <PlanProvider>
-            <AppContent />
-          </PlanProvider>
-        </AuthProvider>
-      )}
+      <AuthProvider>
+        <PlanProvider>
+          <AppContent />
+        </PlanProvider>
+      </AuthProvider>
     </SettingsProvider>
   );
 };
