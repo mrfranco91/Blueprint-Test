@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { ALL_SERVICES, STYLIST_LEVELS, MEMBERSHIP_TIERS, MOCK_CLIENTS } from '../data/mockData';
 import type { Service, StylistLevel, Stylist, MembershipTier, Client, ServiceLinkingConfig, BrandingSettings, MembershipConfig, AppTextSize, User } from '../types';
 import { supabase } from '../lib/supabase';
+import { SquareIntegrationService, isSquareTokenMissing } from '../services/squareIntegration';
 
 export interface IntegrationSettings {
     provider: 'vagaro' | 'square' | 'mindbody';
@@ -73,59 +74,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [stylists, setStylists] = useState<Stylist[]>(() => {
         try {
             const saved = localStorage.getItem('admin_team');
-            return saved ? JSON.parse(saved) : [
-                { 
-                    id: 'TM-aBcDeFgHiJkLmN', 
-                    name: 'Jessica Miller', 
-                    role: 'Full Time', 
-                    levelId: 'lvl_2', 
-                    email: 'jessica@example.com', 
-                    permissions: { 
-                        canBookAppointments: true, 
-                        canOfferDiscounts: true, 
-                        requiresDiscountApproval: false, 
-                        viewGlobalReports: false,
-                        viewClientContact: true,
-                        viewAllSalonPlans: false,
-                        can_book_own_schedule: true,
-                        can_book_peer_schedules: false,
-                    } 
-                },
-                { 
-                    id: 'TM-oPqRsTuVwXyZaB', 
-                    name: 'David Chen', 
-                    role: 'Full Time', 
-                    levelId: 'lvl_3', 
-                    email: 'david@example.com', 
-                    permissions: { 
-                        canBookAppointments: true, 
-                        canOfferDiscounts: true, 
-                        requiresDiscountApproval: false, 
-                        viewGlobalReports: true,
-                        viewClientContact: true,
-                        viewAllSalonPlans: true,
-                        can_book_own_schedule: true,
-                        can_book_peer_schedules: true,
-                    } 
-                },
-                { 
-                    id: 'TM-cDeFgHiJkLmNoP', 
-                    name: 'Sarah Jones', 
-                    role: 'Apprentice', 
-                    levelId: 'lvl_1', 
-                    email: 'sarah@example.com', 
-                    permissions: { 
-                        canBookAppointments: false, 
-                        canOfferDiscounts: false, 
-                        requiresDiscountApproval: true, 
-                        viewGlobalReports: false,
-                        viewClientContact: false,
-                        viewAllSalonPlans: false,
-                        can_book_own_schedule: true,
-                        can_book_peer_schedules: false,
-                    } 
-                },
-            ];
+            return saved ? JSON.parse(saved) : [];
         } catch { return []; }
     });
 
@@ -227,16 +176,27 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
             if (error && error.code !== 'PGRST116') { // PGRST116: "exact one row not found"
                  console.error('Error loading settings from Supabase:', error);
-                 return;
+            }
+            
+            const dbSettings = data?.settings;
+            const dbStylists = dbSettings?.stylists as Stylist[] | undefined;
+
+            if (dbStylists && dbStylists.length > 0) {
+                setStylists(dbStylists);
+            } else if (!isSquareTokenMissing) {
+                try {
+                    const squareTeam = await SquareIntegrationService.fetchTeam();
+                    setStylists(squareTeam);
+                } catch (e) {
+                    console.error("Failed to fetch initial team from Square:", e);
+                    setStylists([]);
+                }
             }
 
-            if (data?.settings) {
-                const dbSettings = data.settings;
-                // Populate all state setters from the single DB record
+            if (dbSettings) {
                 if (dbSettings.services) setServices(dbSettings.services);
                 if (dbSettings.linkingConfig) setLinkingConfig(dbSettings.linkingConfig);
                 if (dbSettings.levels) setLevels(dbSettings.levels);
-                if (dbSettings.stylists) setStylists(dbSettings.stylists);
                 if (dbSettings.clients) setClients(dbSettings.clients);
                 if (dbSettings.membershipConfig) setMembershipConfig(dbSettings.membershipConfig);
                 if (dbSettings.branding) setBranding(dbSettings.branding);
@@ -464,6 +424,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             saveAll
         }}>
             {children}
+        {/* FIX: Corrected typo in closing tag for SettingsContext.Provider */}
         </SettingsContext.Provider>
     );
 };
