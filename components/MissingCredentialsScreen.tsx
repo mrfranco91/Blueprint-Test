@@ -1,28 +1,64 @@
 import React from 'react';
-import { DatabaseIcon } from './icons';
+import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
+import { useSettings } from '../contexts/SettingsContext';
 
-const MissingCredentialsScreen: React.FC = () => {
+const MissingCredentialsScreen = () => {
+  const { branding } = useSettings();
+
+  // FIX: Use process.env to align with vite.config.ts define block and resolve TypeScript errors.
+  const squareAppId =
+    process.env.VITE_SQUARE_APPLICATION_ID ||
+    process.env.VITE_SQUARE_CLIENT_ID;
+  const squareRedirectUri = process.env.VITE_SQUARE_REDIRECT_URI;
+  const squareEnv = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
+
+  const scopes =
+    (process.env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ??
+    'CUSTOMERS_READ CUSTOMERS_WRITE BOOKINGS_READ BOOKINGS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
+
+  const startOAuth = () => {
+    if (!squareAppId || !squareRedirectUri) {
+      alert("Square OAuth is not configured correctly. Missing Application ID or Redirect URI.");
+      return;
+    }
+
+    const base =
+      squareEnv === 'sandbox'
+        ? 'https://connect.squareupsandbox.com/oauth2/authorize'
+        : 'https://connect.squareup.com/oauth2/authorize';
+
+    const url =
+      `${base}` +
+      `?client_id=${encodeURIComponent(squareAppId)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent(scopes)}` +
+      `&redirect_uri=${encodeURIComponent(squareRedirectUri)}` +
+      `&session=false`;
+
+    window.location.href = url;
+  };
+
   return (
-    <div className="min-h-screen bg-red-50 flex flex-col items-center justify-center p-6 text-center">
-      <div className="bg-white p-10 rounded-[40px] shadow-2xl border-4 border-red-200 max-w-sm w-full">
-        <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-6 text-red-500">
-          <DatabaseIcon className="w-10 h-10" />
-        </div>
-        <h1 className="text-2xl font-black text-red-900 tracking-tighter mb-4">
-          Configuration Error
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <div className="bg-white p-10 rounded-[40px] border-4 border-gray-950 shadow-2xl text-center max-w-sm w-full">
+        <h1
+          className="text-2xl font-black tracking-tighter mb-4"
+          style={{ color: ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#1E3A8A') }}
+        >
+          Sign in with Square
         </h1>
-        <p className="text-sm font-bold text-red-800 leading-relaxed mb-2">
-          The application cannot start because the required environment variables are missing.
+        <p className="text-sm font-bold text-gray-700 mb-6">
+          Connect your Square account to access the Pro/Admin dashboard.
         </p>
-        <div className="mt-6 text-left bg-red-50 p-4 rounded-xl border border-red-200">
-            <p className="text-xs font-bold text-red-600 uppercase mb-2">Required Variables:</p>
-            <code className="block text-sm font-mono text-red-900 bg-red-100 p-2 rounded">VITE_SUPABASE_URL</code>
-            <code className="block text-sm font-mono text-red-900 bg-red-100 p-2 rounded mt-2">VITE_SUPABASE_ANON_KEY</code>
-            <code className="block text-sm font-mono text-red-900 bg-red-100 p-2 rounded mt-2">VITE_SQUARE_ACCESS_TOKEN</code>
+        <button
+          onClick={startOAuth}
+          className="w-full bg-gray-950 text-white font-black py-3 rounded-2xl border-4 border-gray-950 shadow-lg"
+        >
+          Continue with Square
+        </button>
+        <div className="mt-4 text-[10px] font-mono text-gray-500 break-all">
+          <strong>Scopes:</strong> {scopes}
         </div>
-        <p className="text-xs text-red-600 mt-4">
-            Please provide these variables in your hosting environment to continue.
-        </p>
       </div>
     </div>
   );

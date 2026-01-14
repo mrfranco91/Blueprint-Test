@@ -1,6 +1,3 @@
-// FIX: Add Vite client types to resolve issues with import.meta.env
-/// <reference types="vite/client" />
-
 import React, { useState } from 'react';
 import type { User, AppTextSize } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
@@ -26,11 +23,12 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
   const isMockUser = !!user?.isMock;
 
   // Square OAuth (reintroduced)
-  const squareAppId = import.meta.env.VITE_SQUARE_APPLICATION_ID || import.meta.env.VITE_SQUARE_CLIENT_ID;
-  const squareRedirectUri = import.meta.env.VITE_SQUARE_REDIRECT_URI;
-  const squareEnv = (import.meta.env.VITE_SQUARE_ENV || 'production').toLowerCase();
+  // FIX: Use process.env to align with vite.config.ts define block and resolve TypeScript errors.
+  const squareAppId = process.env.VITE_SQUARE_APPLICATION_ID || process.env.VITE_SQUARE_CLIENT_ID;
+  const squareRedirectUri = process.env.VITE_SQUARE_REDIRECT_URI;
+  const squareEnv = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
   const oauthScopes =
-    (import.meta.env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ||
+    (process.env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ||
     'CUSTOMERS_READ CUSTOMERS_WRITE BOOKINGS_READ BOOKINGS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
 
   const startSquareOAuth = () => {

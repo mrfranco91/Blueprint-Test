@@ -43,6 +43,11 @@ const AppContent: React.FC = () => {
     })();
   }, []);
 
+  // 🔒 HARD GATE: Square OAuth is the login
+  if (isSquareTokenMissing) {
+    return <MissingCredentialsScreen />;
+  }
+
   // AUTH INITIALIZATION GATE:
   // Do not render anything until the auth state has been confirmed. This prevents
   // a flash of the login screen or a redirect loop on page load.
