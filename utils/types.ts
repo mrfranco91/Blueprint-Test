@@ -113,6 +113,8 @@ export interface Stylist {
         viewGlobalReports: boolean;
         viewClientContact: boolean;
         viewAllSalonPlans: boolean;
+        can_book_own_schedule: boolean;
+        can_book_peer_schedules: boolean;
     };
 }
 

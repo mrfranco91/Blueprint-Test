@@ -86,7 +86,9 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                         requiresDiscountApproval: false, 
                         viewGlobalReports: false,
                         viewClientContact: true,
-                        viewAllSalonPlans: false
+                        viewAllSalonPlans: false,
+                        can_book_own_schedule: true,
+                        can_book_peer_schedules: false,
                     } 
                 },
                 { 
@@ -101,7 +103,9 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                         requiresDiscountApproval: false, 
                         viewGlobalReports: true,
                         viewClientContact: true,
-                        viewAllSalonPlans: true
+                        viewAllSalonPlans: true,
+                        can_book_own_schedule: true,
+                        can_book_peer_schedules: true,
                     } 
                 },
                 { 
@@ -116,7 +120,9 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                         requiresDiscountApproval: true, 
                         viewGlobalReports: false,
                         viewClientContact: false,
-                        viewAllSalonPlans: false
+                        viewAllSalonPlans: false,
+                        can_book_own_schedule: true,
+                        can_book_peer_schedules: false,
                     } 
                 },
             ];
@@ -201,14 +207,54 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         document.body.classList.remove('text-size-s', 'text-size-m', 'text-size-l');
         document.body.classList.add(`text-size-${textSize.toLowerCase()}`);
     }, [textSize]);
-
+    
     useEffect(() => {
+        const loadSettingsFromDb = async () => {
+            if (!supabase) return;
+
+            // Use the currently authenticated user to scope settings.
+            // Assuming the user's ID acts as the merchant_id for this single-tenant app.
+            const { data: { user } } = await supabase.auth.getUser();
+            const merchantId = user?.id;
+
+            if (!merchantId) {
+                // Not logged in as a user who can have settings, rely on localStorage/defaults.
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('merchant_settings')
+                .select('settings')
+                .eq('merchant_id', merchantId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') { // PGRST116: "exact one row not found"
+                 console.error('Error loading settings from Supabase:', error);
+                 return;
+            }
+
+            if (data?.settings) {
+                const dbSettings = data.settings;
+                // Populate all state setters from the single DB record
+                if (dbSettings.services) setServices(dbSettings.services);
+                if (dbSettings.linkingConfig) setLinkingConfig(dbSettings.linkingConfig);
+                if (dbSettings.levels) setLevels(dbSettings.levels);
+                if (dbSettings.stylists) setStylists(dbSettings.stylists);
+                if (dbSettings.clients) setClients(dbSettings.clients);
+                if (dbSettings.membershipConfig) setMembershipConfig(dbSettings.membershipConfig);
+                if (dbSettings.branding) setBranding(dbSettings.branding);
+                if (dbSettings.integration) setIntegration(dbSettings.integration);
+                if (dbSettings.textSize) setTextSize(dbSettings.textSize);
+                if (dbSettings.pushAlertsEnabled) setPushAlertsEnabled(dbSettings.pushAlertsEnabled);
+                if (dbSettings.pinnedReports) setPinnedReports(dbSettings.pinnedReports);
+            }
+        };
+
         const fetchClientsFromDb = async () => {
             if (!supabase) return;
             try {
                 const { data, error } = await supabase.from('clients').select('*');
                 if (!error && data) {
-                    // FIX: Add `any` type to `row` to resolve Supabase type inference issue.
                     const dbClients: Client[] = data.map((row: any) => ({
                         id: row.id,
                         externalId: row.external_id,
@@ -233,6 +279,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                 console.error("Error fetching clients from database:", err);
             }
         };
+
+        loadSettingsFromDb();
         fetchClientsFromDb();
     }, []);
 
@@ -259,7 +307,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         const { data, error } = await supabase
             .from('clients')
-            // FIX: Cast payload to `any` to resolve Supabase type inference issue.
             .insert({
                 name: clientData.name,
                 email: clientData.email,
@@ -273,12 +320,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             throw error;
         }
         
-        // FIX: Add null check for data returned from Supabase.
         if (!data) {
             throw new Error("Client creation failed: no data returned.");
         }
 
-        // FIX: Cast `data` to `any` to resolve Supabase type inference issues.
         const newClient: Client = {
             id: (data as any).id,
             externalId: (data as any).external_id,
@@ -307,7 +352,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (findError) throw findError;
 
         if (existingClient) {
-            // FIX: Cast `existingClient` to `any` to resolve Supabase type inference issue.
             const resolvedClient: Client = {
                 id: (existingClient as any).id,
                 externalId: (existingClient as any).external_id,
@@ -331,7 +375,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         const { data: newDbClient, error: createError } = await supabase
             .from('clients')
-            // FIX: Cast payload to `any` to resolve Supabase type inference issue.
             .insert({
                 external_id: externalId,
                 name: clientDetails.name,
@@ -344,12 +387,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         
         if (createError) throw createError;
 
-        // FIX: Add null check for newDbClient returned from Supabase.
         if (!newDbClient) {
             throw new Error("Client creation failed: no data returned.");
         }
 
-        // FIX: Cast `newDbClient` to `any` to resolve Supabase type inference issues.
         const newClient: Client = {
             id: (newDbClient as any).id,
             externalId: (newDbClient as any).external_id,
@@ -364,7 +405,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         return newClient;
     };
 
-    const saveAll = () => {
+    const saveAll = async () => {
+        // Continue saving to localStorage for instant UI updates and offline fallback
         try {
             localStorage.setItem('admin_services', JSON.stringify(services));
             localStorage.setItem('admin_linking_config', JSON.stringify(linkingConfig));
@@ -379,7 +421,30 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             localStorage.setItem('admin_brand_accent', branding.accentColor);
             localStorage.setItem('admin_brand_font', branding.font);
         } catch (e) {
-            console.error('Failed to save settings:', e);
+            console.error('Failed to save settings to localStorage:', e);
+        }
+
+        // Also persist the entire settings state to Supabase
+        if (!supabase) return;
+        const { data: { user } } = await supabase.auth.getUser();
+        const merchantId = user?.id;
+        if (!merchantId) return;
+
+        const settingsBlob = {
+            services, linkingConfig, levels, stylists, clients, membershipConfig,
+            branding, integration, textSize, pushAlertsEnabled, pinnedReports,
+        };
+
+        const { error } = await supabase
+            .from('merchant_settings')
+            .upsert({
+                merchant_id: merchantId,
+                settings: settingsBlob,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'merchant_id' });
+
+        if (error) {
+            console.error('Failed to persist settings to Supabase:', error);
         }
     };
 

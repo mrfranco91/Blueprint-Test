@@ -1,4 +1,5 @@
 
+
 import React, { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { GeneratedPlan, UserRole, Service, PlanAppointment } from '../types';
@@ -276,18 +277,33 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               throw new Error("No services were selected for this visit.");
           }
 
+          const stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+          
+          if (user?.role === 'stylist' && user.stylistData) {
+              const loggedInStylist = allStylists.find(s => s.id === user.stylistData!.id);
+              if (loggedInStylist) {
+                  const isBookingForSelf = stylistIdToBookFor === loggedInStylist.id;
+                  
+                  if (isBookingForSelf && !loggedInStylist.permissions.can_book_own_schedule) {
+                      throw new Error("You do not have permission to book appointments for your own schedule.");
+                  }
+
+                  if (!isBookingForSelf && !loggedInStylist.permissions.can_book_peer_schedules) {
+                      throw new Error("You do not have permission to book appointments for other team members.");
+                  }
+              }
+          }
+
           const loc = await SquareIntegrationService.fetchLocation();
           
           let customerId = plan.client.externalId || await SquareIntegrationService.searchCustomer(plan.client.name);
           if (!customerId) throw new Error(`Could not find client "${plan.client.name}" in Square.`);
-
-          const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
           
           const squareResponse = await SquareIntegrationService.createAppointment({
               locationId: loc.id,
               startAt: slotTime,
               customerId,
-              teamMemberId: stylistId,
+              teamMemberId: stylistIdToBookFor,
               services: servicesToBook
           });
 
@@ -296,7 +312,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               await saveBooking({
                   id: squareBooking.id,
                   client_id: plan.client.id,
-                  stylist_id: stylistId,
+                  stylist_id: stylistIdToBookFor,
                   start_time: slotTime,
                   status: squareBooking.status,
                   services: servicesToBook.map(s => ({ variation_id: s.id, name: s.name })),
@@ -437,7 +453,6 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
                             cursor={{fill: '#f8fafc'}}
                             contentStyle={{backgroundColor: '#000', color: '#fff', borderRadius: '16px', border: 'none', fontWeight: 900}} 
                         />
-                        {/* FIX: Explicitly type 'name' as string to resolve TS inference error. */}
                         {serviceLegend.map((name: string) => (
                             <Bar 
                                 key={name} 
@@ -451,7 +466,6 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
                 </ResponsiveContainer>
             </div>
             <div className="mt-6 flex flex-wrap gap-3 justify-center">
-                {/* FIX: Explicitly type 'name' as string to resolve TS inference error. */}
                 {serviceLegend.map((name: string) => (
                     <div key={name} className="flex items-center space-x-2">
                         <div className="w-3 h-3 rounded-full" style={{backgroundColor: SERVICE_COLORS[name] || '#cbd5e1'}}></div>

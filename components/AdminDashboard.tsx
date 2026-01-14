@@ -164,7 +164,6 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
                 duration: s.duration,
                 metadata: { version: s.version }
             }));
-            // FIX: Cast servicePayload to 'any' to resolve Supabase type inference issue.
             const { error: se } = await supabase.from('services').upsert(servicePayload as any, { onConflict: 'id' });
             if (se) throw se;
             updateServices(newServices);
@@ -333,6 +332,8 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
                 <div className="space-y-4">
                     {[
                         { key: 'canBookAppointments', label: 'Square Booking', desc: 'Can sync roadmaps to Square.' },
+                        { key: 'can_book_own_schedule', label: 'Book Own Schedule', desc: 'Can book appointments for their own calendar.' },
+                        { key: 'can_book_peer_schedules', label: 'Book Peer Schedules', desc: 'Can book appointments for other team members.' },
                         { key: 'canOfferDiscounts', label: 'Plan Discounting', desc: 'Can override service costs.' },
                         { key: 'requiresDiscountApproval', label: 'Approval Required', desc: 'Discounted plans need admin sign-off.' },
                         { key: 'viewGlobalReports', label: 'Global Reports', desc: 'Can view business-wide analytics.' },

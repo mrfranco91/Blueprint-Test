@@ -25,13 +25,9 @@ const AppContent: React.FC = () => {
   }
 
   const renderDashboard = () => {
-    // ✅ OAuth-only mode: allow app to render without internal user.
-    // User context may be populated later (or not required).
-    if (!user) {
-      return <StylistDashboard onLogout={logout} />;
-    }
-
-    const effectiveRole = user.role;
+    // By defaulting to 'stylist', the app shell renders correctly even when
+    // no user is present (e.g., immediately after OAuth), restoring navigation.
+    const effectiveRole: UserRole = user?.role || 'stylist';
 
     switch (effectiveRole) {
       case 'stylist':
