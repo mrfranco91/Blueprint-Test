@@ -11,6 +11,7 @@ import './styles/accessibility.css';
 import MissingCredentialsScreen from './components/MissingCredentialsScreen';
 import { isSquareTokenMissing } from './services/squareIntegration';
 import SettingsPage from './components/SettingsPage';
+import BottomNav from './components/BottomNav';
 
 const AppContent: React.FC = () => {
   const { user, logout, authInitialized } = useAuth();
@@ -28,20 +29,30 @@ const AppContent: React.FC = () => {
   }
 
   const renderCurrentView = () => {
+    const effectiveRole: UserRole = user?.role || 'stylist';
+    
     if (view === 'settings') {
-        // Settings is a top-level view and gets its own provider to ensure
-        // it's always self-contained and correctly initialized, regardless of
-        // which user role accessed it.
-        return (
-            <SettingsProvider>
-                <SettingsPage onClose={() => setView('dashboard')} />
-            </SettingsProvider>
-        );
+      return (
+        <SettingsProvider>
+          <div className="flex flex-col h-full bg-brand-bg">
+            <div className="flex-grow flex flex-col pb-20 overflow-hidden">
+              <SettingsPage />
+            </div>
+            <BottomNav
+              role={effectiveRole}
+              activeTab="settings"
+              onNavigate={(tab) => {
+                if (tab !== 'settings') {
+                  setView('dashboard');
+                }
+              }}
+            />
+          </div>
+        </SettingsProvider>
+      );
     }
     
     // Default to the user's role-specific dashboard.
-    const effectiveRole: UserRole = user?.role || 'stylist';
-
     switch (effectiveRole) {
       case 'stylist':
         return <StylistDashboard 
