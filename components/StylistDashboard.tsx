@@ -184,13 +184,32 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
     setPlanDetails(details);
     setStep('loading');
     setTimeout(async () => {
-      await generatePlan(details, ids => setSelectedServiceIds(ids));
+      try {
+        await generatePlan(details, ids => setSelectedServiceIds(ids));
+      } catch (err: any) {
+        console.error("Fatal error during plan generation process:", err);
+        alert(`A critical error occurred while creating the plan: ${err.message}. Please try again.`);
+        // Ensure we always exit the loading state on a fatal error.
+        setStep('set-frequency');
+      }
     }, 1500);
   };
   
   const generatePlan = async (details: PlanDetails, serviceIdUpdater: (ids: string[]) => void) => {
-    if (!activeClient) return;
-    const stylistLevelId = user?.stylistData?.levelId || 'lvl_1'; 
+    if (!activeClient) {
+        throw new Error("No active client selected for plan generation.");
+    }
+    
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!activeClient.id || !UUID_REGEX.test(activeClient.id)) {
+        throw new Error(`The selected client '${activeClient.name}' has an invalid ID. Please re-select a valid client.`);
+    }
+
+    if (!user?.stylistData) {
+        throw new Error("Employee data for the logged-in user could not be found. Please ensure your account is properly configured or try re-syncing from settings.");
+    }
+
+    const stylistLevelId = user.stylistData.levelId || 'lvl_1'; 
     const planStartDate = new Date();
     const planEndDate = new Date();
     planEndDate.setFullYear(planEndDate.getFullYear() + 1);
