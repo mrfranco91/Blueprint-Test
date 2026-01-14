@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { Step, Service, PlanDetails, GeneratedPlan, PlanAppointment, Client, UserRole } from '../types';
@@ -16,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePlans } from '../contexts/PlanContext';
 import { RefreshIcon, DocumentTextIcon, PlusIcon, CalendarIcon, ChevronRightIcon, UsersIcon, TrashIcon, SettingsIcon, ChevronLeftIcon, ClipboardIcon } from './icons';
 import AccountSettings from './AccountSettings';
+import AdminDashboard from './AdminDashboard';
 import StylistReports from './StylistReports';
 import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
 
@@ -88,7 +90,7 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
   }, [myPlans]);
 
   const myPipelineGrowthData = useMemo(() => {
-    const sortedPlans = [...myPlans].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const sortedPlans = [...myPlans].sort((a, b) => new Date(b.createdAt).getTime() - new Date(b.createdAt).getTime());
     let cumulativeValue = 0;
     const dataMap = new Map<string, number>();
 
@@ -463,6 +465,8 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
                     <button onClick={() => setStep('select-client')} className="font-black py-5 px-10 rounded-2xl border-b-4 border-black/20 shadow-xl active:scale-95 transition-all" style={startHereButtonStyle}>START HERE</button>
                  </div>
               );
+          case 'settings':
+            return <AdminDashboard role="admin" />;
           case 'account': 
             return <AccountSettings user={user} onLogout={onLogout} subtitle={user?.stylistData?.role || 'Stylist'} />;
           default: return <div>Unknown Tab</div>;

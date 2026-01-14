@@ -396,6 +396,7 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
         { key: 'team', label: 'Team', icon: UsersIcon },
         { key: 'memberships', label: 'Membership', icon: CheckCircleIcon },
         { key: 'integrations', label: 'Sync', icon: DatabaseIcon },
+        { key: 'account', label: 'Account', icon: UsersIcon },
     ];
 
     if (activeSettingsView === 'account') {

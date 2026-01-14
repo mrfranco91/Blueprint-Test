@@ -21,14 +21,13 @@ const BottomNav: React.FC<BottomNavProps> = ({ role, activeTab, onNavigate }) =>
     { name: 'Clients', icon: UsersIcon, key: 'clients' },
     { name: 'Calendar', icon: CalendarIcon, key: 'appointments' },
     { name: 'Plans', icon: DocumentTextIcon, key: 'plans' },
-    { name: 'Account', icon: SettingsIcon, key: 'account' },
+    { name: 'Settings', icon: SettingsIcon, key: 'settings' },
   ];
   
   const adminNav = [
       { name: 'Dashboard', icon: HomeIcon, key: 'dashboard' },
       { name: 'Plans', icon: DocumentTextIcon, key: 'plans' },
       { name: 'Settings', icon: SettingsIcon, key: 'settings' },
-      { name: 'Account', icon: UsersIcon, key: 'account' },
   ]
 
   switch(role) {
