@@ -29,7 +29,7 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
   const squareEnv = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
   const oauthScopes =
     (process.env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ||
-    'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
+    'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_READ APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
 
   const startSquareOAuth = () => {
     if (!squareAppId || !squareRedirectUri) return;

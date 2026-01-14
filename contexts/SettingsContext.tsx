@@ -158,16 +158,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, [textSize]);
     
     useEffect(() => {
-        const loadSettingsFromDb = async () => {
-            if (!supabase) return;
+        if (!supabase) return;
 
-            const { data: { user } } = await supabase.auth.getUser();
+        const loadDataForUser = async (user: any) => {
+            if (!user) return;
             const merchantId = user?.user_metadata?.merchant_id;
+            if (!merchantId) return;
 
-            if (!merchantId) {
-                return;
-            }
-
+            // Load settings from Supabase
             const { data, error } = await supabase
                 .from('merchant_settings')
                 .select('settings')
@@ -179,20 +177,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             }
             
             const dbSettings = data?.settings;
-            const dbStylists = dbSettings?.stylists as Stylist[] | undefined;
-
-            if (dbStylists && dbStylists.length > 0) {
-                setStylists(dbStylists);
-            } else if (!isSquareTokenMissing) {
-                try {
-                    const squareTeam = await SquareIntegrationService.fetchTeam();
-                    setStylists(squareTeam);
-                } catch (e) {
-                    console.error("Failed to fetch initial team from Square:", e);
-                    setStylists([]);
-                }
-            }
-
+            
+            // Hydrate all settings from DB first
             if (dbSettings) {
                 if (dbSettings.services) setServices(dbSettings.services);
                 if (dbSettings.linkingConfig) setLinkingConfig(dbSettings.linkingConfig);
@@ -205,14 +191,26 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (dbSettings.pushAlertsEnabled !== undefined) setPushAlertsEnabled(dbSettings.pushAlertsEnabled);
                 if (dbSettings.pinnedReports) setPinnedReports(dbSettings.pinnedReports);
             }
-        };
 
-        const fetchClientsFromDb = async () => {
-            if (!supabase) return;
+            // Specifically handle stylists: use DB if available (preserves permissions), otherwise fetch from Square.
+            const dbStylists = dbSettings?.stylists as Stylist[] | undefined;
+            if (dbStylists && dbStylists.length > 0) {
+                setStylists(dbStylists);
+            } else if (!isSquareTokenMissing) {
+                try {
+                    const squareTeam = await SquareIntegrationService.fetchTeam();
+                    setStylists(squareTeam);
+                } catch (e) {
+                    console.error("Failed to fetch initial team from Square:", e);
+                    setStylists([]);
+                }
+            }
+
+            // Load clients from their own table
             try {
-                const { data, error } = await supabase.from('clients').select('*');
-                if (!error && data) {
-                    const dbClients: Client[] = data.map((row: any) => ({
+                const { data: clientData, error: clientError } = await supabase.from('clients').select('*');
+                if (!clientError && clientData) {
+                    const dbClients: Client[] = clientData.map((row: any) => ({
                         id: row.id,
                         externalId: row.external_id,
                         name: row.name,
@@ -237,8 +235,15 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             }
         };
 
-        loadSettingsFromDb();
-        fetchClientsFromDb();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
+                await loadDataForUser(session.user);
+            }
+        });
+
+        return () => {
+            subscription?.unsubscribe();
+        };
     }, []);
 
     const updateTextSize = (size: AppTextSize) => {
@@ -424,7 +429,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             saveAll
         }}>
             {children}
-        {/* FIX: Corrected typo in closing tag for SettingsContext.Provider */}
         </SettingsContext.Provider>
     );
 };
