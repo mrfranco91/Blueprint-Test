@@ -5,7 +5,7 @@ import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, Cartesia
 import BottomNav from './BottomNav';
 import StylistDashboard from './StylistDashboard';
 import { SquareIntegrationService } from '../services/squareIntegration';
-import { CURRENT_CLIENT } from '../data/mockData';
+// FIX: Removed unused import of CURRENT_CLIENT which is not exported from mockData.
 import { useSettings } from '../contexts/SettingsContext';
 import { usePlans } from '../contexts/PlanContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -484,7 +484,7 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
           </div>
           
           <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="col-span-2 bg-gray-950 text-white p-6 rounded-[32px] shadow-2xl border-4 border-gray-900">
+              <div className="col-span-2 bg-gray-950 text-white p-6 rounded-[32px] shadow-2xl border-4 border-gray-950">
                   <p className="text-sm font-black uppercase text-gray-400 mb-1 tracking-widest">Roadmap Pipeline</p>
                   <p className="text-5xl font-black text-brand-secondary">${totalPipeline.toLocaleString()}</p>
               </div>

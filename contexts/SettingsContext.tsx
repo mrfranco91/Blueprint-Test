@@ -1,7 +1,7 @@
 
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ALL_SERVICES, STYLIST_LEVELS, MEMBERSHIP_TIERS, MOCK_CLIENTS } from '../data/mockData';
+import { ALL_SERVICES, STYLIST_LEVELS, MEMBERSHIP_TIERS } from '../data/mockData';
 import type { Service, StylistLevel, Stylist, MembershipTier, Client, ServiceLinkingConfig, BrandingSettings, MembershipConfig, AppTextSize, User } from '../types';
 import { supabase } from '../lib/supabase';
 import { SquareIntegrationService, isSquareTokenMissing } from '../services/squareIntegration';
@@ -10,6 +10,9 @@ export interface IntegrationSettings {
     provider: 'vagaro' | 'square' | 'mindbody';
     environment: 'sandbox' | 'production';
 }
+
+const isValidUUID = (id?: string) =>
+  !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 
 interface SettingsContextType {
     services: Service[];
@@ -81,8 +84,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [clients, setClients] = useState<Client[]>(() => {
         try {
             const saved = localStorage.getItem('admin_clients');
-            return saved ? JSON.parse(saved) : MOCK_CLIENTS;
-        } catch { return MOCK_CLIENTS; }
+            return saved ? JSON.parse(saved).filter((c: Client) => isValidUUID(c.id)) : [];
+        } catch { return []; }
     });
 
     const [membershipConfig, setMembershipConfig] = useState<MembershipConfig>(() => {
@@ -183,7 +186,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (dbSettings.services) setServices(dbSettings.services);
                 if (dbSettings.linkingConfig) setLinkingConfig(dbSettings.linkingConfig);
                 if (dbSettings.levels) setLevels(dbSettings.levels);
-                if (dbSettings.clients) setClients(dbSettings.clients);
+                if (dbSettings.clients) setClients(dbSettings.clients.filter((c: Client) => isValidUUID(c.id)));
                 if (dbSettings.membershipConfig) setMembershipConfig(dbSettings.membershipConfig);
                 if (dbSettings.branding) setBranding(dbSettings.branding);
                 if (dbSettings.integration) setIntegration(dbSettings.integration);
@@ -219,15 +222,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                         avatarUrl: row.avatar_url,
                         historicalData: [],
                         source: row.source
-                    }));
+                    })).filter(c => isValidUUID(c.id));
                     
                     if (dbClients.length > 0) {
-                        setClients(prev => {
-                            const clientMap = new Map();
-                            MOCK_CLIENTS.forEach(c => clientMap.set(c.id, c));
-                            dbClients.forEach(c => clientMap.set(c.id, c));
-                            return Array.from(clientMap.values());
-                        });
+                        setClients(dbClients);
                     }
                 }
             } catch (err) {
@@ -265,6 +263,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     const createClient = async (clientData: { name: string, email: string }): Promise<Client> => {
         if (!supabase) throw new Error("Supabase is not initialized.");
         
+        if (!clientData.name) {
+            throw new Error('Client name is required');
+        }
+
         const avatar_url = `https://ui-avatars.com/api/?name=${encodeURIComponent(clientData.name)}&background=random`;
 
         const { data, error } = await supabase
@@ -356,6 +358,9 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         const newClient: Client = {
             id: (newDbClient as any).id,
             externalId: (newDbClient as any).external_id,
+            ...(isValidUUID((newDbClient as any).id)
+              ? {}
+              : (() => { throw new Error('Invalid client UUID returned from DB'); })()),
             name: (newDbClient as any).name,
             email: (newDbClient as any).email,
             phone: (newDbClient as any).phone,
@@ -374,7 +379,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             localStorage.setItem('admin_linking_config', JSON.stringify(linkingConfig));
             localStorage.setItem('admin_levels', JSON.stringify(levels));
             localStorage.setItem('admin_team', JSON.stringify(stylists));
-            localStorage.setItem('admin_clients', JSON.stringify(clients));
+            localStorage.setItem('admin_clients', JSON.stringify(clients.filter(c => isValidUUID(c.id))));
             localStorage.setItem('admin_membership_config', JSON.stringify(membershipConfig));
             localStorage.setItem('admin_integration', JSON.stringify(integration));
             localStorage.setItem('admin_brand_name', branding.salonName);
@@ -393,7 +398,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (!merchantId) return;
 
         const settingsBlob = {
-            services, linkingConfig, levels, stylists, clients, membershipConfig,
+            services, linkingConfig, levels, stylists, clients: clients.filter(c => isValidUUID(c.id)), membershipConfig,
             branding, integration, textSize, pushAlertsEnabled, pinnedReports,
         };
 

@@ -1,5 +1,5 @@
 
-import type { Service, Client, HistoricalData, MembershipTier, StylistLevel } from '../types';
+import type { Service, MembershipTier, StylistLevel } from '../types';
 
 export const STYLIST_LEVELS: StylistLevel[] = [
     { id: 'lvl_1', name: 'Junior Stylist', color: 'bg-blue-100 text-blue-800', order: 1 },
@@ -24,47 +24,6 @@ export const MEMBERSHIP_TIERS: MembershipTier[] = [
     { id: 't1', name: 'Silver Member', minSpend: 0, perks: ['Access to Booking App', 'Birthday Discount'], color: '#9CA3AF' },
     { id: 't2', name: 'Gold Member', minSpend: 150, perks: ['10% Off Retail', 'Priority Holiday Booking', 'Free Bang Trims'], color: '#FBBF24' },
     { id: 't3', name: 'Platinum Member', minSpend: 300, perks: ['20% Off Retail', '1 Free Treatment / Month', 'Complimentary Blowouts'], color: '#E5E7EB' },
-];
-
-const clientHistoricalData: HistoricalData[] = [
-    { month: 'Apr', cost: 280 },
-    { month: 'May', cost: 100 },
-    { month: 'Jun', cost: 0 },
-    { month: 'Jul', cost: 430 },
-    { month: 'Aug', cost: 100 },
-    { month: 'Sep', cost: 220 },
-    { month: 'Oct', cost: 100 },
-    { month: 'Nov', cost: 0 },
-    { month: 'Dec', cost: 550 },
-    { month: 'Jan', cost: 100 },
-    { month: 'Feb', cost: 300 },
-    { month: 'Mar', cost: 100 },
-];
-
-const nextAppt = new Date();
-nextAppt.setDate(nextAppt.getDate() + 14); // Next appointment in 2 weeks
-
-const lastAppt = new Date();
-lastAppt.setDate(lastAppt.getDate() - 28); // Last appointment 4 weeks ago
-
-export const CURRENT_CLIENT: Client = {
-  id: 'c1',
-  name: 'Olivia Wilson',
-  email: 'olivia.wilson@example.com',
-  phone: '555-0123',
-  avatarUrl: 'https://picsum.photos/id/237/200/200',
-  historicalData: clientHistoricalData,
-  nextAppointmentDate: nextAppt,
-  lastAppointmentDate: lastAppt,
-};
-
-export const MOCK_CLIENTS: Client[] = [
-    CURRENT_CLIENT,
-    { ...CURRENT_CLIENT, id: 'c2', name: 'Emma Thompson', email: 'emma.t@example.com', phone: '555-0124', avatarUrl: 'https://picsum.photos/id/64/200/200' },
-    { ...CURRENT_CLIENT, id: 'c3', name: 'Sophia Martinez', email: 'sophia.m@example.com', phone: '555-0125', avatarUrl: 'https://picsum.photos/id/65/200/200' },
-    { ...CURRENT_CLIENT, id: 'c4', name: 'Ava Johnson', email: 'ava.j@example.com', phone: '555-0126', avatarUrl: 'https://picsum.photos/id/91/200/200' },
-    { ...CURRENT_CLIENT, id: 'c5', name: 'Isabella Davis', email: 'isabella.d@example.com', phone: '555-0127', avatarUrl: 'https://picsum.photos/id/177/200/200' },
-    { ...CURRENT_CLIENT, id: 'c6', name: 'Mia Brown', email: 'mia.b@example.com', phone: '555-0128', avatarUrl: 'https://picsum.photos/id/342/200/200' },
 ];
 
 export const TODAY_APPOINTMENTS = [

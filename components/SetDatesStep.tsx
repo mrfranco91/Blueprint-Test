@@ -1,20 +1,21 @@
 
+
 import React, { useState, useEffect } from 'react';
-import type { Service, PlanDetails } from '../types';
-import { CURRENT_CLIENT } from '../data/mockData';
+import type { Service, PlanDetails, Client } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
 
 interface SetDatesStepProps {
   selectedServices: Service[];
   planDetails: PlanDetails;
+  client: Client;
   onNext: (details: PlanDetails) => void;
   onBack: () => void;
 }
 
 type SelectionMode = 'today' | 'next' | 'last' | 'offset' | 'custom';
 
-const SetDatesStep: React.FC<SetDatesStepProps> = ({ selectedServices, planDetails, onNext, onBack }) => {
+const SetDatesStep: React.FC<SetDatesStepProps> = ({ selectedServices, planDetails, client, onNext, onBack }) => {
   const [localDetails, setLocalDetails] = useState<PlanDetails>(planDetails);
   const [selections, setSelections] = useState<{[key: string]: SelectionMode | null}>({});
   const [offsets, setOffsets] = useState<{[key: string]: number}>({});
@@ -74,17 +75,17 @@ const SetDatesStep: React.FC<SetDatesStepProps> = ({ selectedServices, planDetai
                     Today
                 </button>
                 <button 
-                    onClick={() => handleDateChange(service.id, CURRENT_CLIENT.nextAppointmentDate || null, 'next')} 
-                    disabled={!CURRENT_CLIENT.nextAppointmentDate} 
-                    className={getButtonClass(selections[service.id] === 'next', !CURRENT_CLIENT.nextAppointmentDate)}
+                    onClick={() => handleDateChange(service.id, client.nextAppointmentDate || null, 'next')} 
+                    disabled={!client.nextAppointmentDate} 
+                    className={getButtonClass(selections[service.id] === 'next', !client.nextAppointmentDate)}
                     style={selections[service.id] === 'next' ? { backgroundColor: branding.secondaryColor, color: ensureAccessibleColor('#FFFFFF', branding.secondaryColor, '#1F2937'), borderColor: branding.secondaryColor } : {}}
                 >
                     Next Scheduled
                 </button>
                 <button 
-                    onClick={() => handleDateChange(service.id, CURRENT_CLIENT.lastAppointmentDate || null, 'last')} 
-                    disabled={!CURRENT_CLIENT.lastAppointmentDate} 
-                    className={`col-span-2 ${getButtonClass(selections[service.id] === 'last', !CURRENT_CLIENT.lastAppointmentDate)}`}
+                    onClick={() => handleDateChange(service.id, client.lastAppointmentDate || null, 'last')} 
+                    disabled={!client.lastAppointmentDate} 
+                    className={`col-span-2 ${getButtonClass(selections[service.id] === 'last', !client.lastAppointmentDate)}`}
                     style={selections[service.id] === 'last' ? { backgroundColor: branding.secondaryColor, color: ensureAccessibleColor('#FFFFFF', branding.secondaryColor, '#1F2937'), borderColor: branding.secondaryColor } : {}}
                 >
                     Last Appointment

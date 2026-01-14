@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { Step, Service, PlanDetails, GeneratedPlan, PlanAppointment, Client, UserRole } from '../types';
-import { TODAY_APPOINTMENTS, MOCK_CLIENTS } from '../data/mockData';
+import { TODAY_APPOINTMENTS } from '../data/mockData';
 import SelectClientStep from './SelectClientStep';
 import SelectServicesStep from './SelectServicesStep';
 import SetDatesStep from './SetDatesStep';
@@ -453,7 +453,7 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
               if (activeClient && viewingHistory && _step === 'idle') return renderClientHistory();
               if (_step === 'select-client') return <SelectClientStep clients={globalClients} onSelect={handleClientSelectedFromWizard} onBack={() => { setStep('idle'); setActiveTab('home'); }} />;
               if (_step === 'select-services') return <SelectServicesStep availableServices={availableServices} onNext={handleServicesSelected} onBack={() => { setViewingHistory(true); setStep('idle'); }} />;
-              if (_step === 'set-dates') return <SetDatesStep selectedServices={selectedServices} onNext={handleDatesSet} planDetails={planDetails} onBack={() => setStep('select-services')} />;
+              if (_step === 'set-dates') return <SetDatesStep client={activeClient!} selectedServices={selectedServices} onNext={handleDatesSet} planDetails={planDetails} onBack={() => setStep('select-services')} />;
               if (_step === 'set-frequency') return <SetFrequencyStep selectedServices={selectedServices} onNext={handleFrequencySet} planDetails={planDetails} onBack={() => setStep('set-dates')} />;
               if (_step === 'loading') return <LoadingStep />;
               if (_step === 'summary' && currentPlan) return <PlanSummaryStep plan={currentPlan} onEditPlan={handleEditExistingPlan} role={propRole || 'stylist'} />;
