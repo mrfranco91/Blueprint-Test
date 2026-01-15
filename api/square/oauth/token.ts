@@ -150,7 +150,7 @@ if (!tokenRes.ok) {
     }
 
     // 5. CUSTOMER SYNC — ✅ CORRECT ENDPOINT
-    let cursor;
+    let cursor: string | undefined;
     do {
       const customerData = await squareApiFetch(
         `${baseUrl}/v2/customers${cursor ? `?cursor=${cursor}` : ''}`,
