@@ -22,7 +22,7 @@ const squareApiFetch = async (url: string, accessToken: string, options: Request
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const missingVars: string[] = [];
   if (!process.env.VITE_SUPABASE_URL) missingVars.push('VITE_SUPABASE_URL');
-  if (!process.env.VITE_SUPABASE_SERVICE_ROLE_KEY) missingVars.push('VITE_SUPABASE_SERVICE_ROLE_KEY');
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
   if (!process.env.VITE_SQUARE_APPLICATION_ID) missingVars.push('VITE_SQUARE_APPLICATION_ID');
   if (!process.env.VITE_SQUARE_APPLICATION_SECRET) missingVars.push('VITE_SQUARE_APPLICATION_SECRET');
   if (!process.env.VITE_SQUARE_REDIRECT_URI) missingVars.push('VITE_SQUARE_REDIRECT_URI');
@@ -79,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 3. Initialize Supabase Admin Client
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
-    const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     
     const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceKey!);
 
