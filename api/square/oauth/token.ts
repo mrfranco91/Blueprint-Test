@@ -1,28 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
 
-const squareFetch = async (
+const squareApiFetch = async (
   url: string,
   accessToken: string,
-  init: RequestInit = {}
+  options: RequestInit = {}
 ) => {
-  const res = await fetch(url, {
-    ...init,
+  const response = await fetch(url, {
+    method: options.method || 'GET',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
       'Square-Version': '2023-10-20',
     },
+    body: options.body,
   });
 
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json?.errors?.[0]?.detail || 'Square API error');
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.errors?.[0]?.detail || 'Square API request failed');
   }
-  return json;
+  return data;
 };
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
@@ -32,7 +34,7 @@ export default async function handler(req: any, res: any) {
       (typeof req.query?.code === 'string' ? req.query.code : undefined);
 
     if (!code) {
-      return res.status(400).json({ message: 'Missing OAuth code' });
+      return res.status(400).json({ message: 'Missing OAuth code.' });
     }
 
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
@@ -41,18 +43,20 @@ export default async function handler(req: any, res: any) {
         ? 'https://connect.squareupsandbox.com'
         : 'https://connect.squareup.com';
 
-    /* =======================
-       1. OAuth token exchange
-       ======================= */
+    // Square OAuth requires base64 encoded client credentials for Basic Auth
+    const basicAuth = Buffer.from(
+      `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
+    ).toString('base64');
 
     const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${basicAuth}`,
+      },
       body: JSON.stringify({
-        client_id: process.env.VITE_SQUARE_APPLICATION_ID,
-        client_secret: process.env.VITE_SQUARE_APPLICATION_SECRET,
-        code,
         grant_type: 'authorization_code',
+        code,
         redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
       }),
     });
@@ -60,32 +64,24 @@ export default async function handler(req: any, res: any) {
     const tokenData = await tokenRes.json();
 
     if (!tokenRes.ok) {
-      console.error('Square OAuth failed:', tokenData);
-      return res.status(401).json({
-        message: 'Failed to exchange Square OAuth token',
+      console.error('Square OAuth Token Error:', tokenData);
+      return res.status(tokenRes.status).json({
+        message: 'Failed to exchange Square OAuth token.',
         square_error: tokenData,
       });
     }
 
     const { access_token, merchant_id } = tokenData;
 
-    /* =======================
-       2. Merchant info
-       ======================= */
-
-    const merchantResp = await squareFetch(
+    const merchantData = await squareApiFetch(
       `${baseUrl}/v2/merchants/${merchant_id}`,
       access_token
     );
 
     const business_name =
-      merchantResp?.merchant?.business_name ?? 'Admin';
+      merchantData?.merchant?.business_name || 'Admin';
 
-    /* =======================
-       3. Supabase admin client
-       ======================= */
-
-    const supabase = createClient(
+    const supabaseAdmin = createClient(
       process.env.VITE_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
@@ -94,10 +90,10 @@ export default async function handler(req: any, res: any) {
     const password = merchant_id;
 
     let { data: { user }, error } =
-      await supabase.auth.signInWithPassword({ email, password });
+      await supabaseAdmin.auth.signInWithPassword({ email, password });
 
     if (error) {
-      const signUp = await supabase.auth.signUp({
+      const signUp = await supabaseAdmin.auth.signUp({
         email,
         password,
         options: {
@@ -110,81 +106,26 @@ export default async function handler(req: any, res: any) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    /* =======================
-       4. TEAM SYNC (server-side)
-       ======================= */
-
-    const teamData = await squareFetch(
-      `${baseUrl}/v2/team-members/search`,
-      access_token,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          query: { filter: { status: 'ACTIVE' } },
-        }),
-      }
-    );
-
-    if (teamData.team_members?.length) {
-      await supabase
-        .from('square_team_members')
-        .upsert(
-          teamData.team_members.map((m: any) => ({
-            supabase_user_id: user.id,
-            square_team_member_id: m.id,
-            name: `${m.given_name ?? ''} ${m.family_name ?? ''}`.trim(),
-            email: m.email_address ?? null,
-            role: m.is_owner ? 'Owner' : 'Team Member',
-          })),
-          { onConflict: 'square_team_member_id' }
-        );
-    }
-
-    /* =======================
-       5. CUSTOMER SYNC (server-side)
-       ======================= */
-
-    let cursor: string | undefined;
-
-    do {
-      const customers = await squareFetch(
-        `${baseUrl}/v2/customers${cursor ? `?cursor=${cursor}` : ''}`,
-        access_token
-      );
-
-      if (customers.customers?.length) {
-        await supabase
-          .from('clients')
-          .upsert(
-            customers.customers.map((c: any) => ({
-              external_id: c.id,
-              name:
-                `${c.given_name ?? ''} ${c.family_name ?? ''}`.trim() ||
-                c.email_address ||
-                'Unnamed Client',
-              email: c.email_address ?? null,
-              phone: c.phone_number ?? null,
-              source: 'square',
-            })),
-            { onConflict: 'external_id' }
-          );
-      }
-
-      cursor = customers.cursor;
-    } while (cursor);
-
-    /* =======================
-       6. Done
-       ======================= */
+    /* ✅ CRITICAL FIX: Persist Square connection where app expects it */
+    // Added 'merchant_id' to the upsert object as well since SettingsContext queries by it.
+    await supabaseAdmin
+      .from('merchant_settings')
+      .upsert({
+        supabase_user_id: user.id,
+        merchant_id: merchant_id,
+        square_merchant_id: merchant_id,
+        square_access_token: access_token,
+        square_connected_at: new Date().toISOString(),
+      }, { onConflict: 'supabase_user_id' });
 
     return res.status(200).json({
       merchant_id,
       business_name,
-      access_token, // Critical: returned for frontend persistence
+      access_token, // Critical: returned for frontend persistence in localStorage
     });
 
-  } catch (err: any) {
-    console.error('Square OAuth / Sync error:', err);
-    return res.status(500).json({ message: err.message });
+  } catch (e: any) {
+    console.error('OAuth Token/Sync Error:', e);
+    return res.status(500).json({ message: e.message });
   }
 }
