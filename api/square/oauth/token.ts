@@ -29,18 +29,27 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // Primary sources
+    // Normalize body (Vercel may provide raw string)
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        body = undefined;
+      }
+    }
+
     let code =
-      req.body?.code ??
+      body?.code ??
       (typeof req.query?.code === 'string' ? req.query.code : undefined);
 
-    // ✅ Fallback: extract from Referer header if missing
+    // Fallback: extract from Referer header
     if (!code && typeof req.headers?.referer === 'string') {
       try {
         const refUrl = new URL(req.headers.referer);
         code = refUrl.searchParams.get('code') ?? undefined;
       } catch {
-        // no-op: invalid referer URL
+        // no-op
       }
     }
 
@@ -118,7 +127,6 @@ export default async function handler(req: any, res: any) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    // ✅ CRITICAL FIX: Persist Square connection ONLY to authoritative columns
     await supabaseAdmin
       .from('merchant_settings')
       .upsert(
