@@ -160,6 +160,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cursor = customerData.cursor;
     } while (cursor);
 
+    // ✅ PERSIST SQUARE CONNECTION STATE in merchant_settings (FIX)
+    await supabaseAdmin
+      .from('merchant_settings')
+      .upsert({
+        supabase_user_id: user.id,
+        integration_provider: 'square',
+        square_connected: true,
+        square_merchant_id: merchant_id,
+        square_last_synced_at: new Date().toISOString(),
+      }, {
+        onConflict: 'supabase_user_id'
+      });
+
     return res.status(200).json({ access_token, merchant_id, email, business_name });
 
   } catch (e: any) {
