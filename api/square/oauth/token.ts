@@ -43,7 +43,6 @@ export default async function handler(req: any, res: any) {
         ? 'https://connect.squareupsandbox.com'
         : 'https://connect.squareup.com';
 
-    // Square OAuth requires base64 encoded client credentials for Basic Auth
     const basicAuth = Buffer.from(
       `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
     ).toString('base64');
@@ -89,8 +88,10 @@ export default async function handler(req: any, res: any) {
     const email = `${merchant_id}@square-oauth.blueprint`;
     const password = merchant_id;
 
-    let { data: { user }, error } =
-      await supabaseAdmin.auth.signInWithPassword({ email, password });
+    let {
+      data: { user },
+      error,
+    } = await supabaseAdmin.auth.signInWithPassword({ email, password });
 
     if (error) {
       const signUp = await supabaseAdmin.auth.signUp({
@@ -106,24 +107,24 @@ export default async function handler(req: any, res: any) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    /* ✅ CRITICAL FIX: Persist Square connection where app expects it */
-    // Added 'merchant_id' to the upsert object as well since SettingsContext queries by it.
+    // ✅ CRITICAL FIX: Persist Square connection ONLY to authoritative columns
     await supabaseAdmin
       .from('merchant_settings')
-      .upsert({
-        supabase_user_id: user.id,
-        merchant_id: merchant_id,
-        square_merchant_id: merchant_id,
-        square_access_token: access_token,
-        square_connected_at: new Date().toISOString(),
-      }, { onConflict: 'supabase_user_id' });
+      .upsert(
+        {
+          supabase_user_id: user.id,
+          square_merchant_id: merchant_id,
+          square_access_token: access_token,
+          square_connected_at: new Date().toISOString(),
+        },
+        { onConflict: 'supabase_user_id' }
+      );
 
     return res.status(200).json({
       merchant_id,
       business_name,
-      access_token, // Critical: returned for frontend persistence in localStorage
+      access_token,
     });
-
   } catch (e: any) {
     console.error('OAuth Token/Sync Error:', e);
     return res.status(500).json({ message: e.message });
