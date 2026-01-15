@@ -137,8 +137,14 @@ export default async function handler(req: any, res: any) {
         { onConflict: 'supabase_user_id' }
       );
 
-    // ✅ CRITICAL FIX: force app bootstrap by redirecting to Admin dashboard
-    return res.redirect(302, '/admin');
+    // ✅ CRITICAL FIX: return success as 200 so frontend does not treat it as failure
+    // We include access_token so SquareCallback can save it to localStorage and pass the gate in App.tsx
+    return res.status(200).json({
+      success: true,
+      role: 'admin',
+      redirect: '/admin',
+      access_token,
+    });
 
   } catch (e: any) {
     console.error('OAuth Token/Sync Error:', e);
