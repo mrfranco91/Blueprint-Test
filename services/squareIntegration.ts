@@ -168,32 +168,42 @@ export const SquareIntegrationService = {
   },
 
   fetchTeam: async (): Promise<Stylist[]> => {
-      const data: any = await squareApiFetch('/v2/team-members/search', {
-          method: 'POST',
-          body: {
-              query: {
-                  filter: {
-                      status: 'ACTIVE',
-                  }
+      try {
+          const res = await fetch('/api/square/team');
+          if (!res.ok) {
+              const errorText = await res.text();
+              console.error('Square team fetch failed via proxy:', res.status, errorText);
+              return [];
+          }
+
+          const json = await res.json();
+          const members = json.team_members || [];
+
+          if (members.length === 0) {
+              return [];
+          }
+
+          return members.map((member: any) => ({
+              id: member.id,
+              name: `${member.given_name} ${member.family_name}`,
+              role: member.is_owner ? 'Owner' : 'Team Member',
+              email: member.email_address,
+              levelId: 'lvl_2',
+              permissions: {
+                  canBookAppointments: true,
+                  canOfferDiscounts: false,
+                  requiresDiscountApproval: true,
+                  viewGlobalReports: false,
+                  viewClientContact: true,
+                  viewAllSalonPlans: false,
+                  can_book_own_schedule: true,
+                  can_book_peer_schedules: false,
               }
-          }
-      });
-      const members = data.team_members || [];
-      return members.map((member: any) => ({
-          id: member.id,
-          name: `${member.given_name} ${member.family_name}`,
-          role: member.is_owner ? 'Owner' : 'Team Member',
-          email: member.email_address,
-          levelId: 'lvl_2',
-          permissions: {
-              canBookAppointments: true,
-              canOfferDiscounts: false,
-              requiresDiscountApproval: true,
-              viewGlobalReports: false,
-              viewClientContact: true,
-              viewAllSalonPlans: false,
-          }
-      }));
+          }));
+      } catch (err) {
+          console.error('Failed to load Square team members from proxy:', err);
+          return [];
+      }
   },
 
   fetchCustomers: async (): Promise<Partial<Client>[]> => {
