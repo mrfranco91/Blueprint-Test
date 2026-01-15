@@ -51,17 +51,23 @@ if (!code) {
         : 'https://connect.squareup.com';
 
     // 1. Exchange OAuth code
-    const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: process.env.VITE_SQUARE_APPLICATION_ID,
-        client_secret: process.env.VITE_SQUARE_APPLICATION_SECRET,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
-      }),
-    });
+    const basicAuth = Buffer.from(
+  `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
+).toString('base64');
+
+const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Basic ${basicAuth}`,
+  },
+  body: JSON.stringify({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
+  }),
+});
+
 
    const tokenData = await tokenRes.json();
 
