@@ -1,4 +1,3 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
@@ -8,7 +7,7 @@ const squareApiFetch = async (
   options: RequestInit = {}
 ) => {
   const response = await fetch(url, {
-    method: options.method || 'GET', // ✅ FIX: do NOT force POST
+    method: options.method || 'GET',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
@@ -26,19 +25,6 @@ const squareApiFetch = async (
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const missingVars: string[] = [];
-  if (!process.env.VITE_SUPABASE_URL) missingVars.push('VITE_SUPABASE_URL');
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
-  if (!process.env.VITE_SQUARE_APPLICATION_ID) missingVars.push('VITE_SQUARE_APPLICATION_ID');
-  if (!process.env.VITE_SQUARE_APPLICATION_SECRET) missingVars.push('VITE_SQUARE_APPLICATION_SECRET');
-  if (!process.env.VITE_SQUARE_REDIRECT_URI) missingVars.push('VITE_SQUARE_REDIRECT_URI');
-
-  if (missingVars.length > 0) {
-    return res.status(500).json({
-      message: `Square Login Failed. Missing env var(s): ${missingVars.join(', ')}`
-    });
-  }
-
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ message: 'Method not allowed' });
@@ -105,7 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    // 4. TEAM SYNC (POST is correct here)
+    // 4. TEAM SYNC
     const teamData = await squareApiFetch(
       `${baseUrl}/v2/team-members/search`,
       access_token,
@@ -130,11 +116,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
     }
 
-    // 5. CUSTOMER SYNC (GET — FIXED)
+    // 5. CUSTOMER SYNC — ✅ CORRECT ENDPOINT
     let cursor;
     do {
       const customerData = await squareApiFetch(
-        `${baseUrl}/v2/customers/list${cursor ? `?cursor=${cursor}` : ''}`,
+        `${baseUrl}/v2/customers${cursor ? `?cursor=${cursor}` : ''}`,
         access_token
       );
 
@@ -153,14 +139,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             )}&background=random`,
             source: 'square',
           })),
-          { onConflict: 'external_id', ignoreDuplicates: false }
+          { onConflict: 'external_id' }
         );
       }
 
       cursor = customerData.cursor;
     } while (cursor);
 
-    return res.status(200).json({ access_token, merchant_id, email, business_name });
+    return res.status(200).json({ merchant_id, business_name });
 
   } catch (e: any) {
     console.error('OAuth Token/Sync Error:', e);
