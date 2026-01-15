@@ -53,8 +53,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
-    const tokenData = await tokenRes.json();
-    if (!tokenRes.ok) return res.status(500).json(tokenData);
+   const tokenData = await tokenRes.json();
+
+if (!tokenRes.ok) {
+  console.error('Square OAuth Token Error:', {
+    status: tokenRes.status,
+    response: tokenData,
+    sent: {
+      client_id: process.env.VITE_SQUARE_APPLICATION_ID,
+      redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
+      env,
+    }
+  });
+
+  return res.status(tokenRes.status).json({
+    message: 'Failed to exchange Square OAuth token.',
+    square_error: tokenData,
+  });
+}
+
 
     const { access_token, merchant_id } = tokenData;
 
