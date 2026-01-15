@@ -196,6 +196,12 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
   };
   
   const generatePlan = async (details: PlanDetails, serviceIdUpdater: (ids: string[]) => void) => {
+    if (!user || !user.id) {
+      throw new Error(
+        'Cannot create plan: no employee assigned. Please sync team members first.'
+      );
+    }
+
     if (!activeClient) {
         throw new Error("No active client selected for plan generation.");
     }

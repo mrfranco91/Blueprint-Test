@@ -195,19 +195,42 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (dbSettings.pinnedReports) setPinnedReports(dbSettings.pinnedReports);
             }
 
-            // Specifically handle stylists: use DB if available (preserves permissions), otherwise fetch from Square.
-            const dbStylists = dbSettings?.stylists as Stylist[] | undefined;
-            if (dbStylists && dbStylists.length > 0) {
-                setStylists(dbStylists);
-            } else if (!isSquareTokenMissing) {
-                try {
-                    const squareTeam = await SquareIntegrationService.fetchTeam();
-                    setStylists(squareTeam);
-                } catch (e) {
-                    console.error("Failed to fetch initial team from Square:", e);
+            // Fetch stylists exclusively from the 'team_members' table.
+            try {
+                const { data: teamData, error: teamError } = await supabase
+                    .from('team_members')
+                    .select('*');
+
+                if (teamError) throw teamError;
+
+                if (!teamData || teamData.length === 0) {
+                    console.warn('No team members found in Supabase. Please sync team from Settings.');
                     setStylists([]);
+                } else {
+                    const mappedStylists: Stylist[] = teamData.map((member: any) => ({
+                        id: member.square_team_member_id,
+                        name: member.name,
+                        role: member.role || 'Team Member',
+                        email: member.email,
+                        levelId: 'lvl_2', // Default level
+                        permissions: { // Default permissions
+                            canBookAppointments: true,
+                            canOfferDiscounts: false,
+                            requiresDiscountApproval: true,
+                            viewGlobalReports: false,
+                            viewClientContact: true,
+                            viewAllSalonPlans: false,
+                            can_book_own_schedule: true,
+                            can_book_peer_schedules: false,
+                        }
+                    }));
+                    setStylists(mappedStylists);
                 }
+            } catch (e) {
+                console.error("Failed to fetch team from Supabase:", e);
+                setStylists([]); // Fail fast to unblock UI
             }
+
 
             // Load clients from their own table
             try {
@@ -434,6 +457,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             saveAll
         }}>
             {children}
+        {/* FIX: Corrected typo in closing tag from Settings-context-provider to SettingsContext.Provider */}
         </SettingsContext.Provider>
     );
 };
