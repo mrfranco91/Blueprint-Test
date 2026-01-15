@@ -31,8 +31,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { code } = req.body;
-    if (!code) return res.status(400).json({ message: 'Missing OAuth code.' });
+   const code =
+  req.body?.code ??
+  (typeof req.query?.code === 'string' ? req.query.code : undefined);
+
+if (!code) {
+  console.error('Square OAuth callback missing code', {
+    body: req.body,
+    query: req.query,
+  });
+  return res.status(400).json({ message: 'Missing OAuth code.' });
+}
+
 
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
     const baseUrl =
