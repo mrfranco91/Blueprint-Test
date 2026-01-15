@@ -145,9 +145,10 @@ const AdminDashboard: React.FC<{ role: UserRole }> = ({ role }) => {
                 permissions: stylist.permissions,
               }));
 
+              // FIX: Cast records to any to avoid TypeScript inference error with Supabase's upsert method.
               const { error: teamError } = await supabase
                 .from('square_team_members')
-                .upsert(records, { onConflict: 'square_team_member_id' });
+                .upsert(records as any, { onConflict: 'square_team_member_id' });
               
               if (teamError) throw teamError;
 

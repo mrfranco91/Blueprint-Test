@@ -25,14 +25,17 @@ export default function SquareCallback() {
       body: JSON.stringify({ code }),
     })
       .then(async (res) => {
+        const data = await res.json();
         if (!res.ok) {
-          const data = await res.json();
           throw new Error(data?.message || 'Square login failed');
         }
-        return res.json();
+        return data;
       })
-      .then(() => {
-        // ✅ SUCCESS — IMMEDIATELY LEAVE CALLBACK PAGE
+      .then((data) => {
+        // ✅ SUCCESS — Save token and IMMEDIATELY LEAVE CALLBACK PAGE
+        if (data.access_token) {
+          localStorage.setItem('square_access_token', data.access_token);
+        }
         navigate('/', { replace: true });
       })
       .catch((err) => {

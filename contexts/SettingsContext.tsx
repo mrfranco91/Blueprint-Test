@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { ALL_SERVICES, STYLIST_LEVELS, MEMBERSHIP_TIERS } from '../data/mockData';
 import type { Service, StylistLevel, Stylist, MembershipTier, Client, ServiceLinkingConfig, BrandingSettings, MembershipConfig, AppTextSize, User } from '../types';
 import { supabase } from '../lib/supabase';
-import { SquareIntegrationService, isSquareTokenMissing } from '../services/squareIntegration';
+import { SquareIntegrationService, isSquareTokenMissing } from '../squareIntegration';
 
 export interface IntegrationSettings {
     provider: 'vagaro' | 'square' | 'mindbody';
@@ -182,7 +182,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                  console.error('Error loading settings from Supabase:', error);
             }
             
-            const dbSettings = data?.settings;
+            // FIX: Guard against data being null and cast to any to allow property access.
+            const dbSettings = data ? (data as any).settings : null;
             
             if (dbSettings) {
                 if (dbSettings.services) setServices(dbSettings.services);
@@ -247,7 +248,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
                         name: row.name,
                         email: row.email,
                         phone: row.phone,
-                        avatarUrl: row.avatar_url,
+                        avatar_url: row.avatar_url,
                         historicalData: [],
                         source: row.source
                     })).filter(c => isValidUUID(c.id));
@@ -430,13 +431,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             branding, integration, textSize, pushAlertsEnabled, pinnedReports,
         };
 
+        // FIX: Cast payload to any to bypass TypeScript inference errors with Supabase's upsert method when types are not available.
         const { error } = await supabase
             .from('merchant_settings')
             .upsert({
                 merchant_id: merchantId,
                 settings: settingsBlob,
                 updated_at: new Date().toISOString()
-            }, { onConflict: 'merchant_id' });
+            } as any, { onConflict: 'merchant_id' });
 
         if (error) {
             console.error('Failed to persist settings to Supabase:', error);

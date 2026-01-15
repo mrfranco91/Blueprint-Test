@@ -36,10 +36,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       (typeof req.query?.code === 'string' ? req.query.code : undefined);
 
     if (!code) {
-      console.error('Square OAuth callback missing code', {
-        body: req.body,
-        query: req.query,
-      });
       return res.status(400).json({ message: 'Missing OAuth code.' });
     }
 
@@ -49,42 +45,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? 'https://connect.squareupsandbox.com'
         : 'https://connect.squareup.com';
 
-    /**
-     * =========================================================
-     * 1. EXCHANGE OAUTH CODE — FORM URL ENCODED (REQUIRED)
-     * =========================================================
-     */
-    const basicAuth = Buffer.from(
-      `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
-    ).toString('base64');
-
-    const body = new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI!,
-    }).toString();
-
+    // 1. EXCHANGE OAUTH CODE (Square requires client_id + client_secret IN BODY)
     const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${basicAuth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body,
+      body: JSON.stringify({
+        client_id: process.env.VITE_SQUARE_APPLICATION_ID,
+        client_secret: process.env.VITE_SQUARE_APPLICATION_SECRET,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
+      }),
     });
 
     const tokenData = await tokenRes.json();
 
     if (!tokenRes.ok) {
-      console.error('Square OAuth Token Error:', {
-        status: tokenRes.status,
-        response: tokenData,
-        sent: {
-          redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
-          env,
-        },
-      });
-
+      console.error('Square OAuth Token Error', tokenData);
       return res.status(tokenRes.status).json({
         message: 'Failed to exchange Square OAuth token.',
         square_error: tokenData,
@@ -93,11 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { access_token, merchant_id } = tokenData;
 
-    /**
-     * =========================================================
-     * 2. MERCHANT INFO
-     * =========================================================
-     */
+    // 2. Merchant info
     const merchantData = await squareApiFetch(
       `${baseUrl}/v2/merchants/${merchant_id}`,
       access_token
@@ -106,11 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const business_name =
       merchantData?.merchant?.business_name || 'Admin';
 
-    /**
-     * =========================================================
-     * 3. SUPABASE ADMIN AUTH
-     * =========================================================
-     */
+    // 3. Supabase admin client
     const supabaseAdmin = createClient(
       process.env.VITE_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -126,7 +97,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const signUp = await supabaseAdmin.auth.signUp({
         email,
         password,
-        options: { data: { role: 'admin', merchant_id, business_name } },
+        options: { data: { role: 'admin', merchant_id, business_name } }
       });
       if (signUp.error) throw signUp.error;
       user = signUp.data.user;
@@ -134,40 +105,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    /**
-     * =========================================================
-     * 4. TEAM SYNC
-     * =========================================================
-     */
+    // 4. TEAM SYNC
     const teamData = await squareApiFetch(
       `${baseUrl}/v2/team-members/search`,
       access_token,
       {
         method: 'POST',
-        body: JSON.stringify({ query: { filter: { status: 'ACTIVE' } } }),
+        body: JSON.stringify({ query: { filter: { status: 'ACTIVE' } } })
       }
     );
 
-    if (teamData.team_members?.length) {
-      await supabaseAdmin.from('square_team_members').upsert(
-        teamData.team_members.map((m: any) => ({
-          supabase_user_id: user.id,
-          square_team_member_id: m.id,
-          name: `${m.given_name || ''} ${m.family_name || ''}`.trim(),
-          email: m.email_address || null,
-          role: m.is_owner ? 'Owner' : 'Team Member',
-        })),
-        { onConflict: 'square_team_member_id' }
-      );
+    if (teamData.team_members) {
+      await supabaseAdmin
+        .from('square_team_members')
+        .upsert(
+          teamData.team_members.map((m: any) => ({
+            supabase_user_id: user.id,
+            square_team_member_id: m.id,
+            name: `${m.given_name || ''} ${m.family_name || ''}`.trim(),
+            email: m.email_address || null,
+            role: m.is_owner ? 'Owner' : 'Team Member',
+          })),
+          { onConflict: 'square_team_member_id' }
+        );
     }
 
-    /**
-     * =========================================================
-     * 5. CUSTOMER SYNC
-     * =========================================================
-     */
-    let cursor: string | undefined;
-
+    // 5. CUSTOMER SYNC
+    let cursor;
     do {
       const customerData = await squareApiFetch(
         `${baseUrl}/v2/customers${cursor ? `?cursor=${cursor}` : ''}`,
@@ -189,14 +153,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             )}&background=random`,
             source: 'square',
           })),
-          { onConflict: 'external_id' }
+          { onConflict: 'external_id', ignoreDuplicates: false }
         );
       }
 
       cursor = customerData.cursor;
     } while (cursor);
 
-    return res.status(200).json({ merchant_id, business_name });
+    return res.status(200).json({ access_token, merchant_id, email, business_name });
+
   } catch (e: any) {
     console.error('OAuth Token/Sync Error:', e);
     return res.status(500).json({ message: e.message });
