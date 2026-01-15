@@ -29,9 +29,20 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const code =
+    // Primary sources
+    let code =
       req.body?.code ??
       (typeof req.query?.code === 'string' ? req.query.code : undefined);
+
+    // ✅ Fallback: extract from Referer header if missing
+    if (!code && typeof req.headers?.referer === 'string') {
+      try {
+        const refUrl = new URL(req.headers.referer);
+        code = refUrl.searchParams.get('code') ?? undefined;
+      } catch {
+        // no-op: invalid referer URL
+      }
+    }
 
     if (!code) {
       return res.status(400).json({ message: 'Missing OAuth code.' });
