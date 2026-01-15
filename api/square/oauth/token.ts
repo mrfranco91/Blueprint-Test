@@ -31,18 +31,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-   const code =
-  req.body?.code ??
-  (typeof req.query?.code === 'string' ? req.query.code : undefined);
+    const code =
+      req.body?.code ??
+      (typeof req.query?.code === 'string' ? req.query.code : undefined);
 
-if (!code) {
-  console.error('Square OAuth callback missing code', {
-    body: req.body,
-    query: req.query,
-  });
-  return res.status(400).json({ message: 'Missing OAuth code.' });
-}
-
+    if (!code) {
+      console.error('Square OAuth callback missing code', {
+        body: req.body,
+        query: req.query,
+      });
+      return res.status(400).json({ message: 'Missing OAuth code.' });
+    }
 
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
     const baseUrl =
@@ -50,48 +49,55 @@ if (!code) {
         ? 'https://connect.squareupsandbox.com'
         : 'https://connect.squareup.com';
 
-    // 1. Exchange OAuth code
+    /**
+     * =========================================================
+     * 1. EXCHANGE OAUTH CODE — FORM URL ENCODED (REQUIRED)
+     * =========================================================
+     */
     const basicAuth = Buffer.from(
-  `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
-).toString('base64');
+      `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
+    ).toString('base64');
 
-const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Basic ${basicAuth}`,
-  },
-  body: JSON.stringify({
-    grant_type: 'authorization_code',
-    code,
-    redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
-  }),
-});
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI!,
+    }).toString();
 
+    const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    });
 
-   const tokenData = await tokenRes.json();
+    const tokenData = await tokenRes.json();
 
-if (!tokenRes.ok) {
-  console.error('Square OAuth Token Error:', {
-    status: tokenRes.status,
-    response: tokenData,
-    sent: {
-      client_id: process.env.VITE_SQUARE_APPLICATION_ID,
-      redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
-      env,
+    if (!tokenRes.ok) {
+      console.error('Square OAuth Token Error:', {
+        status: tokenRes.status,
+        response: tokenData,
+        sent: {
+          redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
+          env,
+        },
+      });
+
+      return res.status(tokenRes.status).json({
+        message: 'Failed to exchange Square OAuth token.',
+        square_error: tokenData,
+      });
     }
-  });
-
-  return res.status(tokenRes.status).json({
-    message: 'Failed to exchange Square OAuth token.',
-    square_error: tokenData,
-  });
-}
-
 
     const { access_token, merchant_id } = tokenData;
 
-    // 2. Merchant info
+    /**
+     * =========================================================
+     * 2. MERCHANT INFO
+     * =========================================================
+     */
     const merchantData = await squareApiFetch(
       `${baseUrl}/v2/merchants/${merchant_id}`,
       access_token
@@ -100,7 +106,11 @@ if (!tokenRes.ok) {
     const business_name =
       merchantData?.merchant?.business_name || 'Admin';
 
-    // 3. Supabase admin client
+    /**
+     * =========================================================
+     * 3. SUPABASE ADMIN AUTH
+     * =========================================================
+     */
     const supabaseAdmin = createClient(
       process.env.VITE_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -116,7 +126,7 @@ if (!tokenRes.ok) {
       const signUp = await supabaseAdmin.auth.signUp({
         email,
         password,
-        options: { data: { role: 'admin', merchant_id, business_name } }
+        options: { data: { role: 'admin', merchant_id, business_name } },
       });
       if (signUp.error) throw signUp.error;
       user = signUp.data.user;
@@ -124,33 +134,40 @@ if (!tokenRes.ok) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    // 4. TEAM SYNC
+    /**
+     * =========================================================
+     * 4. TEAM SYNC
+     * =========================================================
+     */
     const teamData = await squareApiFetch(
       `${baseUrl}/v2/team-members/search`,
       access_token,
       {
         method: 'POST',
-        body: JSON.stringify({ query: { filter: { status: 'ACTIVE' } } })
+        body: JSON.stringify({ query: { filter: { status: 'ACTIVE' } } }),
       }
     );
 
-    if (teamData.team_members) {
-      await supabaseAdmin
-        .from('square_team_members')
-        .upsert(
-          teamData.team_members.map((m: any) => ({
-            supabase_user_id: user.id,
-            square_team_member_id: m.id,
-            name: `${m.given_name || ''} ${m.family_name || ''}`.trim(),
-            email: m.email_address || null,
-            role: m.is_owner ? 'Owner' : 'Team Member',
-          })),
-          { onConflict: 'square_team_member_id' }
-        );
+    if (teamData.team_members?.length) {
+      await supabaseAdmin.from('square_team_members').upsert(
+        teamData.team_members.map((m: any) => ({
+          supabase_user_id: user.id,
+          square_team_member_id: m.id,
+          name: `${m.given_name || ''} ${m.family_name || ''}`.trim(),
+          email: m.email_address || null,
+          role: m.is_owner ? 'Owner' : 'Team Member',
+        })),
+        { onConflict: 'square_team_member_id' }
+      );
     }
 
-    // 5. CUSTOMER SYNC — ✅ CORRECT ENDPOINT
+    /**
+     * =========================================================
+     * 5. CUSTOMER SYNC
+     * =========================================================
+     */
     let cursor: string | undefined;
+
     do {
       const customerData = await squareApiFetch(
         `${baseUrl}/v2/customers${cursor ? `?cursor=${cursor}` : ''}`,
@@ -180,7 +197,6 @@ if (!tokenRes.ok) {
     } while (cursor);
 
     return res.status(200).json({ merchant_id, business_name });
-
   } catch (e: any) {
     console.error('OAuth Token/Sync Error:', e);
     return res.status(500).json({ message: e.message });
