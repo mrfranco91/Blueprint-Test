@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
-import type { GeneratedPlan, UserRole } from './types';
+import React from 'react';
+import type { UserRole } from './types';
 import StylistDashboard from './components/StylistDashboard';
 import AdminDashboard from './components/AdminDashboard';
-import { supabase } from './lib/supabase';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlanProvider } from './contexts/PlanContext';
@@ -19,61 +18,40 @@ const AppContent: React.FC = () => {
   // a flash of the login screen or a redirect loop on page load.
   if (!authInitialized) {
     return (
-        <div className="flex items-center justify-center h-screen">
-            <div className="w-16 h-16 border-4 border-brand-accent border-t-transparent rounded-full animate-spin"></div>
-        </div>
+      <div className="flex items-center justify-center h-screen bg-brand-bg">
+        <div className="w-16 h-16 border-4 border-brand-accent border-t-transparent rounded-full animate-spin"></div>
+      </div>
     );
   }
 
-  // 🔒 If no user session is active after initialization, show the login screen.
   if (!user) {
     return <LoginScreen onLogin={login} />;
   }
 
-  const renderDashboard = () => {
-    // ✅ User is guaranteed to exist here, so we can safely access their role.
-    const effectiveRole: UserRole = user.role;
+  if (user.role === 'admin') {
+    return <AdminDashboard role="admin" />;
+  }
 
-    switch (effectiveRole) {
-      case 'stylist':
-        return <StylistDashboard 
-                  onLogout={logout} 
-               />;
-      case 'admin':
-        return <AdminDashboard role="admin" />;
-      default:
-        return <div>Unknown role</div>;
-    }
-  };
+  if (user.role === 'stylist') {
+    return <StylistDashboard onLogout={logout} role="stylist" />;
+  }
 
-  return (
-    <div className="bg-brand-bg min-h-screen">
-      <div className="max-w-md mx-auto bg-white shadow-lg min-h-screen relative pb-12">
-        {renderDashboard()}
-      </div>
-    </div>
-  );
+  return <LoginScreen onLogin={login} />; // Default to login screen
 };
 
 const App: React.FC = () => {
-  // 🔒 Square OAuth is the FIRST gate — before Supabase/Auth providers are mounted.
   if (isSquareTokenMissing) {
-    return (
-      <SettingsProvider>
-        <MissingCredentialsScreen />
-      </SettingsProvider>
-    );
+    return <MissingCredentialsScreen />;
   }
 
-  // ✅ Square connected — now it is safe to initialize Supabase/Auth.
   return (
-    <SettingsProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <SettingsProvider>
         <PlanProvider>
           <AppContent />
         </PlanProvider>
-      </AuthProvider>
-    </SettingsProvider>
+      </SettingsProvider>
+    </AuthProvider>
   );
 };
 
