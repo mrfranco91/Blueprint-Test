@@ -13,6 +13,11 @@ import LoginScreen from './components/LoginScreen';
 const AppContent: React.FC = () => {
   const { user, login, logout, authInitialized } = useAuth();
 
+  console.log('[APP CONTENT STATE]', {
+    authInitialized,
+    user,
+  });
+
   // AUTH INITIALIZATION GATE:
   // Do not render anything until the auth state has been confirmed. This prevents
   // a flash of the login screen or a redirect loop on page load.
