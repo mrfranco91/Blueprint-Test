@@ -33,15 +33,25 @@ const AppContent: React.FC = () => {
     return <LoginScreen onLogin={login} />;
   }
 
-  if (user.role === 'admin') {
-    return <AdminDashboard role="admin" />;
-  }
+  const renderDashboard = () => {
+    const role: UserRole = user.role;
+    switch (role) {
+      case 'stylist':
+        return <StylistDashboard onLogout={logout} role="stylist" />;
+      case 'admin':
+        return <AdminDashboard role="admin" />;
+      default:
+        return <LoginScreen onLogin={login} />; // Fallback for unknown roles
+    }
+  };
 
-  if (user.role === 'stylist') {
-    return <StylistDashboard onLogout={logout} role="stylist" />;
-  }
-
-  return <LoginScreen onLogin={login} />; // Default to login screen
+  return (
+    <div className="bg-brand-bg min-h-screen">
+      <div className="max-w-md mx-auto bg-white shadow-lg min-h-screen relative">
+        {renderDashboard()}
+      </div>
+    </div>
+  );
 };
 
 const App: React.FC = () => {

@@ -127,6 +127,7 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
         if (!detail || !detail.firstDate || !detail.frequency) return;
         let currentDate = new Date(detail.firstDate.getTime());
         while (currentDate <= planEndDate) {
+            // FIX: Replaced 's.cost' with 'service.cost' to reference the correct variable within the forEach loop's scope, resolving a "Cannot find name 's'" error.
             appointments.push({ date: new Date(currentDate.getTime()), services: [{ ...service, cost: service.cost }] });
             totalCost += service.cost;
             currentDate.setDate(currentDate.getDate() + detail.frequency * 7);
@@ -247,7 +248,7 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
   };
 
   return (
-      <div className="flex flex-col h-full bg-brand-bg">
+      <div className="flex flex-col h-full">
         <div className="flex-grow flex flex-col pb-20 overflow-hidden">
             {renderContent()}
         </div>
