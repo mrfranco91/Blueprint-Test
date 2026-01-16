@@ -16,7 +16,6 @@ export default function SquareCallback() {
       return;
     }
 
-    // 🔒 CRITICAL: exchange code ONCE, then redirect away
     fetch('/api/square/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -29,13 +28,29 @@ export default function SquareCallback() {
         }
         return data;
       })
-      .then((data) => {
-        // ✅ SUCCESS — Save token and IMMEDIATELY LEAVE CALLBACK PAGE
+      .then(async (data) => {
         if (data.access_token) {
           localStorage.setItem('square_access_token', data.access_token);
         }
-        
-        // ✅ CRITICAL FIX: force full app reload so state rehydrates
+
+        // ✅ CRITICAL FIX: trigger initial Square data ingestion
+        await fetch('/api/square/clients', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('sb-access-token') || ''}`,
+          },
+        });
+
+        await fetch('/api/square/team', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('sb-access-token') || ''}`,
+          },
+        });
+
+        // Force full reload so app reads newly persisted data
         window.location.replace('/admin');
       })
       .catch((err) => {
