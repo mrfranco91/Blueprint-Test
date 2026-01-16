@@ -232,28 +232,26 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
 
             // Load clients from their own table
-            try {
-                const { data: clientData, error: clientError } = await supabase.from('clients').select('*');
-                if (!clientError && clientData) {
-                    const dbClients: Client[] = clientData.map((row: any) => ({
-                        id: row.id,
-                        externalId: row.external_id,
-                        name: row.name,
-                        email: row.email,
-                        phone: row.phone,
-                        avatar_url: row.avatar_url,
-                        historicalData: [],
-                        source: row.source
-                    })).filter(c => isValidUUID(c.id));
-                    
-                    console.log('[CLIENTS LOADED FROM SUPABASE]', dbClients);
+            const { data: clientData, error: clientError } = await supabase.from('clients').select('*');
 
-                    if (dbClients.length > 0) {
-                        setClients(dbClients);
-                    }
-                }
-            } catch (err) {
-                console.error("Error fetching clients from database:", err);
+            if (clientError) {
+              console.error("Error fetching clients from database:", clientError);
+              setClients([]);
+            } else {
+              const dbClients: Client[] = (clientData || [])
+                .map((row: any) => ({
+                  id: row.id,
+                  externalId: row.external_id,
+                  name: row.name,
+                  email: row.email,
+                  phone: row.phone,
+                  avatarUrl: row.avatar_url,
+                  historicalData: [],
+                  source: row.source
+                }))
+                .filter(c => isValidUUID(c.id));
+            
+              setClients(dbClients);
             }
         };
 
@@ -404,7 +402,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             localStorage.setItem('admin_linking_config', JSON.stringify(linkingConfig));
             localStorage.setItem('admin_levels', JSON.stringify(levels));
             // Do not save stylists to localStorage anymore.
-            localStorage.setItem('admin_clients', JSON.stringify(clients.filter(c => isValidUUID(c.id))));
             localStorage.setItem('admin_membership_config', JSON.stringify(membershipConfig));
             localStorage.setItem('admin_integration', JSON.stringify(integration));
             localStorage.setItem('admin_brand_name', branding.salonName);
