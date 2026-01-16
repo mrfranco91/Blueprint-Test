@@ -46,7 +46,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   if (isSquareTokenMissing) {
-    return <MissingCredentialsScreen />;
+    return (
+      <SettingsProvider>
+        <MissingCredentialsScreen />
+      </SettingsProvider>
+    );
   }
 
   return (
