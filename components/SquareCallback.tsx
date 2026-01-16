@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 export default function SquareCallback() {
-  const navigate = useNavigate();
   const hasRun = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +34,9 @@ export default function SquareCallback() {
         if (data.access_token) {
           localStorage.setItem('square_access_token', data.access_token);
         }
-        navigate('/', { replace: true });
+        
+        // ✅ CRITICAL FIX: force full app reload so state rehydrates
+        window.location.replace('/admin');
       })
       .catch((err) => {
         console.error('Square OAuth callback failed:', err);
@@ -44,7 +44,7 @@ export default function SquareCallback() {
           'Square login failed. Please return to the app and try connecting again.'
         );
       });
-  }, [navigate]);
+  }, []);
 
   return (
     <div style={{ padding: 24 }}>
