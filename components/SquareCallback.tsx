@@ -33,24 +33,27 @@ export default function SquareCallback() {
           localStorage.setItem('square_access_token', data.access_token);
         }
 
-        // ✅ CRITICAL FIX: trigger initial Square data ingestion
+        const squareToken = data.access_token;
+
+        // ✅ Trigger clients sync (correct path)
         await fetch('/api/square/clients', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('sb-access-token') || ''}`,
+            'x-square-access-token': squareToken,
           },
         });
 
-        await fetch('/api/square/team', {
+        // ✅ Trigger team sync (CORRECTED path)
+        await fetch('/api/square/oauth/team', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('sb-access-token') || ''}`,
+            'x-square-access-token': squareToken,
           },
         });
 
-        // Force full reload so app reads newly persisted data
+        // Force full reload so app reads persisted data
         window.location.replace('/admin');
       })
       .catch((err) => {
