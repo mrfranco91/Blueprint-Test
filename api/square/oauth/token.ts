@@ -8,7 +8,7 @@ const squareApiFetch = async (
   const response = await fetch(url, {
     method: options.method || 'GET',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
       'Square-Version': '2023-10-20',
     },
@@ -20,107 +20,6 @@ const squareApiFetch = async (
     throw new Error(data?.errors?.[0]?.detail || 'Square API request failed');
   }
   return data;
-};
-
-// Fire-and-forget background sync: never throw to caller
-const syncSquareDataBestEffort = async (params: {
-  supabaseUrl: string;
-  serviceRoleKey: string;
-  supabaseUserId: string;
-  squareMerchantId: string;
-  squareAccessToken: string;
-  squareBaseUrl: string;
-}) => {
-  const {
-    supabaseUrl,
-    serviceRoleKey,
-    supabaseUserId,
-    squareMerchantId,
-    squareAccessToken,
-    squareBaseUrl,
-  } = params;
-
-  try {
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-
-    // ---- Sync Clients (Square Customers -> clients)
-    try {
-      const customersJson: any = await squareApiFetch(
-        `${squareBaseUrl}/v2/customers`,
-        squareAccessToken
-      );
-
-      const customers = customersJson?.customers || [];
-      const clientRows = customers.map((c: any) => ({
-        supabase_user_id: supabaseUserId,
-        name: [c.given_name, c.family_name].filter(Boolean).join(' ') || 'Client',
-        email: c.email_address || null,
-        phone: c.phone_number || null,
-        avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          [c.given_name, c.family_name].filter(Boolean).join(' ') || 'C'
-        )}&background=random`,
-        external_id: c.id,
-      }));
-
-      if (clientRows.length > 0) {
-        const { error } = await supabaseAdmin
-          .from('clients')
-          .upsert(clientRows, { onConflict: 'external_id' });
-
-        if (error) {
-          console.error('[OAUTH SYNC] Clients upsert failed:', error);
-        } else {
-          console.log('[OAUTH SYNC] Clients upserted:', clientRows.length);
-        }
-      } else {
-        console.log('[OAUTH SYNC] Clients: 0');
-      }
-    } catch (e: any) {
-      console.error('[OAUTH SYNC] Clients sync failed:', e?.message || e);
-    }
-
-    // ---- Sync Team (Square Team Members -> square_team_members)
-    try {
-      const teamJson: any = await squareApiFetch(
-        `${squareBaseUrl}/v2/team-members/search`,
-        squareAccessToken,
-        {
-          method: 'POST',
-          body: JSON.stringify({ limit: 100 }),
-        }
-      );
-
-      const members = teamJson?.team_members || [];
-      const teamRows = members.map((m: any) => ({
-        merchant_id: squareMerchantId,
-        square_team_member_id: m.id,
-        name: [m.given_name, m.family_name].filter(Boolean).join(' ') || 'Team',
-        email: m.email_address || null,
-        phone: m.phone_number || null,
-        role: m.is_owner ? 'Owner' : 'Team Member',
-        raw: m,
-        updated_at: new Date().toISOString(),
-      }));
-
-      if (teamRows.length > 0) {
-        const { error } = await supabaseAdmin
-          .from('square_team_members')
-          .upsert(teamRows, { onConflict: 'square_team_member_id' });
-
-        if (error) {
-          console.error('[OAUTH SYNC] Team upsert failed:', error);
-        } else {
-          console.log('[OAUTH SYNC] Team upserted:', teamRows.length);
-        }
-      } else {
-        console.log('[OAUTH SYNC] Team: 0');
-      }
-    } catch (e: any) {
-      console.error('[OAUTH SYNC] Team sync failed:', e?.message || e);
-    }
-  } catch (e: any) {
-    console.error('[OAUTH SYNC] Fatal background sync error:', e?.message || e);
-  }
 };
 
 export default async function handler(req: any, res: any) {
@@ -160,7 +59,6 @@ export default async function handler(req: any, res: any) {
         ? 'https://connect.squareupsandbox.com'
         : 'https://connect.squareup.com';
 
-    // Keep current behavior as-is
     const basicAuth = btoa(
       `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
     );
@@ -169,7 +67,7 @@ export default async function handler(req: any, res: any) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${basicAuth}`,
+        Authorization: `Basic ${basicAuth}`,
       },
       body: JSON.stringify({
         client_id: process.env.VITE_SQUARE_APPLICATION_ID,
@@ -183,7 +81,6 @@ export default async function handler(req: any, res: any) {
     const tokenData = await tokenRes.json();
 
     if (!tokenRes.ok) {
-      console.error('Square OAuth Token Error:', tokenData);
       return res.status(tokenRes.status).json({
         message: 'Failed to exchange Square OAuth token.',
         square_error: tokenData,
@@ -239,17 +136,62 @@ export default async function handler(req: any, res: any) {
         { onConflict: 'supabase_user_id' }
       );
 
-    // Fire-and-forget: do NOT await, do NOT fail OAuth response
-    void syncSquareDataBestEffort({
-      supabaseUrl: process.env.VITE_SUPABASE_URL!,
-      serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      supabaseUserId: user.id,
-      squareMerchantId: merchant_id,
-      squareAccessToken: access_token,
-      squareBaseUrl: baseUrl,
-    });
+    // -------- BLOCKING INITIAL SYNC --------
 
-    // Keep response shape as-is for frontend bootstrap
+    // Clients
+    const customersJson: any = await squareApiFetch(
+      `${baseUrl}/v2/customers`,
+      access_token
+    );
+
+    const customers = customersJson?.customers || [];
+    if (customers.length > 0) {
+      const clientRows = customers.map((c: any) => ({
+        supabase_user_id: user.id,
+        name: [c.given_name, c.family_name].filter(Boolean).join(' ') || 'Client',
+        email: c.email_address || null,
+        phone: c.phone_number || null,
+        avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          [c.given_name, c.family_name].filter(Boolean).join(' ') || 'C'
+        )}&background=random`,
+        external_id: c.id,
+      }));
+
+      await supabaseAdmin
+        .from('clients')
+        .upsert(clientRows, { onConflict: 'external_id' });
+    }
+
+    // Team (0 members is valid and successful)
+    const teamJson: any = await squareApiFetch(
+      `${baseUrl}/v2/team-members/search`,
+      access_token,
+      {
+        method: 'POST',
+        body: JSON.stringify({ limit: 100 }),
+      }
+    );
+
+    const members = teamJson?.team_members || [];
+    if (members.length > 0) {
+      const teamRows = members.map((m: any) => ({
+        merchant_id: merchant_id,
+        square_team_member_id: m.id,
+        name: [m.given_name, m.family_name].filter(Boolean).join(' ') || 'Team',
+        email: m.email_address || null,
+        phone: m.phone_number || null,
+        role: m.is_owner ? 'Owner' : 'Team Member',
+        raw: m,
+        updated_at: new Date().toISOString(),
+      }));
+
+      await supabaseAdmin
+        .from('square_team_members')
+        .upsert(teamRows, { onConflict: 'square_team_member_id' });
+    }
+
+    // -------- END BLOCKING SYNC --------
+
     return res.status(200).json({
       merchant_id,
       business_name,
