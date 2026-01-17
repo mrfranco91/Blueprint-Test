@@ -15,7 +15,7 @@ export default async function handler(req: any, res: any) {
     );
 
     /* -------------------------------------------------
-       1. IDENTIFY SUPABASE USER (MERCHANT CONTEXT)
+       1. IDENTIFY AUTHENTICATED USER
     --------------------------------------------------*/
     const authHeader = req.headers['authorization'];
     const bearer =
@@ -24,7 +24,7 @@ export default async function handler(req: any, res: any) {
         : null;
 
     if (!bearer) {
-      return res.status(401).json({ message: 'Missing auth context.' });
+      return res.status(401).json({ message: 'Missing auth token.' });
     }
 
     const { data: userData } = await supabaseAdmin.auth.getUser(bearer);
@@ -35,19 +35,23 @@ export default async function handler(req: any, res: any) {
     }
 
     /* -------------------------------------------------
-       2. LOAD MERCHANT SQUARE ACCESS TOKEN
+       2. LOAD MERCHANT SETTINGS (CORRECT SOURCE)
     --------------------------------------------------*/
     const { data: merchant } = await supabaseAdmin
       .from('merchant_settings')
-      .select('square_access_token')
+      .select('settings')
       .eq('supabase_user_id', supabaseUserId)
       .maybeSingle();
 
-    const squareAccessToken = merchant?.square_access_token;
+    const squareAccessToken =
+      merchant?.settings?.square_access_token ??
+      merchant?.settings?.oauth?.access_token ??
+      null;
 
     if (!squareAccessToken) {
+      console.error('[TEAM SYNC] Missing Square OAuth token');
       return res.status(400).json({
-        message: 'Square not connected for this merchant.',
+        message: 'Square OAuth token not found in merchant settings.',
       });
     }
 
@@ -75,6 +79,8 @@ export default async function handler(req: any, res: any) {
 
     const squareJson = await squareRes.json();
 
+    console.log('[TEAM SYNC] Square response count:', squareJson?.team_members?.length ?? 0);
+
     if (!squareRes.ok) {
       console.error('[TEAM SYNC] Square error:', squareJson);
       return res.status(squareRes.status).json(squareJson);
@@ -83,12 +89,11 @@ export default async function handler(req: any, res: any) {
     const members = squareJson.team_members ?? [];
 
     if (members.length === 0) {
-      console.log('[TEAM SYNC] No team members found for merchant.');
       return res.status(200).json({ inserted: 0 });
     }
 
     /* -------------------------------------------------
-       4. NORMALIZE + UPSERT INTO SUPABASE
+       4. UPSERT INTO SUPABASE
     --------------------------------------------------*/
     const rows = members.map((m: any) => ({
       supabase_user_id: supabaseUserId,
@@ -103,16 +108,14 @@ export default async function handler(req: any, res: any) {
 
     const { error } = await supabaseAdmin
       .from('square_team_members')
-      .upsert(rows, {
-        onConflict: 'square_team_member_id',
-      });
+      .upsert(rows, { onConflict: 'square_team_member_id' });
 
     if (error) {
       console.error('[TEAM SYNC] Supabase error:', error);
       return res.status(500).json({ message: error.message });
     }
 
-    console.log(`[TEAM SYNC] Upserted ${rows.length} team members`);
+    console.log('[TEAM SYNC] Inserted:', rows.length);
 
     return res.status(200).json({ inserted: rows.length });
   } catch (e: any) {
