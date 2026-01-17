@@ -13,37 +13,60 @@ export default async function handler(req: any, res: any) {
 
     if (
       !process.env.VITE_SUPABASE_URL ||
-      !process.env.SUPABASE_SERVICE_ROLE_KEY
+      !process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      !process.env.VITE_SUPABASE_ANON_KEY
     ) {
       return res.status(500).json({ message: 'Supabase config missing.' });
     }
 
+    if (!bearer) {
+      return res.status(401).json({ message: 'Missing Supabase auth token.' });
+    }
+
+    // User-scoped Supabase client (identity only)
+    const supabaseUser = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.VITE_SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${bearer}`,
+          },
+        },
+      }
+    );
+
+    const { data: userData, error: userErr } =
+      await supabaseUser.auth.getUser();
+
+    if (userErr || !userData?.user) {
+      console.error('[CLIENT SYNC] Invalid Supabase session:', userErr);
+      return res.status(401).json({ message: 'Invalid Supabase session.' });
+    }
+
+    const supabaseUserId = userData.user.id;
+
+    // Service-role Supabase client (DB access)
     const supabaseAdmin = createClient(
       process.env.VITE_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    let supabaseUserId: string | null = null;
+    if (!squareAccessToken) {
+      const { data: ms, error: msErr } = await supabaseAdmin
+        .from('merchant_settings')
+        .select('square_access_token')
+        .eq('supabase_user_id', supabaseUserId)
+        .maybeSingle();
 
-    if (bearer) {
-      const { data: userData } = await supabaseAdmin.auth.getUser(bearer);
-      supabaseUserId = userData?.user?.id ?? null;
-
-      if (!squareAccessToken && supabaseUserId) {
-        const { data: ms } = await supabaseAdmin
-          .from('merchant_settings')
-          .select('square_access_token')
-          .eq('supabase_user_id', supabaseUserId)
-          .maybeSingle();
-
-        squareAccessToken = ms?.square_access_token;
+      if (msErr || !ms?.square_access_token) {
+        console.error('[CLIENT SYNC] merchant_settings lookup failed:', msErr);
+        return res.status(401).json({
+          message: 'Missing Square connection for user.',
+        });
       }
-    }
 
-    if (!squareAccessToken || !supabaseUserId) {
-      return res.status(401).json({
-        message: 'Missing Square connection or user context.',
-      });
+      squareAccessToken = ms.square_access_token;
     }
 
     const squareRes = await fetch(
@@ -70,7 +93,9 @@ export default async function handler(req: any, res: any) {
       name: [c.given_name, c.family_name].filter(Boolean).join(' ') || 'Client',
       email: c.email_address || null,
       phone: c.phone_number || null,
-      avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent([c.given_name, c.family_name].filter(Boolean).join(' ') || 'C')}&background=random`,
+      avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        [c.given_name, c.family_name].filter(Boolean).join(' ') || 'C'
+      )}&background=random`,
       external_id: c.id,
     }));
 
@@ -80,15 +105,14 @@ export default async function handler(req: any, res: any) {
         .upsert(rows, { onConflict: 'external_id' });
 
       if (error) {
+        console.error('[CLIENT SYNC] Insert failed:', error);
         return res.status(500).json({ message: error.message });
       }
     }
 
-    return res.status(200).json({
-      inserted: rows.length,
-    });
+    return res.status(200).json({ inserted: rows.length });
   } catch (e: any) {
-    console.error('Square clients sync error:', e);
+    console.error('[CLIENT SYNC] Fatal error:', e);
     return res.status(500).json({ message: e.message });
   }
 }
