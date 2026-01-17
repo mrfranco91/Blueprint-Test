@@ -13,8 +13,93 @@ export default async function handler(req: any, res: any) {
         : null;
 
     if (!bearer) {
-      return res.status(401).json({ message: 'Missing Supabase auth token' });
+      // FIX: The user's bearer token is sent via x-square-access-token header in the callback.
+      const tokenFromHeader = req.headers['x-square-access-token'];
+       if (!tokenFromHeader) {
+         return res.status(401).json({ message: 'Missing Supabase auth token' });
+       }
+       
+       // In this specific flow, the bearer token IS the square access token.
+       // We can use it to find the merchant.
+        const supabaseAdmin = createClient(
+          process.env.VITE_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
+        const { data: ms, error: msErr } = await supabaseAdmin
+          .from('merchant_settings')
+          .select('square_access_token, square_merchant_id')
+          .eq('square_access_token', tokenFromHeader)
+          .single();
+        
+        if (msErr || !ms?.square_access_token || !ms?.square_merchant_id) {
+          return res.status(401).json({
+            message: 'Square connection missing for user',
+          });
+        }
+        
+        // --- Re-implement from here using the found merchant settings ---
+        const squareAccessToken = ms.square_access_token;
+        const merchantId = ms.square_merchant_id;
+
+        const squareRes = await fetch(
+          'https://connect.squareup.com/v2/team-members/search',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${squareAccessToken}`,
+              'Content-Type': 'application/json',
+              'Square-Version': '2023-10-20',
+            },
+            body: JSON.stringify({
+              query: {
+                filter: {
+                  status: 'ACTIVE'
+                }
+              }
+            }),
+          }
+        );
+
+        const squareJson = await squareRes.json();
+        if (!squareRes.ok) {
+          console.error('[TEAM SYNC] Square error:', squareJson);
+          return res.status(squareRes.status).json(squareJson);
+        }
+
+        const members = squareJson.team_members || [];
+        console.log('[TEAM SYNC] Square members:', members.length);
+
+        if (members.length === 0) {
+          return res.status(200).json({ inserted: 0 });
+        }
+
+        const rows = members.map((m: any) => ({
+          merchant_id: merchantId,
+          square_team_member_id: m.id,
+          name: [m.given_name, m.family_name].filter(Boolean).join(' ') || 'Team',
+          email: m.email_address || null,
+          phone: m.phone_number || null,
+          role: m.is_owner ? 'Owner' : 'Team Member',
+          raw: m,
+          updated_at: new Date().toISOString(),
+        }));
+
+        const { error: insertErr } = await supabaseAdmin
+          .from('square_team_members')
+          .upsert(rows, {
+            onConflict: 'square_team_member_id',
+          });
+
+        if (insertErr) {
+          console.error('[TEAM SYNC] Insert failed:', insertErr);
+          return res.status(500).json({ message: insertErr.message });
+        }
+
+        console.log('[TEAM SYNC] Inserted:', rows.length);
+        return res.status(200).json({ inserted: rows.length });
     }
+
 
     const supabaseAdmin = createClient(
       process.env.VITE_SUPABASE_URL!,
