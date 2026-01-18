@@ -1,14 +1,22 @@
 import React from 'react';
 import type { UserRole } from './types';
+
 import StylistDashboard from './components/StylistDashboard';
 import AdminDashboard from './components/AdminDashboard';
+import LoginScreen from './components/LoginScreen';
+import MissingCredentialsScreen from './components/MissingCredentialsScreen';
+
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlanProvider } from './contexts/PlanContext';
-import './styles/accessibility.css';
-import MissingCredentialsScreen from './components/MissingCredentialsScreen';
+
 import { isSquareTokenMissing } from './services/squareIntegration';
-import LoginScreen from './components/LoginScreen';
+
+import './styles/accessibility.css';
+
+/* ----------------------------- */
+/* App Content (Auth-aware UI)   */
+/* ----------------------------- */
 
 const AppContent: React.FC = () => {
   const { user, login, logout, authInitialized } = useAuth();
@@ -18,15 +26,13 @@ const AppContent: React.FC = () => {
     user,
   });
 
-  // AUTH INITIALIZATION GATE:
-  // Do not render anything until the auth state has been confirmed. This prevents
-  // a flash of the login screen or a redirect loop on page load.
+  /*
+    IMPORTANT:
+    Never block rendering forever.
+    If auth hasn't initialized yet, show login instead of spinner.
+  */
   if (!authInitialized) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-brand-bg">
-        <div className="w-16 h-16 border-4 border-brand-accent border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoginScreen onLogin={login} />;
   }
 
   if (!user) {
@@ -35,13 +41,16 @@ const AppContent: React.FC = () => {
 
   const renderDashboard = () => {
     const role: UserRole = user.role;
+
     switch (role) {
       case 'stylist':
         return <StylistDashboard onLogout={logout} role="stylist" />;
+
       case 'admin':
         return <AdminDashboard role="admin" />;
+
       default:
-        return <LoginScreen onLogin={login} />; // Fallback for unknown roles
+        return <LoginScreen onLogin={login} />;
     }
   };
 
@@ -54,8 +63,17 @@ const AppContent: React.FC = () => {
   );
 };
 
+/* ----------------------------- */
+/* Root App Wrapper              */
+/* ----------------------------- */
+
 const App: React.FC = () => {
-  if (isSquareTokenMissing) {
+  /*
+    CRITICAL FIX:
+    isSquareTokenMissing is a FUNCTION.
+    It MUST be called.
+  */
+  if (isSquareTokenMissing()) {
     return (
       <SettingsProvider>
         <MissingCredentialsScreen />
