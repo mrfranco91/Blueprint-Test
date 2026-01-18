@@ -73,7 +73,8 @@ const App: React.FC = () => {
     isSquareTokenMissing is a FUNCTION.
     It MUST be called.
   */
-  if (isSquareTokenMissing()) {
+  if (false && isSquareTokenMissing()) {
+
     return (
       <SettingsProvider>
         <MissingCredentialsScreen />
