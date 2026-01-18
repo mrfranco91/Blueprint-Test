@@ -4,9 +4,9 @@ import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
-  login: (role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   authInitialized: boolean;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,40 +18,51 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     let mounted = true;
 
-    const initAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      const sessionUser = data.session?.user;
-
+    const resolveSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (!mounted) return;
 
-      if (!sessionUser) {
+      if (session?.user) {
+        const { role, business_name } = session.user.user_metadata || {};
+        if (role) {
+          setUser({
+            id: session.user.id,
+            name: business_name || 'Admin',
+            role: role as UserRole,
+            email: session.user.email,
+            isMock: false,
+          });
+        } else {
+          setUser(null);
+        }
+      } else {
         setUser(null);
-        setAuthInitialized(true);
-        return;
       }
-
-      const { role, business_name } = sessionUser.user_metadata || {};
-
-      if (role !== 'admin') {
-        setUser(null);
-        setAuthInitialized(true);
-        return;
-      }
-
-      setUser({
-        id: sessionUser.id,
-        name: business_name || 'Admin',
-        role: 'admin',
-        email: sessionUser.email,
-        isMock: false,
-      });
       setAuthInitialized(true);
     };
 
-    initAuth();
+    resolveSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      initAuth();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+
+      if (session?.user) {
+        const { role, business_name } = session.user.user_metadata || {};
+        if (role) {
+          setUser({
+            id: session.user.id,
+            name: business_name || 'Admin',
+            role: role as UserRole,
+            email: session.user.email,
+            isMock: false,
+          });
+        } else {
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
     });
 
     return () => {
@@ -60,32 +71,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  const login = async (role: UserRole) => {
-    // Mock login is only for non-admin roles now.
-    // Admin login MUST go through the real Square OAuth flow.
-    if (role === 'stylist') {
-       setUser({
-        id: 'stylist-mock',
-        name: 'Stylist',
-        role: 'stylist',
-        isMock: true,
-      });
-      setAuthInitialized(true);
-    }
-  };
-
   const logout = async () => {
     await supabase.auth.signOut();
-    setUser(null);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        login,
         logout,
         authInitialized,
+        isAuthenticated: !!user,
       }}
     >
       {children}

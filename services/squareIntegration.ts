@@ -27,7 +27,8 @@ const getSquareAccessToken = () => {
 export const isSquareTokenMissing = !getSquareAccessToken();
 
 // FIX: Revert to import.meta.env, the standard Vite mechanism for environment variables.
-const SQUARE_ENV = import.meta.env.VITE_SQUARE_ENV || 'production';
+// FIX: Cast `import.meta` to `any` to resolve TypeScript error "Property 'env' does not exist on type 'ImportMeta'".
+const SQUARE_ENV = (import.meta as any).env.VITE_SQUARE_ENV || 'production';
 
 const baseUrl = SQUARE_ENV === 'sandbox'
     ? 'https://connect.squareupsandbox.com'

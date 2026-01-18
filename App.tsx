@@ -18,7 +18,7 @@ import './styles/accessibility.css';
 /* App Content (Auth-aware UI)   */
 /* ----------------------------- */
 const AppContent: React.FC = () => {
-  const { user, login, logout, authInitialized } = useAuth();
+  const { user, logout, authInitialized } = useAuth();
   const { needsSquareConnect } = useSettings();
 
   if (!authInitialized) {
@@ -30,7 +30,7 @@ const AppContent: React.FC = () => {
   }
 
   if (!user) {
-    return <LoginScreen onLogin={login} />;
+    return <LoginScreen />;
   }
 
   if (needsSquareConnect) {
@@ -43,7 +43,7 @@ const AppContent: React.FC = () => {
     case 'stylist':
       return <StylistDashboard onLogout={logout} role="stylist" />;
     default:
-      return <LoginScreen onLogin={login} />;
+      return <LoginScreen />;
   }
 };
 
