@@ -13,12 +13,6 @@ export default defineConfig(({ mode }) => {
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
-        'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
-        'process.env.VITE_SQUARE_ACCESS_TOKEN': JSON.stringify(env.VITE_SQUARE_ACCESS_TOKEN),
-        'process.env.VITE_SQUARE_ENV': JSON.stringify(env.VITE_SQUARE_ENV),
-        'process.env.VITE_SQUARE_APPLICATION_ID': JSON.stringify(env.VITE_SQUARE_APPLICATION_ID),
-        'process.env.VITE_SQUARE_REDIRECT_URI': JSON.stringify(env.VITE_SQUARE_REDIRECT_URI),
       },
       resolve: {
         alias: {

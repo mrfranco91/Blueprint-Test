@@ -53,7 +53,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       // 🔑 THIS IS THE MISSING LOGIC
-      setNeedsSquareConnect(isSquareTokenMissing());
+      // FIX: `isSquareTokenMissing` is a boolean constant, not a function.
+      setNeedsSquareConnect(isSquareTokenMissing);
 
       setAuthInitialized(true);
     };
@@ -109,4 +110,3 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
-b

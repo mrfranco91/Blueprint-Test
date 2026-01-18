@@ -70,10 +70,11 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   /*
     CRITICAL FIX:
-    isSquareTokenMissing is a FUNCTION.
-    It MUST be called.
+    isSquareTokenMissing is a boolean constant.
+    It MUST NOT be called as a function.
   */
-  if (false && isSquareTokenMissing()) {
+  // FIX: `isSquareTokenMissing` is a boolean constant, not a function.
+  if (false && isSquareTokenMissing) {
 
     return (
       <SettingsProvider>
