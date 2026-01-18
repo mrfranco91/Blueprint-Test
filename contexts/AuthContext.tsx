@@ -1,13 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+    import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import type { User, UserRole } from '../types';
 import { supabase } from '../lib/supabase';
+import { isSquareTokenMissing } from '../services/squareIntegration';
 
 interface AuthContextType {
   user: User | null;
-  login: (role: UserRole, specificId?: string) => Promise<void>;
+  login: (role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
-  isAuthenticated: boolean;
   authInitialized: boolean;
+  needsSquareConnect: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,70 +16,77 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [needsSquareConnect, setNeedsSquareConnect] = useState(false);
 
-  // 🔴 IMPORTANT: App must NEVER block on auth
   useEffect(() => {
-    let cancelled = false;
+    let mounted = true;
 
-    // ✅ Always unblock the app
-    setAuthInitialized(true);
+    const initAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      const sessionUser = data.session?.user;
 
-    if (!supabase) return;
+      if (!mounted) return;
 
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        if (cancelled) return;
+      if (!sessionUser) {
+        setUser(null);
+        setNeedsSquareConnect(false);
+        setAuthInitialized(true);
+        return;
+      }
 
-        const authUser = data.session?.user;
-        if (!authUser) return;
+      const { role, business_name } = sessionUser.user_metadata || {};
 
-        const { role, business_name } = authUser.user_metadata || {};
+      if (role !== 'admin') {
+        setUser(null);
+        setNeedsSquareConnect(false);
+        setAuthInitialized(true);
+        return;
+      }
 
-        if (role === 'admin') {
-          setUser({
-            id: authUser.id,
-            name: business_name || 'Admin',
-            role: 'admin',
-            email: authUser.email,
-            isMock: false,
-          });
-        }
-      })
-      .catch(() => {
-        // ❗ Ignore auth failures — app still loads
+      // ✅ ADMIN IS LOGGED IN
+      setUser({
+        id: sessionUser.id,
+        name: business_name || 'Admin',
+        role: 'admin',
+        email: sessionUser.email,
+        isMock: false,
       });
 
+      // 🔑 THIS IS THE MISSING LOGIC
+      setNeedsSquareConnect(isSquareTokenMissing());
+
+      setAuthInitialized(true);
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      initAuth();
+    });
+
     return () => {
-      cancelled = true;
+      mounted = false;
+      subscription?.unsubscribe();
     };
   }, []);
 
-  const login = async (role: UserRole, specificId?: string) => {
+  const login = async (role: UserRole) => {
     if (role === 'admin') {
       setUser({
         id: 'admin',
-        name: 'System Administrator',
+        name: 'Admin',
         role: 'admin',
         isMock: true,
       });
-    }
-
-    if (role === 'stylist') {
-      setUser({
-        id: specificId || 'stylist_mock',
-        name: `Stylist ${specificId || ''}`.trim(),
-        role: 'stylist',
-        isMock: true,
-      });
+      setNeedsSquareConnect(true);
+      setAuthInitialized(true);
     }
   };
 
   const logout = async () => {
-    try {
-      await supabase?.auth.signOut();
-    } catch {}
+    await supabase.auth.signOut();
     setUser(null);
+    setNeedsSquareConnect(false);
   };
 
   return (
@@ -87,8 +95,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         login,
         logout,
-        isAuthenticated: !!user,
         authInitialized,
+        needsSquareConnect,
       }}
     >
       {children}
@@ -101,3 +109,4 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
+b
