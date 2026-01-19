@@ -1,12 +1,19 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
 import type { User, UserRole } from '../types';
 import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
+  login: (role: UserRole, specificId?: string) => Promise<void>;
   logout: () => Promise<void>;
-  authInitialized: boolean;
   isAuthenticated: boolean;
+  authInitialized: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,75 +23,91 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
+    if (!supabase) {
+      setAuthInitialized(true);
+      return;
+    }
 
-    const resolveSession = async () => {
-      // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
-      const { data: { session } } = await (supabase.auth as any).getSession();
-      
-      if (!mounted) return;
+    let active = true;
 
-      if (session?.user) {
-        const { role, business_name } = session.user.user_metadata || {};
-        if (role) {
-          setUser({
-            id: session.user.id,
-            name: business_name || 'Admin',
-            role: role as UserRole,
-            email: session.user.email,
-            isMock: false,
-          });
-        } else {
-          setUser(null);
-        }
-      } else {
+    const hydrateFromSession = (session: any) => {
+      if (!active) return;
+
+      const authUser = session?.user;
+
+      if (!authUser) {
         setUser(null);
+        setAuthInitialized(true);
+        return;
       }
+
+      // AUTHENTICATED: do not clear user due to missing metadata
+      const businessName = authUser.user_metadata?.business_name;
+      const role = (authUser.user_metadata?.role as UserRole) || 'admin';
+
+      setUser({
+        id: authUser.id,
+        name: businessName || 'Admin',
+        role,
+        email: authUser.email,
+        isMock: false,
+      });
+
       setAuthInitialized(true);
     };
 
-    resolveSession();
+    // IMPORTANT: hydrate existing session immediately on mount
+    supabase.auth.getSession().then(({ data }) => {
+      hydrateFromSession(data.session);
+    });
 
-    // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
-    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((event: any, session: any) => {
-      if (!mounted) return;
-
-      if (session?.user) {
-        const { role, business_name } = session.user.user_metadata || {};
-        if (role) {
-          setUser({
-            id: session.user.id,
-            name: business_name || 'Admin',
-            role: role as UserRole,
-            email: session.user.email,
-            isMock: false,
-          });
-        } else {
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
+    // Listen for any future auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      hydrateFromSession(session);
     });
 
     return () => {
-      mounted = false;
+      active = false;
       subscription?.unsubscribe();
     };
   }, []);
 
+  // Keep existing signature; do not refactor callers.
+  // (Used only for any existing non-Square demo flows.)
+  const login = async (role: UserRole, specificId?: string) => {
+    if (role === 'admin') {
+      setUser({
+        id: 'admin',
+        name: 'Admin',
+        role: 'admin',
+        isMock: true,
+      });
+      setAuthInitialized(true);
+      return;
+    }
+
+    // No-op for non-admin in this context (do not redesign auth here)
+    setAuthInitialized(true);
+  };
+
   const logout = async () => {
-    // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
-    await (supabase.auth as any).signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setUser(null);
+    setAuthInitialized(true);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        login,
         logout,
-        authInitialized,
         isAuthenticated: !!user,
+        authInitialized,
       }}
     >
       {children}
@@ -93,7 +116,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 };
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
