@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { Buffer } from 'buffer';
 
 const squareApiFetch = async (
   url: string,
@@ -24,16 +25,7 @@ const squareApiFetch = async (
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
-  try {
-    let body = req.body;
-    if (typeof body === 'string') {
-      try {
-        body = JSON.parse(body);
-      } catch {
+@@ -37,54 +38,62 @@ export default async function handler(req: any, res: any) {
         body = undefined;
       }
     }
@@ -59,10 +51,18 @@ export default async function handler(req: any, res: any) {
         ? 'https://connect.squareupsandbox.com'
         : 'https://connect.squareup.com';
 
-    // FIX: Replaced Buffer.from with btoa to resolve "Cannot find name 'Buffer'" error in environments where Node.js types are not explicitly included.
-    const basicAuth = btoa(
+    if (
+      !process.env.VITE_SQUARE_APPLICATION_ID ||
+      !process.env.VITE_SQUARE_APPLICATION_SECRET
+    ) {
+      return res.status(500).json({
+        message: 'Square OAuth environment variables are not configured on the server.',
+      });
+    }
+
+    const basicAuth = Buffer.from(
       `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
-    );
+    ).toString('base64');
 
     const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
       method: 'POST',
@@ -88,44 +88,7 @@ export default async function handler(req: any, res: any) {
         square_error: tokenData,
       });
     }
-
-    const { access_token, merchant_id } = tokenData;
-
-    const merchantData = await squareApiFetch(
-      `${baseUrl}/v2/merchants/${merchant_id}`,
-      access_token
-    );
-
-    const business_name =
-      merchantData?.merchant?.business_name || 'Admin';
-
-    const supabaseAdmin = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const email = `${merchant_id}@square-oauth.blueprint`;
-    const password = merchant_id;
-
-    let {
-      data: { user },
-      error,
-    // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
-    } = await (supabaseAdmin.auth as any).signInWithPassword({ email, password });
-
-    if (error) {
-      // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
-      const signUp = await (supabaseAdmin.auth as any).signUp({
-        email,
-        password,
-        options: {
-          data: { role: 'admin', merchant_id, business_name },
-        },
-      });
-      if (signUp.error) throw signUp.error;
-      user = signUp.data.user;
-    }
-
+@@ -129,26 +138,26 @@ export default async function handler(req: any, res: any) {
     if (!user) throw new Error('Supabase auth failed');
 
     await supabaseAdmin
