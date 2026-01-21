@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { Buffer } from 'buffer';
 
 const squareApiFetch = async (
   url: string,
@@ -23,9 +22,28 @@ const squareApiFetch = async (
   return data;
 };
 
+const parseJsonResponse = async (response: Response) => {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+};
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
-@@ -37,54 +38,62 @@ export default async function handler(req: any, res: any) {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
         body = undefined;
       }
     }
@@ -60,9 +78,11 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const basicAuth = Buffer.from(
-      `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
-    ).toString('base64');
+    const rawAuth = `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`;
+    const basicAuth =
+      typeof Buffer !== 'undefined'
+        ? Buffer.from(rawAuth).toString('base64')
+        : (globalThis as any).btoa(rawAuth);
 
     const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
       method: 'POST',
@@ -79,7 +99,7 @@ export default async function handler(req: any, res: any) {
       }),
     });
 
-    const tokenData = await tokenRes.json();
+    const tokenData = await parseJsonResponse(tokenRes);
 
     if (!tokenRes.ok) {
       console.error('Square OAuth Token Error:', tokenData);
@@ -88,7 +108,50 @@ export default async function handler(req: any, res: any) {
         square_error: tokenData,
       });
     }
-@@ -129,26 +138,26 @@ export default async function handler(req: any, res: any) {
+
+    const { access_token, merchant_id } = tokenData;
+    if (!access_token || !merchant_id) {
+      return res.status(500).json({
+        message: 'Square OAuth response missing access token or merchant id.',
+        square_error: tokenData,
+      });
+    }
+
+    const merchantData = await squareApiFetch(
+      `${baseUrl}/v2/merchants/${merchant_id}`,
+      access_token
+    );
+
+    const business_name =
+      merchantData?.merchant?.business_name || 'Admin';
+
+    const supabaseAdmin = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const email = `${merchant_id}@square-oauth.blueprint`;
+    const password = merchant_id;
+
+    const signInResult = await (supabaseAdmin.auth as any).signInWithPassword({
+      email,
+      password,
+    });
+    let user = signInResult.data?.user;
+    const signInError = signInResult.error;
+
+    if (signInError) {
+      const signUp = await (supabaseAdmin.auth as any).signUp({
+        email,
+        password,
+        options: {
+          data: { role: 'admin', merchant_id, business_name },
+        },
+      });
+      if (signUp.error) throw signUp.error;
+      user = signUp.data.user;
+    }
+
     if (!user) throw new Error('Supabase auth failed');
 
     await supabaseAdmin
