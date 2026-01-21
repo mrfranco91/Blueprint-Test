@@ -9,89 +9,104 @@ export default function SquareCallback() {
     if (hasRun.current) return;
     hasRun.current = true;
 
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
+    const parseResponse = async (res: Response) => {
+      const text = await res.text();
+      if (!text) return {};
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { message: text };
+      }
+    };
 
-    if (!code) {
-      setError('Missing authorization code from Square.');
-      return;
-    }
+    const runCallback = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
 
-    fetch('/api/square/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.message || 'Square login failed');
-        }
-        return data;
-      })
-      .then(async (data) => {
-        if (data.access_token) {
-          localStorage.setItem('square_access_token', data.access_token);
-        }
+      if (!code) {
+        setError('Missing authorization code from Square.');
+        return;
+      }
 
-        const squareToken = data.access_token;
-        const merchantId = data.merchant_id;
-
-        if (merchantId) {
-          const email = `${merchantId}@square-oauth.blueprint`;
-          const password = merchantId;
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-
-          if (signInError) {
-            throw new Error(
-              signInError.message ||
-                'Failed to establish a session after Square OAuth.'
-            );
-          }
-        }
-
-        const { data: sessionData, error: sessionError } =
-          await supabase.auth.getSession();
-        const sessionToken = sessionData?.session?.access_token;
-
-        if (sessionError || !sessionToken) {
-          throw new Error(
-            sessionError?.message || 'Missing Supabase session token.'
-          );
-        }
-
-        // ✅ Trigger clients sync (correct path)
-        await fetch('/api/square/clients', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${sessionToken}`,
-            'Content-Type': 'application/json',
-            'x-square-access-token': squareToken,
-          },
-        });
-
-        // ✅ Trigger team sync (corrected path)
-        await fetch('/api/square/team', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${sessionToken}`,
-            'Content-Type': 'application/json',
-            'x-square-access-token': squareToken,
-          },
-        });
-
-        // Force full reload so app reads persisted data
-        window.location.replace('/admin');
-      })
-      .catch((err) => {
-        console.error('Square OAuth callback failed:', err);
-        setError(
-          'Square login failed. Please return to the app and try connecting again.'
-        );
+      const tokenRes = await fetch('/api/square/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
       });
+      const tokenData = await parseResponse(tokenRes);
+      if (!tokenRes.ok) {
+        throw new Error(tokenData?.message || 'Square login failed');
+      }
+
+      const squareToken = tokenData?.access_token;
+      const merchantId = tokenData?.merchant_id;
+
+      if (!squareToken || !merchantId) {
+        throw new Error('Square login failed. Missing access token or merchant.');
+      }
+
+      localStorage.setItem('square_access_token', squareToken);
+
+      const email = `${merchantId}@square-oauth.blueprint`;
+      const password = merchantId;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        throw new Error(
+          signInError.message ||
+            'Failed to establish a session after Square OAuth.'
+        );
+      }
+
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+      const sessionToken = sessionData?.session?.access_token;
+
+      if (sessionError || !sessionToken) {
+        throw new Error(
+          sessionError?.message || 'Missing Supabase session token.'
+        );
+      }
+
+      const syncHeaders = {
+        Authorization: `Bearer ${sessionToken}`,
+        'Content-Type': 'application/json',
+        'x-square-access-token': squareToken,
+      };
+
+      const clientsRes = await fetch('/api/square/clients', {
+        method: 'POST',
+        headers: syncHeaders,
+      });
+      if (!clientsRes.ok) {
+        const clientsData = await parseResponse(clientsRes);
+        throw new Error(
+          clientsData?.message || 'Square client sync failed.'
+        );
+      }
+
+      const teamRes = await fetch('/api/square/team', {
+        method: 'POST',
+        headers: syncHeaders,
+      });
+      if (!teamRes.ok) {
+        const teamData = await parseResponse(teamRes);
+        throw new Error(teamData?.message || 'Square team sync failed.');
+      }
+
+      // Force full reload so app reads persisted data
+      window.location.replace('/admin');
+    };
+
+    runCallback().catch((err) => {
+      console.error('Square OAuth callback failed:', err);
+      setError(
+        'Square login failed. Please return to the app and try connecting again.'
+      );
+    });
   }, []);
 
   return (
