@@ -1,21 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-export default async function handler(req: any, res: any) {
-  try {
-    if (
-      !process.env.VITE_SUPABASE_URL ||
-      !process.env.SUPABASE_SERVICE_ROLE_KEY
-    ) {
-      return res.status(500).json({ message: 'Supabase config missing.' });
-    }
-
-    const supabaseAdmin = createClient(
-      process.env.VITE_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-
-    /* -------------------------------------------------
-       1. IDENTIFY AUTHENTICATED USER
+1. IDENTIFY AUTHENTICATED USER
     --------------------------------------------------*/
     const authHeader = req.headers['authorization'];
     const bearer =
@@ -40,11 +23,12 @@ export default async function handler(req: any, res: any) {
     --------------------------------------------------*/
     const { data: merchant } = await supabaseAdmin
       .from('merchant_settings')
-      .select('settings')
+      .select('square_access_token, settings')
       .eq('supabase_user_id', supabaseUserId)
       .maybeSingle();
 
     const squareAccessToken =
+      merchant?.square_access_token ??
       merchant?.settings?.square_access_token ??
       merchant?.settings?.oauth?.access_token ??
       null;
@@ -70,34 +54,7 @@ export default async function handler(req: any, res: any) {
         },
         body: JSON.stringify({
           query: {
-            filter: {
-              status: 'ACTIVE',
-            },
-          },
-        }),
-      }
-    );
-
-    const squareJson = await squareRes.json();
-
-    console.log('[TEAM SYNC] Square response count:', squareJson?.team_members?.length ?? 0);
-
-    if (!squareRes.ok) {
-      console.error('[TEAM SYNC] Square error:', squareJson);
-      return res.status(squareRes.status).json(squareJson);
-    }
-
-    const members = squareJson.team_members ?? [];
-
-    if (members.length === 0) {
-      return res.status(200).json({ inserted: 0 });
-    }
-
-    /* -------------------------------------------------
-       4. UPSERT INTO SUPABASE
-    --------------------------------------------------*/
-    const rows = members.map((m: any) => ({
-      supabase_user_id: supabaseUserId,
+@@ -101,26 +102,26 @@ export default async function handler(req: any, res: any) {
       square_team_member_id: m.id,
       name: [m.given_name, m.family_name].filter(Boolean).join(' ') || 'Team Member',
       email: m.email_address ?? null,
