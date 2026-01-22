@@ -117,11 +117,21 @@ export default function SquareCallback() {
     };
 
     runCallback().catch((err) => {
+      // Ignore abort errors (expected when component unmounts)
+      if (err.name === 'AbortError') {
+        console.log('[SQUARE CALLBACK] Request cancelled (component unmounted)');
+        return;
+      }
       console.error('Square OAuth callback failed:', err);
       setError(
         'Square login failed. Please return to the app and try connecting again.'
       );
     });
+
+    // Cleanup: abort pending requests if component unmounts
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, []);
 
   return (
