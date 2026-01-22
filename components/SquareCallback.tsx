@@ -4,10 +4,14 @@ import { supabase } from '../lib/supabase';
 export default function SquareCallback() {
   const hasRun = useRef(false);
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
+
+    // Create abort controller for this effect to cancel pending requests if unmounted
+    abortControllerRef.current = new AbortController();
 
     const parseResponse = async (res: Response) => {
       const text = await res.text();
