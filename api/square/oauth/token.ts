@@ -22,16 +22,6 @@ const squareApiFetch = async (
   return data;
 };
 
-const parseJsonResponse = async (response: Response) => {
-  const text = await response.text();
-  if (!text) return {};
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { message: text };
-  }
-};
-
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -39,8 +29,6 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    console.log('[OAUTH TOKEN] Processing token request');
-
     let body = req.body;
     if (typeof body === 'string') {
       try {
@@ -62,63 +50,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!code) {
-      console.error('[OAUTH TOKEN] Missing OAuth code');
       return res.status(400).json({ message: 'Missing OAuth code.' });
-    }
-
-    console.log('[OAUTH TOKEN] Received code, validating state');
-
-    // CSRF State Validation
-    let state = body?.state;
-    if (!state && typeof req.headers?.referer === 'string') {
-      try {
-        const refUrl = new URL(req.headers.referer);
-        state = refUrl.searchParams.get('state') ?? undefined;
-      } catch {}
-    }
-
-    if (!state) {
-      return res.status(400).json({ message: 'Missing OAuth state parameter.' });
-    }
-
-    // Extract state from cookies for validation
-    const cookies = req.headers.cookie?.split(';').reduce((acc: any, cookie: string) => {
-      const trimmed = cookie.trim();
-      if (!trimmed) return acc;
-      const eqIndex = trimmed.indexOf('=');
-      if (eqIndex === -1) return acc;
-      const key = trimmed.substring(0, eqIndex);
-      const value = trimmed.substring(eqIndex + 1);
-      try {
-        acc[key] = decodeURIComponent(value);
-      } catch {
-        acc[key] = value;
-      }
-      return acc;
-    }, {}) || {};
-
-    const storedState = cookies.square_oauth_state;
-    // Validate state: prefer cookie validation, but accept if state is present
-    // (cookie might not be sent back due to browser/proxy restrictions)
-    if (storedState && storedState !== state) {
-      console.error('[OAUTH] State validation failed - cookie mismatch:', {
-        stored: storedState,
-        received: state,
-      });
-      return res.status(403).json({ message: 'Invalid OAuth state parameter. Possible CSRF attack.' });
-    }
-
-    if (storedState) {
-      // Clear the state cookie if it exists
-      // Note: Secure flag is only for HTTPS (production)
-      const isSecure = req.headers['x-forwarded-proto'] === 'https' || req.secure || false;
-      const secureFlag = isSecure ? '; Secure' : '';
-      res.setHeader('Set-Cookie', `square_oauth_state=; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=0`);
-    } else {
-      console.warn('[OAUTH] State cookie not found - relying on Square callback validation', {
-        receivedState: state,
-        cookies: Object.keys(cookies),
-      });
     }
 
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
@@ -127,20 +59,9 @@ export default async function handler(req: any, res: any) {
         ? 'https://connect.squareupsandbox.com'
         : 'https://connect.squareup.com';
 
-    if (
-      !process.env.VITE_SQUARE_APPLICATION_ID ||
-      !process.env.SQUARE_APPLICATION_SECRET
-    ) {
-      return res.status(500).json({
-        message: 'Square OAuth environment variables are not configured on the server.',
-      });
-    }
-
-    const rawAuth = `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.SQUARE_APPLICATION_SECRET}`;
-    const basicAuth =
-      typeof Buffer !== 'undefined'
-        ? Buffer.from(rawAuth).toString('base64')
-        : (globalThis as any).btoa(rawAuth);
+    const basicAuth = Buffer.from(
+      `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
+    ).toString('base64');
 
     const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
       method: 'POST',
@@ -150,14 +71,14 @@ export default async function handler(req: any, res: any) {
       },
       body: JSON.stringify({
         client_id: process.env.VITE_SQUARE_APPLICATION_ID,
-        client_secret: process.env.SQUARE_APPLICATION_SECRET,
+        client_secret: process.env.VITE_SQUARE_APPLICATION_SECRET,
         grant_type: 'authorization_code',
         code,
         redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
       }),
     });
 
-    const tokenData = await parseJsonResponse(tokenRes);
+    const tokenData = await tokenRes.json();
 
     if (!tokenRes.ok) {
       console.error('Square OAuth Token Error:', tokenData);
@@ -167,20 +88,7 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const { access_token, merchant_id, refresh_token, expires_in } = tokenData;
-    if (!access_token || !merchant_id) {
-      console.error('[OAUTH TOKEN] Missing tokens in Square response:', { hasAccessToken: !!access_token, hasMerchantId: !!merchant_id });
-      return res.status(500).json({
-        message: 'Square OAuth response missing access token or merchant id.',
-        square_error: tokenData,
-      });
-    }
-
-    // Calculate token expiration time (Square returns expires_in as seconds)
-    const expiresInSeconds = expires_in || 3600; // Default to 1 hour if not provided
-    const tokenExpiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
-
-    console.log('[OAUTH TOKEN] Successfully obtained Square tokens for merchant:', merchant_id);
+    const { access_token, merchant_id } = tokenData;
 
     const merchantData = await squareApiFetch(
       `${baseUrl}/v2/merchants/${merchant_id}`,
@@ -196,18 +104,15 @@ export default async function handler(req: any, res: any) {
     );
 
     const email = `${merchant_id}@square-oauth.blueprint`;
-    // Use merchant_id as password - it's only created after successful Square OAuth
     const password = merchant_id;
 
-    const signInResult = await (supabaseAdmin.auth as any).signInWithPassword({
-      email,
-      password,
-    });
-    let user = signInResult.data?.user;
-    const signInError = signInResult.error;
+    let {
+      data: { user },
+      error,
+    } = await supabaseAdmin.auth.signInWithPassword({ email, password });
 
-    if (signInError) {
-      const signUp = await (supabaseAdmin.auth as any).signUp({
+    if (error) {
+      const signUp = await supabaseAdmin.auth.signUp({
         email,
         password,
         options: {
@@ -220,42 +125,23 @@ export default async function handler(req: any, res: any) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
-    const { error: upsertError, data: upsertData } = await supabaseAdmin
+    await supabaseAdmin
       .from('merchant_settings')
       .upsert(
         {
           supabase_user_id: user.id,
           square_merchant_id: merchant_id,
           square_access_token: access_token,
-          square_refresh_token: refresh_token,
-          square_token_expires_at: tokenExpiresAt,
-          square_connected: true,
           square_connected_at: new Date().toISOString(),
         },
-        { onConflict: 'square_merchant_id' }
+        { onConflict: 'supabase_user_id' }
       );
 
-    if (upsertError) {
-      console.error('[OAUTH TOKEN] Failed to save merchant_settings:', upsertError);
-      return res.status(500).json({
-        message: 'Failed to save Square connection. Please try again.',
-        error: upsertError.message,
-      });
-    }
-
-    console.log('[OAUTH TOKEN] Successfully saved merchant_settings:', { userId: user.id, merchantId: merchant_id });
-
-    // Store access token in secure HTTP-only cookie
-    // Note: Secure flag is only for HTTPS (production)
-    const isSecure = req.headers['x-forwarded-proto'] === 'https' || req.secure || false;
-    const secureFlag = isSecure ? '; Secure' : '';
-    res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=2592000`);
-
-    // ✅ RESTORED: payload frontend expects to bootstrap app state (without exposing token)
+    // ✅ RESTORED: payload frontend expects to bootstrap app state
     return res.status(200).json({
       merchant_id,
       business_name,
+      access_token,
     });
 
   } catch (e: any) {
