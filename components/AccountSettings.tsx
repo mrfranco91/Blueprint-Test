@@ -22,39 +22,13 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
 
   const isMockUser = !!user?.isMock;
 
-  // Square OAuth (reintroduced)
-  // FIX: Revert to import.meta.env, the standard Vite mechanism for environment variables.
-  // FIX: Cast `import.meta` to `any` to resolve TypeScript error "Property 'env' does not exist on type 'ImportMeta'".
-  const squareAppId = (import.meta as any).env.VITE_SQUARE_APPLICATION_ID || (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
-  // FIX: Cast `import.meta` to `any` to resolve TypeScript error "Property 'env' does not exist on type 'ImportMeta'".
+  // Square OAuth - use server-side OAuth flow to ensure state is securely stored
   const squareRedirectUri = (import.meta as any).env.VITE_SQUARE_REDIRECT_URI;
-  // FIX: Cast `import.meta` to `any` to resolve TypeScript error "Property 'env' does not exist on type 'ImportMeta'".
-  const squareEnv = ((import.meta as any).env.VITE_SQUARE_ENV || 'production').toLowerCase();
-  // FIX: Cast `import.meta` to `any` to resolve TypeScript error "Property 'env' does not exist on type 'ImportMeta'".
-  const oauthScopes =
-    ((import.meta as any).env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ||
-    'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_READ APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
 
   const startSquareOAuth = () => {
-    if (!squareAppId || !squareRedirectUri) return;
-
-    const authorizeBase =
-      squareEnv === 'sandbox'
-        ? 'https://connect.squareupsandbox.com/oauth2/authorize'
-        : 'https://connect.squareup.com/oauth2/authorize';
-
-    const state = crypto.randomUUID();
-
-    const oauthUrl =
-      `${authorizeBase}` +
-      `?client_id=${encodeURIComponent(squareAppId)}` +
-      `&response_type=code` +
-      `&scope=${encodeURIComponent(oauthScopes)}` +
-      `&redirect_uri=${encodeURIComponent(squareRedirectUri)}` +
-      `&state=${encodeURIComponent(state)}` +
-      `&session=false`;
-
-    window.location.href = oauthUrl;
+    if (!squareRedirectUri) return;
+    // Use server endpoint to initiate OAuth - ensures state is securely stored in HTTP-only cookie
+    window.location.href = '/api/square/oauth/start';
   };
 
   return (
@@ -72,7 +46,7 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
                 <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: ensureAccessibleColor(branding.primaryColor, '#FFFFFF', '#BE123C') }}>{subtitle}</p>
             </div>
 
-            {squareAppId && squareRedirectUri && (
+            {squareRedirectUri && (
               <div className="bg-white p-6 rounded-[32px] border-4 border-gray-950 shadow-sm">
                 <h3 className="font-black text-sm tracking-widest uppercase text-gray-400 mb-4">
                   Square Connection
