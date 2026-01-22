@@ -239,7 +239,10 @@ export default async function handler(req: any, res: any) {
     console.log('[OAUTH TOKEN] Successfully saved merchant_settings:', { userId: user.id, merchantId: merchant_id });
 
     // Store access token in secure HTTP-only cookie
-    res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
+    // Note: Secure flag is omitted in development (HTTP), included in production (HTTPS)
+    const isProduction = process.env.NODE_ENV === 'production';
+    const secureFlag = isProduction ? '; Secure' : '';
+    res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=2592000`);
 
     // ✅ RESTORED: payload frontend expects to bootstrap app state (without exposing token)
     return res.status(200).json({
