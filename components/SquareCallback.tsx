@@ -22,16 +22,22 @@ export default function SquareCallback() {
     const runCallback = async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
+      const state = params.get('state');
 
       if (!code) {
         setError('Missing authorization code from Square.');
         return;
       }
 
+      if (!state) {
+        setError('Missing state parameter from Square. Possible CSRF attack.');
+        return;
+      }
+
       const tokenRes = await fetch('/api/square/oauth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, state }),
       });
       const tokenData = await parseResponse(tokenRes);
       if (!tokenRes.ok) {
