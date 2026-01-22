@@ -103,7 +103,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // Clear the state cookie
-    res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0');
+    res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
 
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
     const baseUrl =
