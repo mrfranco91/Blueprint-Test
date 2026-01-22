@@ -167,7 +167,7 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const { access_token, merchant_id, refresh_token } = tokenData;
+    const { access_token, merchant_id, refresh_token, expires_in } = tokenData;
     if (!access_token || !merchant_id) {
       console.error('[OAUTH TOKEN] Missing tokens in Square response:', { hasAccessToken: !!access_token, hasMerchantId: !!merchant_id });
       return res.status(500).json({
@@ -175,6 +175,10 @@ export default async function handler(req: any, res: any) {
         square_error: tokenData,
       });
     }
+
+    // Calculate token expiration time (Square returns expires_in as seconds)
+    const expiresInSeconds = expires_in || 3600; // Default to 1 hour if not provided
+    const tokenExpiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
     console.log('[OAUTH TOKEN] Successfully obtained Square tokens for merchant:', merchant_id);
 
