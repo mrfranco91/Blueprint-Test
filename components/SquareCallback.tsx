@@ -42,6 +42,7 @@ export default function SquareCallback() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: abortControllerRef.current?.signal,
         body: JSON.stringify({ code, state }),
       });
       const tokenData = await parseResponse(tokenRes);
