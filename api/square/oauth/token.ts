@@ -115,7 +115,10 @@ export default async function handler(req: any, res: any) {
       const secureFlag = isSecure ? '; Secure' : '';
       res.setHeader('Set-Cookie', `square_oauth_state=; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=0`);
     } else {
-      console.warn('[OAUTH] State cookie not found - relying on Square callback validation');
+      console.warn('[OAUTH] State cookie not found - relying on Square callback validation', {
+        receivedState: state,
+        cookies: Object.keys(cookies),
+      });
     }
 
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
