@@ -46,7 +46,7 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
                 <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: ensureAccessibleColor(branding.primaryColor, '#FFFFFF', '#BE123C') }}>{subtitle}</p>
             </div>
 
-            {squareAppId && squareRedirectUri && (
+            {squareRedirectUri && (
               <div className="bg-white p-6 rounded-[32px] border-4 border-gray-950 shadow-sm">
                 <h3 className="font-black text-sm tracking-widest uppercase text-gray-400 mb-4">
                   Square Connection
