@@ -63,6 +63,34 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ message: 'Missing OAuth code.' });
     }
 
+    // CSRF State Validation
+    let state = body?.state;
+    if (!state && typeof req.headers?.referer === 'string') {
+      try {
+        const refUrl = new URL(req.headers.referer);
+        state = refUrl.searchParams.get('state') ?? undefined;
+      } catch {}
+    }
+
+    if (!state) {
+      return res.status(400).json({ message: 'Missing OAuth state parameter.' });
+    }
+
+    // Extract state from cookies
+    const cookies = req.headers.cookie?.split(';').reduce((acc: any, cookie: string) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = decodeURIComponent(value);
+      return acc;
+    }, {}) || {};
+
+    const storedState = cookies.square_oauth_state;
+    if (!storedState || storedState !== state) {
+      return res.status(403).json({ message: 'Invalid OAuth state parameter. Possible CSRF attack.' });
+    }
+
+    // Clear the state cookie
+    res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0');
+
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
     const baseUrl =
       env === 'sandbox'
