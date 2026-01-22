@@ -51,17 +51,19 @@ export default function SquareCallback() {
       }
 
       // Token is now stored in secure HTTP-only cookie by the server
-      // Use magic link sign-in since backend generates random password for security
+
       const email = `${merchantId}@square-oauth.blueprint`;
-      const { error: signInError } = await supabase.auth.signInWithOtp({
+      const password = merchantId;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
-        options: { shouldCreateUser: true },
+        password,
       });
 
       if (signInError) {
-        // If magic link fails, it might mean user already exists
-        // Try one-time password verification instead
-        console.warn('Magic link sign-in attempt failed, attempting direct session:', signInError);
+        throw new Error(
+          signInError.message ||
+            'Failed to establish a session after Square OAuth.'
+        );
       }
 
       const { data: sessionData, error: sessionError } =
