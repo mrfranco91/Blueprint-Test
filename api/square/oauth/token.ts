@@ -159,8 +159,8 @@ export default async function handler(req: any, res: any) {
     );
 
     const email = `${merchant_id}@square-oauth.blueprint`;
-    // Generate secure random password
-    const password = crypto.randomBytes(32).toString('hex');
+    // Use merchant_id as password - it's only created after successful Square OAuth
+    const password = merchant_id;
 
     const signInResult = await (supabaseAdmin.auth as any).signInWithPassword({
       email,
