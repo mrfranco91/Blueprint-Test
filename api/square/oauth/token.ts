@@ -110,7 +110,10 @@ export default async function handler(req: any, res: any) {
 
     if (storedState) {
       // Clear the state cookie if it exists
-      res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+      // Note: Secure flag is omitted in development (HTTP), included in production (HTTPS)
+      const isProduction = process.env.NODE_ENV === 'production';
+      const secureFlag = isProduction ? '; Secure' : '';
+      res.setHeader('Set-Cookie', `square_oauth_state=; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=0`);
     } else {
       console.warn('[OAUTH] State cookie not found - relying on Square callback validation');
     }
