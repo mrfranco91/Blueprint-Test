@@ -195,11 +195,13 @@ export default async function handler(req: any, res: any) {
         { onConflict: 'supabase_user_id' }
       );
 
-    // ✅ RESTORED: payload frontend expects to bootstrap app state
+    // Store access token in secure HTTP-only cookie
+    res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000`);
+
+    // ✅ RESTORED: payload frontend expects to bootstrap app state (without exposing token)
     return res.status(200).json({
       merchant_id,
       business_name,
-      access_token,
     });
 
   } catch (e: any) {
