@@ -100,11 +100,11 @@ export default async function handler(req: any, res: any) {
         'Authorization': `Basic ${basicAuth}`,
       },
       body: JSON.stringify({
-        client_id: process.env.VITE_SQUARE_APPLICATION_ID,
-        client_secret: process.env.VITE_SQUARE_APPLICATION_SECRET,
+        client_id: appId,
+        client_secret: appSecret,
         grant_type: 'authorization_code',
         code,
-        redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
+        redirect_uri: redirectUri,
       }),
     });
 
