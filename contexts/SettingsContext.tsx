@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -187,17 +186,12 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
 
       // ---- Team: does NOT block app (empty is OK)
-      const merchantId =
-        (user.user_metadata as any)?.merchant_id ||
-        (user.app_metadata as any)?.merchant_id ||
-        null;
-
       setLoadingTeam(true);
       setTeamError(null);
 
       try {
         let q = supabase.from('square_team_members').select('*');
-        if (merchantId) q = q.eq('merchant_id', merchantId);
+        if (user.id) q = q.eq('supabase_user_id', user.id);
 
         const { data, error } = await q;
 
