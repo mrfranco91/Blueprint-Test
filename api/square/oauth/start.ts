@@ -14,8 +14,11 @@ export default function handler(req: any, res: any) {
     squareEnv === 'sandbox'
       ? 'https://connect.squareupsandbox.com/oauth2/authorize'
       : 'https://connect.squareup.com/oauth2/authorize';
-  
+
   const state = crypto.randomUUID();
+
+  // Store state in secure HTTP-only cookie for CSRF validation
+  res.setHeader('Set-Cookie', `square_oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=600`);
 
   const oauthUrl =
     `${authorizeBase}` +
