@@ -37,6 +37,7 @@ export default function SquareCallback() {
       const tokenRes = await fetch('/api/square/oauth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ code, state }),
       });
       const tokenData = await parseResponse(tokenRes);
