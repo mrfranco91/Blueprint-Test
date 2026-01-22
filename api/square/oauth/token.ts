@@ -99,14 +99,14 @@ export default async function handler(req: any, res: any) {
 
     if (
       !process.env.VITE_SQUARE_APPLICATION_ID ||
-      !process.env.VITE_SQUARE_APPLICATION_SECRET
+      !process.env.SQUARE_APPLICATION_SECRET
     ) {
       return res.status(500).json({
         message: 'Square OAuth environment variables are not configured on the server.',
       });
     }
 
-    const rawAuth = `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`;
+    const rawAuth = `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.SQUARE_APPLICATION_SECRET}`;
     const basicAuth =
       typeof Buffer !== 'undefined'
         ? Buffer.from(rawAuth).toString('base64')
