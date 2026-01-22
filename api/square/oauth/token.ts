@@ -161,7 +161,7 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const { access_token, merchant_id } = tokenData;
+    const { access_token, merchant_id, refresh_token } = tokenData;
     if (!access_token || !merchant_id) {
       console.error('[OAUTH TOKEN] Missing tokens in Square response:', { hasAccessToken: !!access_token, hasMerchantId: !!merchant_id });
       return res.status(500).json({
@@ -218,6 +218,7 @@ export default async function handler(req: any, res: any) {
           supabase_user_id: user.id,
           square_merchant_id: merchant_id,
           square_access_token: access_token,
+          square_refresh_token: refresh_token,
           square_connected: true,
           square_connected_at: new Date().toISOString(),
         },
