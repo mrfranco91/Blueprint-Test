@@ -9,18 +9,38 @@ interface SquareLocation {
     status: string;
 }
 
-const TOKEN_STORAGE_KEY = 'square_access_token';
+let cachedToken: string | null = null;
+let tokenFetchPromise: Promise<string | null> | null = null;
 
-const getSquareAccessToken = () => {
-  try {
-    if (typeof window !== 'undefined') {
-      const stored = window.localStorage.getItem(TOKEN_STORAGE_KEY);
-      if (stored && stored.length > 10) return stored;
+const getSquareAccessToken = async () => {
+  // Return cached token if available
+  if (cachedToken) return cachedToken;
+
+  // Prevent multiple concurrent requests
+  if (tokenFetchPromise) return tokenFetchPromise;
+
+  tokenFetchPromise = (async () => {
+    try {
+      if (typeof window === 'undefined') return null;
+
+      const res = await fetch('/api/square/get-token');
+      if (!res.ok) {
+        console.error('Failed to retrieve Square token:', res.status);
+        return null;
+      }
+
+      const data = await res.json();
+      cachedToken = data.access_token;
+      return cachedToken;
+    } catch (error) {
+      console.error('Error fetching Square token:', error);
+      return null;
+    } finally {
+      tokenFetchPromise = null;
     }
-  } catch {
-    // ignore
-  }
-  return null;
+  })();
+
+  return tokenFetchPromise;
 };
 
 // OAuth is now the ONLY valid auth mechanism
