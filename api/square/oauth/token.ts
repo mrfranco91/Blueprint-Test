@@ -218,6 +218,7 @@ export default async function handler(req: any, res: any) {
           supabase_user_id: user.id,
           square_merchant_id: merchant_id,
           square_access_token: access_token,
+          square_connected: true,
           square_connected_at: new Date().toISOString(),
         },
         { onConflict: 'square_merchant_id' }
