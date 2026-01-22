@@ -15,6 +15,10 @@ export default async function handler(req: any, res: any) {
     /* -------------------------------------------------
        1. IDENTIFY AUTHENTICATED USER
     --------------------------------------------------*/
+    let squareAccessToken: string | undefined =
+      (req.headers['x-square-access-token'] as string | undefined) ||
+      (req.headers['x-square-access-token'.toLowerCase()] as string | undefined);
+
     const authHeader = req.headers['authorization'];
     const bearer =
       typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
