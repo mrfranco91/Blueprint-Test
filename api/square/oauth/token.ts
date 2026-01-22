@@ -69,7 +69,7 @@ export default async function handler(req: any, res: any) {
         : 'https://connect.squareup.com';
 
     const appId = process.env.VITE_SQUARE_APPLICATION_ID;
-    const appSecret = process.env.VITE_SQUARE_APPLICATION_SECRET;
+    const appSecret = process.env.SQUARE_APPLICATION_SECRET;
     const redirectUri = process.env.VITE_SQUARE_REDIRECT_URI;
 
     console.log('[OAUTH TOKEN] Config check:', {
