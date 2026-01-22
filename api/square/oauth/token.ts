@@ -220,7 +220,7 @@ export default async function handler(req: any, res: any) {
           square_access_token: access_token,
           square_connected_at: new Date().toISOString(),
         },
-        { onConflict: 'supabase_user_id' }
+        { onConflict: 'square_merchant_id' }
       );
 
     if (upsertError) {
