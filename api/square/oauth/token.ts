@@ -49,7 +49,16 @@ export default async function handler(req: any, res: any) {
       } catch {}
     }
 
+    console.log('[OAUTH TOKEN] Request details:', {
+      hasBody: !!body,
+      bodyCode: body?.code,
+      queryCode: req.query?.code,
+      referer: req.headers?.referer,
+      extractedCode: code,
+    });
+
     if (!code) {
+      console.error('[OAUTH TOKEN] Missing code after extraction');
       return res.status(400).json({ message: 'Missing OAuth code.' });
     }
 
