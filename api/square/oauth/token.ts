@@ -120,7 +120,7 @@ export default async function handler(req: any, res: any) {
       },
       body: JSON.stringify({
         client_id: process.env.VITE_SQUARE_APPLICATION_ID,
-        client_secret: process.env.VITE_SQUARE_APPLICATION_SECRET,
+        client_secret: process.env.SQUARE_APPLICATION_SECRET,
         grant_type: 'authorization_code',
         code,
         redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
