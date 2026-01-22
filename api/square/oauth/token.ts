@@ -63,6 +63,34 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ message: 'Missing OAuth code.' });
     }
 
+    // CSRF State Validation
+    let state = body?.state;
+    if (!state && typeof req.headers?.referer === 'string') {
+      try {
+        const refUrl = new URL(req.headers.referer);
+        state = refUrl.searchParams.get('state') ?? undefined;
+      } catch {}
+    }
+
+    if (!state) {
+      return res.status(400).json({ message: 'Missing OAuth state parameter.' });
+    }
+
+    // Extract state from cookies
+    const cookies = req.headers.cookie?.split(';').reduce((acc: any, cookie: string) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = decodeURIComponent(value);
+      return acc;
+    }, {}) || {};
+
+    const storedState = cookies.square_oauth_state;
+    if (!storedState || storedState !== state) {
+      return res.status(403).json({ message: 'Invalid OAuth state parameter. Possible CSRF attack.' });
+    }
+
+    // Clear the state cookie
+    res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0');
+
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
     const baseUrl =
       env === 'sandbox'
@@ -71,14 +99,14 @@ export default async function handler(req: any, res: any) {
 
     if (
       !process.env.VITE_SQUARE_APPLICATION_ID ||
-      !process.env.VITE_SQUARE_APPLICATION_SECRET
+      !process.env.SQUARE_APPLICATION_SECRET
     ) {
       return res.status(500).json({
         message: 'Square OAuth environment variables are not configured on the server.',
       });
     }
 
-    const rawAuth = `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`;
+    const rawAuth = `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.SQUARE_APPLICATION_SECRET}`;
     const basicAuth =
       typeof Buffer !== 'undefined'
         ? Buffer.from(rawAuth).toString('base64')
@@ -92,7 +120,7 @@ export default async function handler(req: any, res: any) {
       },
       body: JSON.stringify({
         client_id: process.env.VITE_SQUARE_APPLICATION_ID,
-        client_secret: process.env.VITE_SQUARE_APPLICATION_SECRET,
+        client_secret: process.env.SQUARE_APPLICATION_SECRET,
         grant_type: 'authorization_code',
         code,
         redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
@@ -131,7 +159,8 @@ export default async function handler(req: any, res: any) {
     );
 
     const email = `${merchant_id}@square-oauth.blueprint`;
-    const password = merchant_id;
+    // Generate secure random password
+    const password = crypto.randomBytes(32).toString('hex');
 
     const signInResult = await (supabaseAdmin.auth as any).signInWithPassword({
       email,
@@ -166,11 +195,13 @@ export default async function handler(req: any, res: any) {
         { onConflict: 'supabase_user_id' }
       );
 
-    // ✅ RESTORED: payload frontend expects to bootstrap app state
+    // Store access token in secure HTTP-only cookie
+    res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000`);
+
+    // ✅ RESTORED: payload frontend expects to bootstrap app state (without exposing token)
     return res.status(200).json({
       merchant_id,
       business_name,
-      access_token,
     });
 
   } catch (e: any) {

@@ -38,14 +38,13 @@ export default function SquareCallback() {
         throw new Error(tokenData?.message || 'Square login failed');
       }
 
-      const squareToken = tokenData?.access_token;
       const merchantId = tokenData?.merchant_id;
 
-      if (!squareToken || !merchantId) {
-        throw new Error('Square login failed. Missing access token or merchant.');
+      if (!merchantId) {
+        throw new Error('Square login failed. Missing merchant ID.');
       }
 
-      localStorage.setItem('square_access_token', squareToken);
+      // Token is now stored in secure HTTP-only cookie by the server
 
       const email = `${merchantId}@square-oauth.blueprint`;
       const password = merchantId;
@@ -74,7 +73,6 @@ export default function SquareCallback() {
       const syncHeaders = {
         Authorization: `Bearer ${sessionToken}`,
         'Content-Type': 'application/json',
-        'x-square-access-token': squareToken,
       };
 
       const clientsRes = await fetch('/api/square/clients', {
