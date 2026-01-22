@@ -4,10 +4,14 @@ import { supabase } from '../lib/supabase';
 export default function SquareCallback() {
   const hasRun = useRef(false);
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
+
+    // Create abort controller for this effect to cancel pending requests if unmounted
+    abortControllerRef.current = new AbortController();
 
     const parseResponse = async (res: Response) => {
       const text = await res.text();
@@ -38,6 +42,7 @@ export default function SquareCallback() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: abortControllerRef.current?.signal,
         body: JSON.stringify({ code, state }),
       });
       const tokenData = await parseResponse(tokenRes);
@@ -112,11 +117,21 @@ export default function SquareCallback() {
     };
 
     runCallback().catch((err) => {
+      // Ignore abort errors (expected when component unmounts)
+      if (err.name === 'AbortError') {
+        console.log('[SQUARE CALLBACK] Request cancelled (component unmounted)');
+        return;
+      }
       console.error('Square OAuth callback failed:', err);
       setError(
         'Square login failed. Please return to the app and try connecting again.'
       );
     });
+
+    // Cleanup: abort pending requests if component unmounts
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, []);
 
   return (

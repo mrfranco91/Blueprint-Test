@@ -110,9 +110,15 @@ export default async function handler(req: any, res: any) {
 
     if (storedState) {
       // Clear the state cookie if it exists
-      res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+      // Note: Secure flag is only for HTTPS (production)
+      const isSecure = req.headers['x-forwarded-proto'] === 'https' || req.secure || false;
+      const secureFlag = isSecure ? '; Secure' : '';
+      res.setHeader('Set-Cookie', `square_oauth_state=; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=0`);
     } else {
-      console.warn('[OAUTH] State cookie not found - relying on Square callback validation');
+      console.warn('[OAUTH] State cookie not found - relying on Square callback validation', {
+        receivedState: state,
+        cookies: Object.keys(cookies),
+      });
     }
 
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
@@ -236,7 +242,10 @@ export default async function handler(req: any, res: any) {
     console.log('[OAUTH TOKEN] Successfully saved merchant_settings:', { userId: user.id, merchantId: merchant_id });
 
     // Store access token in secure HTTP-only cookie
-    res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
+    // Note: Secure flag is only for HTTPS (production)
+    const isSecure = req.headers['x-forwarded-proto'] === 'https' || req.secure || false;
+    const secureFlag = isSecure ? '; Secure' : '';
+    res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=2592000`);
 
     // ✅ RESTORED: payload frontend expects to bootstrap app state (without exposing token)
     return res.status(200).json({
