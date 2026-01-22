@@ -229,6 +229,7 @@ export default async function handler(req: any, res: any) {
           square_merchant_id: merchant_id,
           square_access_token: access_token,
           square_refresh_token: refresh_token,
+          square_token_expires_at: tokenExpiresAt,
           square_connected: true,
           square_connected_at: new Date().toISOString(),
         },
