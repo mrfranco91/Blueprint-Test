@@ -73,7 +73,6 @@ export default function SquareCallback() {
       const syncHeaders = {
         Authorization: `Bearer ${sessionToken}`,
         'Content-Type': 'application/json',
-        'x-square-access-token': squareToken,
       };
 
       const clientsRes = await fetch('/api/square/clients', {
