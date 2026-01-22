@@ -57,8 +57,8 @@ const baseUrl = SQUARE_ENV === 'sandbox'
 
 async function squareApiFetch<T>(path: string, options: { method?: string, body?: any } = {}): Promise<T> {
     const { method = 'GET', body } = options;
-    
-    const token = getSquareAccessToken();
+
+    const token = await getSquareAccessToken();
     if (!token) {
         throw new Error('Square OAuth token missing. User must authenticate with Square.');
     }
