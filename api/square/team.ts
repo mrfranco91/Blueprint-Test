@@ -40,17 +40,19 @@ export default async function handler(req: any, res: any) {
     /* -------------------------------------------------
        2. LOAD MERCHANT SETTINGS (CORRECT SOURCE)
     --------------------------------------------------*/
-    const { data: merchant } = await supabaseAdmin
-      .from('merchant_settings')
-      .select('square_access_token, settings')
-      .eq('supabase_user_id', supabaseUserId)
-      .maybeSingle();
+    if (!squareAccessToken) {
+      const { data: merchant } = await supabaseAdmin
+        .from('merchant_settings')
+        .select('square_access_token, settings')
+        .eq('supabase_user_id', supabaseUserId)
+        .maybeSingle();
 
-    const squareAccessToken =
-      merchant?.square_access_token ??
-      merchant?.settings?.square_access_token ??
-      merchant?.settings?.oauth?.access_token ??
-      null;
+      squareAccessToken =
+        merchant?.square_access_token ??
+        merchant?.settings?.square_access_token ??
+        merchant?.settings?.oauth?.access_token ??
+        null;
+    }
 
     if (!squareAccessToken) {
       console.error('[TEAM SYNC] Missing Square OAuth token');
