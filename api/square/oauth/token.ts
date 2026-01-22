@@ -78,13 +78,27 @@ export default async function handler(req: any, res: any) {
 
     // Extract state from cookies
     const cookies = req.headers.cookie?.split(';').reduce((acc: any, cookie: string) => {
-      const [key, value] = cookie.trim().split('=');
-      acc[key] = decodeURIComponent(value);
+      const trimmed = cookie.trim();
+      if (!trimmed) return acc;
+      const eqIndex = trimmed.indexOf('=');
+      if (eqIndex === -1) return acc;
+      const key = trimmed.substring(0, eqIndex);
+      const value = trimmed.substring(eqIndex + 1);
+      try {
+        acc[key] = decodeURIComponent(value);
+      } catch {
+        acc[key] = value;
+      }
       return acc;
     }, {}) || {};
 
     const storedState = cookies.square_oauth_state;
     if (!storedState || storedState !== state) {
+      console.error('[OAUTH] State validation failed:', {
+        stored: storedState,
+        received: state,
+        allCookies: Object.keys(cookies),
+      });
       return res.status(403).json({ message: 'Invalid OAuth state parameter. Possible CSRF attack.' });
     }
 
