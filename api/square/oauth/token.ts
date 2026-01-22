@@ -49,7 +49,16 @@ export default async function handler(req: any, res: any) {
       } catch {}
     }
 
+    console.log('[OAUTH TOKEN] Request details:', {
+      hasBody: !!body,
+      bodyCode: body?.code,
+      queryCode: req.query?.code,
+      referer: req.headers?.referer,
+      extractedCode: code,
+    });
+
     if (!code) {
+      console.error('[OAUTH TOKEN] Missing code after extraction');
       return res.status(400).json({ message: 'Missing OAuth code.' });
     }
 
@@ -59,8 +68,29 @@ export default async function handler(req: any, res: any) {
         ? 'https://connect.squareupsandbox.com'
         : 'https://connect.squareup.com';
 
+    const appId = process.env.VITE_SQUARE_APPLICATION_ID;
+    const appSecret = process.env.SQUARE_APPLICATION_SECRET;
+    const redirectUri = process.env.VITE_SQUARE_REDIRECT_URI;
+
+    console.log('[OAUTH TOKEN] Config check:', {
+      env,
+      hasAppId: !!appId,
+      hasAppSecret: !!appSecret,
+      hasRedirectUri: !!redirectUri,
+      redirectUri: redirectUri,
+    });
+
+    if (!appId || !appSecret || !redirectUri) {
+      console.error('[OAUTH TOKEN] Missing Square config', {
+        appId,
+        appSecret: appSecret ? '***' : 'MISSING',
+        redirectUri,
+      });
+      return res.status(500).json({ message: 'Square OAuth credentials not configured on server.' });
+    }
+
     const basicAuth = Buffer.from(
-      `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
+      `${appId}:${appSecret}`
     ).toString('base64');
 
     const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
@@ -70,11 +100,11 @@ export default async function handler(req: any, res: any) {
         'Authorization': `Basic ${basicAuth}`,
       },
       body: JSON.stringify({
-        client_id: process.env.VITE_SQUARE_APPLICATION_ID,
-        client_secret: process.env.VITE_SQUARE_APPLICATION_SECRET,
+        client_id: appId,
+        client_secret: appSecret,
         grant_type: 'authorization_code',
         code,
-        redirect_uri: process.env.VITE_SQUARE_REDIRECT_URI,
+        redirect_uri: redirectUri,
       }),
     });
 

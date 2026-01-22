@@ -44,8 +44,8 @@ export default function SquareCallback() {
           },
         });
 
-        // ✅ Trigger team sync (CORRECTED path)
-        await fetch('/api/square/oauth/team', {
+        // ✅ Trigger team sync
+        await fetch('/api/square/team', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
