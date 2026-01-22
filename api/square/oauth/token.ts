@@ -210,7 +210,8 @@ export default async function handler(req: any, res: any) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    await supabaseAdmin
+    console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
+    const { error: upsertError, data: upsertData } = await supabaseAdmin
       .from('merchant_settings')
       .upsert(
         {
@@ -221,6 +222,16 @@ export default async function handler(req: any, res: any) {
         },
         { onConflict: 'supabase_user_id' }
       );
+
+    if (upsertError) {
+      console.error('[OAUTH TOKEN] Failed to save merchant_settings:', upsertError);
+      return res.status(500).json({
+        message: 'Failed to save Square connection. Please try again.',
+        error: upsertError.message,
+      });
+    }
+
+    console.log('[OAUTH TOKEN] Successfully saved merchant_settings:', { userId: user.id, merchantId: merchant_id });
 
     // Store access token in secure HTTP-only cookie
     res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
