@@ -1,4 +1,19 @@
-1. IDENTIFY AUTHENTICATED USER
+import { createClient } from '@supabase/supabase-js';
+
+export default async function handler(req: any, res: any) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    const supabaseAdmin = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    /* -------------------------------------------------
+       1. IDENTIFY AUTHENTICATED USER
     --------------------------------------------------*/
     const authHeader = req.headers['authorization'];
     const bearer =
@@ -54,7 +69,32 @@
         },
         body: JSON.stringify({
           query: {
-@@ -101,26 +102,26 @@ export default async function handler(req: any, res: any) {
+            filter: {
+              status: ['ACTIVE', 'INACTIVE'],
+            },
+          },
+          limit: 100,
+        }),
+      }
+    );
+
+    if (!squareRes.ok) {
+      const squareError = await squareRes.json();
+      console.error('[TEAM SYNC] Square API error:', squareError);
+      return res.status(squareRes.status).json({
+        message: 'Failed to fetch team members from Square',
+        details: squareError,
+      });
+    }
+
+    const squareData = await squareRes.json();
+    const teamMembers = squareData.team_members || [];
+
+    /* -------------------------------------------------
+       4. TRANSFORM AND UPSERT TO DATABASE
+    --------------------------------------------------*/
+    const rows = teamMembers.map((m: any) => ({
+      supabase_user_id: supabaseUserId,
       square_team_member_id: m.id,
       name: [m.given_name, m.family_name].filter(Boolean).join(' ') || 'Team Member',
       email: m.email_address ?? null,
