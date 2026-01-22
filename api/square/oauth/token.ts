@@ -39,6 +39,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    console.log('[OAUTH TOKEN] Processing token request');
+
     let body = req.body;
     if (typeof body === 'string') {
       try {
@@ -60,8 +62,11 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!code) {
+      console.error('[OAUTH TOKEN] Missing OAuth code');
       return res.status(400).json({ message: 'Missing OAuth code.' });
     }
+
+    console.log('[OAUTH TOKEN] Received code, validating state');
 
     // CSRF State Validation
     let state = body?.state;
