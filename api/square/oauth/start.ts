@@ -21,7 +21,10 @@ export default function handler(req: any, res: any) {
   const state = crypto.randomUUID();
 
   // Store state in secure HTTP-only cookie for CSRF validation
-  res.setHeader('Set-Cookie', `square_oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
+  // Note: Secure flag is omitted in development (HTTP), included in production (HTTPS)
+  const isProduction = process.env.NODE_ENV === 'production';
+  const secureFlag = isProduction ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `square_oauth_state=${state}; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=600`);
 
   const oauthUrl =
     `${authorizeBase}` +
