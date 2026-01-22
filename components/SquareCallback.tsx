@@ -42,8 +42,13 @@ export default function SquareCallback() {
       });
       const tokenData = await parseResponse(tokenRes);
       if (!tokenRes.ok) {
-        throw new Error(tokenData?.message || 'Square login failed');
+        console.error('[SQUARE CALLBACK] Token endpoint failed:', {
+          status: tokenRes.status,
+          data: tokenData,
+        });
+        throw new Error(tokenData?.message || `Square login failed (${tokenRes.status})`);
       }
+      console.log('[SQUARE CALLBACK] Token exchange successful:', { merchantId: tokenData?.merchant_id });
 
       const merchantId = tokenData?.merchant_id;
 
