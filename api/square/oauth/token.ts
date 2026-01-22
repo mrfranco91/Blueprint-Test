@@ -158,11 +158,14 @@ export default async function handler(req: any, res: any) {
 
     const { access_token, merchant_id } = tokenData;
     if (!access_token || !merchant_id) {
+      console.error('[OAUTH TOKEN] Missing tokens in Square response:', { hasAccessToken: !!access_token, hasMerchantId: !!merchant_id });
       return res.status(500).json({
         message: 'Square OAuth response missing access token or merchant id.',
         square_error: tokenData,
       });
     }
+
+    console.log('[OAUTH TOKEN] Successfully obtained Square tokens for merchant:', merchant_id);
 
     const merchantData = await squareApiFetch(
       `${baseUrl}/v2/merchants/${merchant_id}`,
