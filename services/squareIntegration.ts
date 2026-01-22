@@ -44,7 +44,8 @@ const getSquareAccessToken = async () => {
 };
 
 // OAuth is now the ONLY valid auth mechanism
-export const isSquareTokenMissing = !getSquareAccessToken();
+// Note: This check is performed asynchronously, so it may not be accurate immediately on page load
+export const isSquareTokenMissing = cachedToken === null;
 
 // FIX: Revert to import.meta.env, the standard Vite mechanism for environment variables.
 // FIX: Cast `import.meta` to `any` to resolve TypeScript error "Property 'env' does not exist on type 'ImportMeta'".
