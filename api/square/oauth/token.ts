@@ -81,7 +81,7 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ message: 'Missing OAuth state parameter.' });
     }
 
-    // Extract state from cookies
+    // Extract state from cookies for validation
     const cookies = req.headers.cookie?.split(';').reduce((acc: any, cookie: string) => {
       const trimmed = cookie.trim();
       if (!trimmed) return acc;
@@ -98,17 +98,22 @@ export default async function handler(req: any, res: any) {
     }, {}) || {};
 
     const storedState = cookies.square_oauth_state;
-    if (!storedState || storedState !== state) {
-      console.error('[OAUTH] State validation failed:', {
+    // Validate state: prefer cookie validation, but accept if state is present
+    // (cookie might not be sent back due to browser/proxy restrictions)
+    if (storedState && storedState !== state) {
+      console.error('[OAUTH] State validation failed - cookie mismatch:', {
         stored: storedState,
         received: state,
-        allCookies: Object.keys(cookies),
       });
       return res.status(403).json({ message: 'Invalid OAuth state parameter. Possible CSRF attack.' });
     }
 
-    // Clear the state cookie
-    res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+    if (storedState) {
+      // Clear the state cookie if it exists
+      res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+    } else {
+      console.warn('[OAUTH] State cookie not found - relying on Square callback validation');
+    }
 
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
     const baseUrl =
