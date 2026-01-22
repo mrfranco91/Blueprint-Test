@@ -68,8 +68,29 @@ export default async function handler(req: any, res: any) {
         ? 'https://connect.squareupsandbox.com'
         : 'https://connect.squareup.com';
 
+    const appId = process.env.VITE_SQUARE_APPLICATION_ID;
+    const appSecret = process.env.VITE_SQUARE_APPLICATION_SECRET;
+    const redirectUri = process.env.VITE_SQUARE_REDIRECT_URI;
+
+    console.log('[OAUTH TOKEN] Config check:', {
+      env,
+      hasAppId: !!appId,
+      hasAppSecret: !!appSecret,
+      hasRedirectUri: !!redirectUri,
+      redirectUri: redirectUri,
+    });
+
+    if (!appId || !appSecret || !redirectUri) {
+      console.error('[OAUTH TOKEN] Missing Square config', {
+        appId,
+        appSecret: appSecret ? '***' : 'MISSING',
+        redirectUri,
+      });
+      return res.status(500).json({ message: 'Square OAuth credentials not configured on server.' });
+    }
+
     const basicAuth = Buffer.from(
-      `${process.env.VITE_SQUARE_APPLICATION_ID}:${process.env.VITE_SQUARE_APPLICATION_SECRET}`
+      `${appId}:${appSecret}`
     ).toString('base64');
 
     const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
