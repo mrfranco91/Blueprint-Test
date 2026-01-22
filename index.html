@@ -52,11 +52,11 @@
           const accent = localStorage.getItem('admin_brand_accent');
           const font = localStorage.getItem('admin_brand_font');
           const textSize = localStorage.getItem('admin_text_size');
-          
+
           if (primary) document.documentElement.style.setProperty('--color-brand-primary', primary);
           if (secondary) document.documentElement.style.setProperty('--color-brand-secondary', secondary);
           if (accent) document.documentElement.style.setProperty('--color-brand-accent', accent);
-          
+
           const applyBodyPreferences = () => {
             // This function is guaranteed to run only after document.body is available.
             if (!document.body) return;
@@ -85,20 +85,6 @@
           console.log('Error loading preferences', e);
         }
       })();
-
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              'brand-primary': 'var(--color-brand-primary)', 
-              'brand-secondary': 'var(--color-brand-secondary)', 
-              'brand-accent': 'var(--color-brand-accent)', 
-              'brand-light-blue': 'var(--color-brand-light-blue)', 
-              'brand-bg': 'var(--color-brand-bg)',
-            },
-          },
-        },
-      }
     </script>
 
 <script type="importmap">
