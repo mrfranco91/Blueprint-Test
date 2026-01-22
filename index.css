@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  /* Default Brand Colors - Will be overridden by script below if saved */
+  --color-brand-primary: #BE123C;
+  --color-brand-secondary: #0F766E;
+  --color-brand-accent: #1E3A8A;
+  --color-brand-light-blue: #E0F2FE;
+  --color-brand-bg: #F8F9FA;
+}
+
+/* Tailwind Overrides for Dynamic Text Size */
+/* Small Size Setting */
+.text-size-s .text-xs { font-size: 0.6875rem; } /* ~11px */
+.text-size-s .text-sm { font-size: 0.75rem; } /* was text-xs */
+.text-size-s .text-base { font-size: 0.875rem; } /* was text-sm */
+.text-size-s .text-lg { font-size: 1rem; } /* was text-base */
+.text-size-s .text-xl { font-size: 1.125rem; } /* was text-lg */
+.text-size-s .text-2xl { font-size: 1.25rem; } /* was text-xl */
+.text-size-s .text-3xl { font-size: 1.5rem; } /* was text-2xl */
+.text-size-s .text-4xl { font-size: 1.875rem; } /* was text-3xl */
+.text-size-s .text-5xl { font-size: 2.25rem; } /* was text-4xl */
+
+/* Medium Size is Tailwind's default, no overrides needed. */
+
+/* Large Size Setting */
+.text-size-l .text-xs { font-size: 0.875rem; } /* was text-sm */
+.text-size-l .text-sm { font-size: 1rem; } /* was text-base */
+.text-size-l .text-base { font-size: 1.125rem; } /* was text-lg */
+.text-size-l .text-lg { font-size: 1.25rem; } /* was text-xl */
+.text-size-l .text-xl { font-size: 1.5rem; } /* was text-2xl */
+.text-size-l .text-2xl { font-size: 1.875rem; } /* was text-3xl */
+.text-size-l .text-3xl { font-size: 2.25rem; } /* was text-4xl */
+.text-size-l .text-4xl { font-size: 3rem; } /* was text-5xl */
+.text-size-l .text-5xl { font-size: 3.75rem; } /* was text-6xl */

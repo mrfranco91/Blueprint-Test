@@ -39,6 +39,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    console.log('[OAUTH TOKEN] Processing token request');
+
     let body = req.body;
     if (typeof body === 'string') {
       try {
@@ -60,8 +62,11 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!code) {
+      console.error('[OAUTH TOKEN] Missing OAuth code');
       return res.status(400).json({ message: 'Missing OAuth code.' });
     }
+
+    console.log('[OAUTH TOKEN] Received code, validating state');
 
     // CSRF State Validation
     let state = body?.state;
@@ -78,18 +83,32 @@ export default async function handler(req: any, res: any) {
 
     // Extract state from cookies
     const cookies = req.headers.cookie?.split(';').reduce((acc: any, cookie: string) => {
-      const [key, value] = cookie.trim().split('=');
-      acc[key] = decodeURIComponent(value);
+      const trimmed = cookie.trim();
+      if (!trimmed) return acc;
+      const eqIndex = trimmed.indexOf('=');
+      if (eqIndex === -1) return acc;
+      const key = trimmed.substring(0, eqIndex);
+      const value = trimmed.substring(eqIndex + 1);
+      try {
+        acc[key] = decodeURIComponent(value);
+      } catch {
+        acc[key] = value;
+      }
       return acc;
     }, {}) || {};
 
     const storedState = cookies.square_oauth_state;
     if (!storedState || storedState !== state) {
+      console.error('[OAUTH] State validation failed:', {
+        stored: storedState,
+        received: state,
+        allCookies: Object.keys(cookies),
+      });
       return res.status(403).json({ message: 'Invalid OAuth state parameter. Possible CSRF attack.' });
     }
 
     // Clear the state cookie
-    res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0');
+    res.setHeader('Set-Cookie', 'square_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
 
     const env = (process.env.VITE_SQUARE_ENV || 'production').toLowerCase();
     const baseUrl =
@@ -139,11 +158,14 @@ export default async function handler(req: any, res: any) {
 
     const { access_token, merchant_id } = tokenData;
     if (!access_token || !merchant_id) {
+      console.error('[OAUTH TOKEN] Missing tokens in Square response:', { hasAccessToken: !!access_token, hasMerchantId: !!merchant_id });
       return res.status(500).json({
         message: 'Square OAuth response missing access token or merchant id.',
         square_error: tokenData,
       });
     }
+
+    console.log('[OAUTH TOKEN] Successfully obtained Square tokens for merchant:', merchant_id);
 
     const merchantData = await squareApiFetch(
       `${baseUrl}/v2/merchants/${merchant_id}`,
@@ -196,7 +218,7 @@ export default async function handler(req: any, res: any) {
       );
 
     // Store access token in secure HTTP-only cookie
-    res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000`);
+    res.setHeader('Set-Cookie', `square_access_token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
 
     // ✅ RESTORED: payload frontend expects to bootstrap app state (without exposing token)
     return res.status(200).json({
