@@ -6,6 +6,7 @@ import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
 
 const LoginScreen: React.FC = () => {
   const { branding } = useSettings();
+  const { login } = useAuth();
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
