@@ -250,7 +250,7 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     <div className="p-6">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-black text-brand-accent tracking-tighter">Plans</h1>
-        <button className="bg-gray-950 text-white px-6 py-3 rounded-2xl font-black text-sm">+ NEW PLAN</button>
+        <button onClick={() => setEditingPlan(null)} className="bg-gray-950 text-white px-6 py-3 rounded-2xl font-black text-sm active:scale-95 transition-transform">+ NEW PLAN</button>
       </div>
       <div className="space-y-3">
         {plans.length === 0 ? (
@@ -260,7 +260,7 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
           </div>
         ) : (
           plans.map(plan => (
-            <div key={plan.id} className="w-full p-5 bg-white border-4 border-gray-100 rounded-3xl shadow-sm">
+            <button key={plan.id} onClick={() => setEditingPlan(plan)} className="w-full text-left p-5 bg-white border-4 border-gray-100 rounded-3xl shadow-sm active:scale-95 transition-transform hover:border-brand-accent">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-black text-gray-950 text-lg">{plan.client?.name || 'Unnamed Client'}</h3>
                 <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${plan.status === 'active' ? 'bg-green-100 text-green-700' : plan.status === 'draft' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
@@ -269,7 +269,7 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
               </div>
               <p className="text-sm font-bold text-gray-500 mb-3">${plan.totalCost?.toLocaleString() || '0'}</p>
               <p className="text-[10px] text-gray-400 font-black">{plan.description || 'No description'}</p>
-            </div>
+            </button>
           ))
         )}
       </div>
