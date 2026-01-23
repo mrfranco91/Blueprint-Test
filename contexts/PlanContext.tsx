@@ -138,7 +138,10 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [user]);
 
     const savePlan = async (newPlan: GeneratedPlan): Promise<GeneratedPlan> => {
+        console.log('savePlan called with:', newPlan);
+
         if (!supabase) {
+            console.error('Supabase client not available in savePlan');
             throw new Error("Supabase client not available.");
         }
 
@@ -150,7 +153,7 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         const isNewPlan = newPlan.id.startsWith('plan_');
-        
+
         const { id: _, ...planDataForBlob } = newPlan;
 
         const payloadBase = {
@@ -164,6 +167,8 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
 
         const payload = isNewPlan ? payloadBase : { ...payloadBase, id: newPlan.id };
+
+        console.log('savePlan payload:', payload);
 
         const { data, error } = await supabase
             .from('plans')
