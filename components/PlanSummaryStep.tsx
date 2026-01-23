@@ -58,9 +58,10 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
   const canBook = user?.role === 'admin' || isClient || user?.stylistData?.permissions.canBookAppointments;
 
   const qualifyingTier = useMemo(() => {
+      if (!membershipConfig?.tiers || membershipConfig.tiers.length === 0) return undefined;
       const sortedTiers = [...membershipConfig.tiers].sort((a, b) => b.minSpend - a.minSpend);
       return sortedTiers.find(t => plan.averageMonthlySpend >= t.minSpend) || sortedTiers[sortedTiers.length - 1];
-  }, [plan.averageMonthlySpend, membershipConfig.tiers]);
+  }, [plan.averageMonthlySpend, membershipConfig?.tiers]);
 
   const invitationMessage = useMemo(() => {
     if (!qualifyingTier || !plan.client.name) return '';
