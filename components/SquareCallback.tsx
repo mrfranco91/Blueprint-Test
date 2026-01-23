@@ -16,52 +16,89 @@ export default function SquareCallback() {
       return;
     }
 
-    fetch('/api/square/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.message || 'Square login failed');
-        }
-        return data;
-      })
-      .then(async (data) => {
-        if (data.access_token) {
-          localStorage.setItem('square_access_token', data.access_token);
+    (async () => {
+      try {
+        // Step 1: Exchange OAuth code for Square access token
+        const tokenRes = await fetch('/api/square/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+
+        const tokenData = await tokenRes.json();
+        if (!tokenRes.ok) {
+          throw new Error(tokenData?.message || 'Square login failed');
         }
 
-        const squareToken = data.access_token;
+        const { access_token: squareToken, merchant_id } = tokenData;
 
-        // ✅ Trigger clients sync (correct path)
-        await fetch('/api/square/clients', {
+        if (!squareToken) {
+          throw new Error('No Square access token received');
+        }
+
+        // Step 2: Sign in with Supabase to get a session token
+        const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+          throw new Error('Supabase config missing');
+        }
+
+        const { supabase } = await import('../lib/supabase');
+
+        // The OAuth token handler creates a user with email: {merchant_id}@square-oauth.blueprint
+        // and password: merchant_id
+        const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+          email: `${merchant_id}@square-oauth.blueprint`,
+          password: merchant_id,
+        });
+
+        if (authErr || !authData?.session?.access_token) {
+          throw new Error(authErr?.message || 'Failed to sign in');
+        }
+
+        const jwtToken = authData.session.access_token;
+
+        // Step 3: Sync data via Supabase Edge Functions with Bearer token
+        const edgeFunctionBase = `${supabaseUrl}/functions/v1`;
+
+        const teamRes = await fetch(`${edgeFunctionBase}/sync-team-members`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-square-access-token': squareToken,
+            'Authorization': `Bearer ${jwtToken}`,
           },
+          body: JSON.stringify({ squareAccessToken: squareToken }),
         });
 
-        // ✅ Trigger team sync
-        await fetch('/api/square/team', {
+        if (!teamRes.ok) {
+          const teamErr = await teamRes.text();
+          console.error('[CALLBACK] Team sync failed:', teamErr);
+        }
+
+        const clientRes = await fetch(`${edgeFunctionBase}/sync-clients`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-square-access-token': squareToken,
+            'Authorization': `Bearer ${jwtToken}`,
           },
+          body: JSON.stringify({ squareAccessToken: squareToken }),
         });
 
-        // Force full reload so app reads persisted data
+        if (!clientRes.ok) {
+          const clientErr = await clientRes.text();
+          console.error('[CALLBACK] Client sync failed:', clientErr);
+        }
+
+        // Step 4: Redirect to admin dashboard
         window.location.replace('/admin');
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Square OAuth callback failed:', err);
         setError(
-          'Square login failed. Please return to the app and try connecting again.'
+          err instanceof Error ? err.message : 'Square login failed. Please return to the app and try connecting again.'
         );
-      });
+      }
+    })();
   }, []);
 
   return (
