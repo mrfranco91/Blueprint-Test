@@ -215,6 +215,20 @@ const LoginScreen: React.FC = () => {
             <div className="flex-1 h-px bg-gray-300"></div>
           </div>
 
+          <button
+            onClick={handleDevAdminLogin}
+            disabled={loading}
+            className="w-full bg-gray-100 text-gray-700 font-bold py-3 rounded-lg border-2 border-gray-300 active:scale-95 transition-transform disabled:opacity-50 text-xs mb-6"
+          >
+            {loading ? 'Logging in...' : 'Dev: Login as Admin'}
+          </button>
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-gray-300"></div>
+            <span className="text-xs text-gray-500 font-semibold">or</span>
+            <div className="flex-1 h-px bg-gray-300"></div>
+          </div>
+
           <p className="text-center text-xs text-gray-600 mb-4">
             Enter your Square access token to sync your team and clients
           </p>
