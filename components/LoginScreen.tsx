@@ -94,14 +94,28 @@ const LoginScreen: React.FC = () => {
 
         <div className="p-10">
           <p className="text-center text-sm font-bold text-gray-700 mb-6">
-            Connect your Square account to manage your salon's service blueprints.
+            Enter your Square access token to manage your salon's service blueprints.
           </p>
-          <button
-            onClick={handleSquareLogin}
-            className="w-full bg-gray-950 text-white font-black py-4 rounded-2xl border-4 border-gray-950 shadow-lg active:scale-95 transition-transform"
-          >
-            Connect with Square
-          </button>
+          <form onSubmit={handleTokenSubmit} className="space-y-4">
+            <input
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="Square Access Token"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-950"
+              disabled={loading}
+            />
+            {error && (
+              <p className="text-red-600 text-sm font-bold">{error}</p>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gray-950 text-white font-black py-4 rounded-2xl border-4 border-gray-950 shadow-lg active:scale-95 transition-transform disabled:opacity-50"
+            >
+              {loading ? 'Syncing...' : 'Sync with Square'}
+            </button>
+          </form>
         </div>
       </div>
     </div>
