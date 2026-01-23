@@ -21,6 +21,7 @@ import { GOOGLE_FONTS_LIST } from '../data/fonts';
 import AccountSettings from './AccountSettings';
 import PlanSummaryStep from './PlanSummaryStep';
 import StylistDashboard from './StylistDashboard';
+import SelectClientStep from './SelectClientStep';
 
 export default function AdminDashboard({ role }: { role: UserRole }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
