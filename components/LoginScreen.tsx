@@ -101,23 +101,6 @@ const LoginScreen: React.FC = () => {
         </div>
 
         <div className="p-10">
-          <p className="text-center text-sm font-bold text-gray-700 mb-6">
-            Connect your Square account to manage your salon's service blueprints.
-          </p>
-          <button
-            onClick={() => {
-              window.location.href = '/api/square/oauth/start';
-            }}
-            className="w-full bg-gray-950 text-white font-black py-4 rounded-2xl border-4 border-gray-950 shadow-lg active:scale-95 transition-transform"
-          >
-            Connect with Square
-          </button>
-
-          <div className="my-6 flex items-center gap-4">
-            <div className="flex-1 h-px bg-gray-300" />
-            <span className="text-xs text-gray-500 font-bold">OR</span>
-            <div className="flex-1 h-px bg-gray-300" />
-          </div>
 
           <p className="text-center text-xs text-gray-600 mb-4">
             Manually enter your Square access token for development/testing
