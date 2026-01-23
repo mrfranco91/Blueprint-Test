@@ -244,34 +244,30 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     );
   };
 
+  const renderPlans = () => (
+    <div className="p-6">
+      <h1 className="text-3xl font-black text-brand-accent tracking-tighter mb-8">Plans</h1>
+      <div className="space-y-3">
+        {plans.map(plan => (
+          <div key={plan.id} className="w-full p-5 bg-white border-4 border-gray-100 rounded-3xl shadow-sm">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-black text-gray-950 text-lg">{plan.clientName}</h3>
+              <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${plan.status === 'active' ? 'bg-green-100 text-green-700' : plan.status === 'draft' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                {plan.status}
+              </span>
+            </div>
+            <p className="text-sm font-bold text-gray-500 mb-3">${plan.totalCost.toLocaleString()}</p>
+            <p className="text-[10px] text-gray-400 font-black">{plan.description || 'No description'}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'dashboard': return renderDashboard();
-      case 'calendar': return (
-        <div className="p-8 text-center flex flex-col items-center justify-center h-full min-h-[60vh]">
-          <DatabaseIcon className="w-16 h-16 text-brand-accent mb-6" />
-          <h2 className="text-2xl font-black mb-2 tracking-tighter">Salon Schedule</h2>
-          <p className="text-gray-400 font-bold mb-8">Synchronized with Square Calendar.</p>
-          <button className="bg-gray-950 text-white px-10 py-5 rounded-2xl font-black">LAUNCH POS</button>
-        </div>
-      );
-      case 'clients': return (
-        <div className="p-6">
-          <h1 className="text-3xl font-black text-brand-accent tracking-tighter mb-8">Client Directory</h1>
-          <div className="space-y-3">
-            {clients.map(c => (
-              <div key={c.id} className="w-full flex items-center p-4 bg-white border-4 border-gray-100 rounded-3xl shadow-sm">
-                <img src={c.avatarUrl} className="w-14 h-14 rounded-2xl mr-4 border-2 border-gray-50"/>
-                <div className="flex-grow">
-                  <span className="font-black text-gray-950 block text-lg leading-tight">{c.name}</span>
-                  {c.externalId && <span className="text-[10px] text-green-600 font-black uppercase tracking-widest">Square Linked</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-      case 'team': return renderTeam();
+      case 'plans': return renderPlans();
       case 'settings': return renderSettings();
       default: return renderDashboard();
     }
