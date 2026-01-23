@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Salon Service Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <style>
+      :root {
+        /* Default Brand Colors - Will be overridden by script below if saved */
+        --color-brand-primary: #BE123C;
+        --color-brand-secondary: #0F766E;
+        --color-brand-accent: #1E3A8A;
+        --color-brand-light-blue: #E0F2FE;
+        --color-brand-bg: #F8F9FA;
+      }
+
+      /* Tailwind Overrides for Dynamic Text Size */
+      /* Small Size Setting */
+      .text-size-s .text-xs { font-size: 0.6875rem; } /* ~11px */
+      .text-size-s .text-sm { font-size: 0.75rem; } /* was text-xs */
+      .text-size-s .text-base { font-size: 0.875rem; } /* was text-sm */
+      .text-size-s .text-lg { font-size: 1rem; } /* was text-base */
+      .text-size-s .text-xl { font-size: 1.125rem; } /* was text-lg */
+      .text-size-s .text-2xl { font-size: 1.25rem; } /* was text-xl */
+      .text-size-s .text-3xl { font-size: 1.5rem; } /* was text-2xl */
+      .text-size-s .text-4xl { font-size: 1.875rem; } /* was text-3xl */
+      .text-size-s .text-5xl { font-size: 2.25rem; } /* was text-4xl */
+
+      /* Medium Size is Tailwind's default, no overrides needed. */
+
+      /* Large Size Setting */
+      .text-size-l .text-xs { font-size: 0.875rem; } /* was text-sm */
+      .text-size-l .text-sm { font-size: 1rem; } /* was text-base */
+      .text-size-l .text-base { font-size: 1.125rem; } /* was text-lg */
+      .text-size-l .text-lg { font-size: 1.25rem; } /* was text-xl */
+      .text-size-l .text-xl { font-size: 1.5rem; } /* was text-2xl */
+      .text-size-l .text-2xl { font-size: 1.875rem; } /* was text-3xl */
+      .text-size-l .text-3xl { font-size: 2.25rem; } /* was text-4xl */
+      .text-size-l .text-4xl { font-size: 3rem; } /* was text-5xl */
+      .text-size-l .text-5xl { font-size: 3.75rem; } /* was text-6xl */
+    </style>
+    <script>
+      // IMMEDIATE BRANDING & PREFERENCE RESTORATION
+      // This runs before React loads to ensure settings are correct instantly.
+      (function() {
+        try {
+          const primary = localStorage.getItem('admin_brand_primary');
+          const secondary = localStorage.getItem('admin_brand_secondary');
+          const accent = localStorage.getItem('admin_brand_accent');
+          const font = localStorage.getItem('admin_brand_font');
+          const textSize = localStorage.getItem('admin_text_size');
+          
+          if (primary) document.documentElement.style.setProperty('--color-brand-primary', primary);
+          if (secondary) document.documentElement.style.setProperty('--color-brand-secondary', secondary);
+          if (accent) document.documentElement.style.setProperty('--color-brand-accent', accent);
+          
+          if (font && !['font-sans', 'font-serif', 'font-mono'].includes(font)) {
+            const link = document.createElement('link');
+            link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@400;700;900&display=swap`;
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+            document.body.style.fontFamily = `'${font}', sans-serif`;
+          } else if (font) {
+            document.body.classList.add(font);
+          }
+
+          if (textSize) document.body.classList.add(`text-size-${textSize.toLowerCase()}`);
+
+        } catch (e) {
+          console.log('Error loading preferences', e);
+        }
+      })();
+
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-primary': 'var(--color-brand-primary)', 
+              'brand-secondary': 'var(--color-brand-secondary)', 
+              'brand-accent': 'var(--color-brand-accent)', 
+              'brand-light-blue': 'var(--color-brand-light-blue)', 
+              'brand-bg': 'var(--color-brand-bg)',
+            },
+          },
+        },
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.2",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.2/",
+    "react/": "https://esm.sh/react@^19.2.2/",
+    "recharts": "https://esm.sh/recharts@^3.5.1",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

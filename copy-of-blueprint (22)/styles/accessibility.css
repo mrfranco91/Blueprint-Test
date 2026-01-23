@@ -1,0 +1,27 @@
+/* Inputs must always be readable */
+input,
+textarea,
+select {
+  background-color: #ffffff;
+  border: 1px solid #666666;
+}
+
+/* Buttons must be visible via shape, not icon color */
+button {
+  background-color: #ffffff;
+  border: 1px solid #666666;
+}
+
+/* Focus visibility (keyboard accessibility) */
+:focus-visible {
+  outline: 3px solid #005fcc;
+  outline-offset: 2px;
+}
+
+/* Disabled clarity */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+}
