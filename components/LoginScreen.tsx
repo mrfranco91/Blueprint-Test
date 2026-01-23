@@ -9,6 +9,38 @@ const LoginScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const squareAppId =
+    (import.meta as any).env.VITE_SQUARE_APPLICATION_ID ||
+    (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
+  const squareRedirectUri = (import.meta as any).env.VITE_SQUARE_REDIRECT_URI;
+  const squareEnv = ((import.meta as any).env.VITE_SQUARE_ENV || 'production').toLowerCase();
+
+  const scopes =
+    ((import.meta as any).env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ??
+    'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_READ APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
+
+  const startSquareOAuth = () => {
+    if (!squareAppId || !squareRedirectUri) {
+      alert("Square OAuth is not configured correctly. Missing Application ID or Redirect URI.");
+      return;
+    }
+
+    const base =
+      squareEnv === 'sandbox'
+        ? 'https://connect.squareupsandbox.com/oauth2/authorize'
+        : 'https://connect.squareup.com/oauth2/authorize';
+
+    const url =
+      `${base}` +
+      `?client_id=${encodeURIComponent(squareAppId)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent(scopes)}` +
+      `&redirect_uri=${encodeURIComponent(squareRedirectUri)}` +
+      `&session=false`;
+
+    window.location.href = url;
+  };
+
   const handleTokenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token.trim()) {
@@ -101,6 +133,23 @@ const LoginScreen: React.FC = () => {
         </div>
 
         <div className="p-10">
+
+          {squareRedirectUri && (
+            <div className="mb-6">
+              <button
+                onClick={startSquareOAuth}
+                className="w-full bg-gray-950 text-white font-black py-3 rounded-lg border-2 border-gray-950 active:scale-95 transition-transform text-sm"
+              >
+                Login with Square
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-gray-300"></div>
+            <span className="text-xs text-gray-500 font-semibold">or</span>
+            <div className="flex-1 h-px bg-gray-300"></div>
+          </div>
 
           <p className="text-center text-xs text-gray-600 mb-4">
             Enter your Square access token to sync your team and clients
