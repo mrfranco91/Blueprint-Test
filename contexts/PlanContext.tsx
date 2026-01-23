@@ -46,21 +46,32 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setLoading(true);
 
             try {
+                console.log('User info:', user);
+                console.log('User role:', user?.role);
+
                 let plansQuery = supabase.from('plans').select('*');
                 let bookingsQuery = supabase.from('bookings').select('*');
 
                 if (user?.role === 'client' && user.id) {
+                    console.log('Filtering for client:', user.id);
                     plansQuery = plansQuery.eq('client_id', user.id);
                     bookingsQuery = bookingsQuery.eq('client_id', user.id);
                 } else if (user?.role === 'stylist' && user.id) {
                     // SECURITY FIX: Scope data to the logged-in stylist at the database level.
                     // This prevents data leakage by ensuring stylists can only fetch their own data.
+                    console.log('Filtering for stylist:', user.id);
                     plansQuery = plansQuery.eq('plan_data->>stylistId', user.id);
                     bookingsQuery = bookingsQuery.eq('stylist_id', user.id);
+                } else {
+                    console.log('Admin user - fetching all plans');
                 }
 
 
                 const [pRes, bRes] = await Promise.all([plansQuery, bookingsQuery]);
+
+                if (pRes.error) {
+                    console.error('DETAILED ERROR:', JSON.stringify(pRes.error, null, 2));
+                }
 
                 if (pRes.error) {
                     console.error("Error fetching plans:", pRes.error.message || pRes.error);
