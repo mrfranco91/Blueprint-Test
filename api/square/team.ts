@@ -123,6 +123,7 @@ export default async function handler(req: any, res: any) {
        4. TRANSFORM AND UPSERT TO DATABASE
     --------------------------------------------------*/
     const rows = teamMembers.map((m: any) => ({
+      supabase_user_id: supabaseUserId,
       merchant_id: merchantId,
       square_team_member_id: m.id,
       name: [m.given_name, m.family_name].filter(Boolean).join(' ') || 'Team Member',
