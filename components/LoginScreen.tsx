@@ -94,26 +94,44 @@ const LoginScreen: React.FC = () => {
 
         <div className="p-10">
           <p className="text-center text-sm font-bold text-gray-700 mb-6">
-            Enter your Square access token to manage your salon's service blueprints.
+            Connect your Square account to manage your salon's service blueprints.
           </p>
-          <form onSubmit={handleTokenSubmit} className="space-y-4">
+          <button
+            onClick={() => {
+              window.location.href = '/api/square/oauth/start';
+            }}
+            className="w-full bg-gray-950 text-white font-black py-4 rounded-2xl border-4 border-gray-950 shadow-lg active:scale-95 transition-transform"
+          >
+            Connect with Square
+          </button>
+
+          <div className="my-6 flex items-center gap-4">
+            <div className="flex-1 h-px bg-gray-300" />
+            <span className="text-xs text-gray-500 font-bold">OR</span>
+            <div className="flex-1 h-px bg-gray-300" />
+          </div>
+
+          <p className="text-center text-xs text-gray-600 mb-4">
+            Manually enter your Square access token for development/testing
+          </p>
+          <form onSubmit={handleTokenSubmit} className="space-y-3">
             <input
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder="Square Access Token"
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-950"
+              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-gray-950"
               disabled={loading}
             />
             {error && (
-              <p className="text-red-600 text-sm font-bold">{error}</p>
+              <p className="text-red-600 text-xs font-bold">{error}</p>
             )}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gray-950 text-white font-black py-4 rounded-2xl border-4 border-gray-950 shadow-lg active:scale-95 transition-transform disabled:opacity-50"
+              className="w-full bg-gray-200 text-gray-950 font-bold py-3 rounded-lg border-2 border-gray-300 active:scale-95 transition-transform disabled:opacity-50 text-sm"
             >
-              {loading ? 'Syncing...' : 'Sync with Square'}
+              {loading ? 'Syncing...' : 'Sync Manually'}
             </button>
           </form>
         </div>
