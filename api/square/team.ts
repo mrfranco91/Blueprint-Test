@@ -23,9 +23,24 @@ export default async function handler(req: any, res: any) {
     /* -------------------------------------------------
        1. IDENTIFY AUTHENTICATED USER
     --------------------------------------------------*/
-    let squareAccessToken: string | undefined =
-      (req.headers['x-square-access-token'] as string | undefined) ||
-      (req.headers['x-square-access-token'.toLowerCase()] as string | undefined);
+    let squareAccessToken: string | undefined;
+
+    // Try to read token from request body first (preferred)
+    if (req.method === 'POST' && req.body) {
+      try {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        squareAccessToken = body?.squareAccessToken;
+      } catch (e) {
+        // Ignore parse errors, fall through to headers
+      }
+    }
+
+    // Fall back to headers if not in body
+    if (!squareAccessToken) {
+      squareAccessToken =
+        (req.headers['x-square-access-token'] as string | undefined) ||
+        (req.headers['x-square-access-token'.toLowerCase()] as string | undefined);
+    }
 
     const authHeader = req.headers['authorization'];
     const bearer =
