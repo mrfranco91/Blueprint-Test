@@ -410,7 +410,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
                 </div>
                 <div className="text-right">
                     <p className="text-xs font-black uppercase text-gray-400 mb-1 tracking-widest">Membership Tier</p>
-                    <p className="text-xl font-black" style={{color: qualifyingTier.color}}>{qualifyingTier.name}</p>
+                    <p className="text-xl font-black" style={{color: qualifyingTier?.color || '#000'}}>{qualifyingTier?.name || 'Standard'}</p>
                 </div>
             </div>
             <div className="bg-white p-5 rounded-3xl border-4 border-gray-100 shadow-lg">
