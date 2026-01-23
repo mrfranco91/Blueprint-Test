@@ -36,15 +36,20 @@ export const clearSupabaseConfig = () => {
 // Initialize the client
 const { url, key } = getSupabaseConfig();
 
+console.log('Supabase init - URL:', url);
+console.log('Supabase init - Key present:', !!key);
+
 let supabaseInstance = null;
 
 if (url && key) {
     try {
         supabaseInstance = createClient(url, key);
+        console.log('Supabase client created successfully');
     } catch (e) {
         console.error("Failed to initialize Supabase client:", e);
         // Leaving instance as null will trigger SetupScreen
     }
 }
 
+console.log('Supabase instance available:', !!supabaseInstance);
 export const supabase = supabaseInstance;
