@@ -30,3 +30,6 @@ export const getSupabaseClient = (): SupabaseClient => {
 
 // Export the initialized Supabase client directly for easy import elsewhere.
 export const supabase = getSupabaseClient();
+
+// Log the Supabase project URL for debugging
+console.log('Supabase URL:', supabaseUrl);
