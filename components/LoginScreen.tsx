@@ -55,17 +55,6 @@ const LoginScreen: React.FC = () => {
     window.location.href = url;
   };
 
-  const handleDevAdminLogin = async () => {
-    const { login } = await import('../contexts/AuthContext');
-    setLoading(true);
-    try {
-      await login('admin');
-    } catch (err) {
-      setError('Admin login failed');
-      setLoading(false);
-    }
-  };
-
   const handleTokenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token.trim()) {
