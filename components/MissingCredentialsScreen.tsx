@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
+import { supabase } from '../lib/supabase';
 
 const MissingCredentialsScreen = () => {
   const { branding } = useSettings();
