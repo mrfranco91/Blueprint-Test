@@ -107,6 +107,8 @@ const LoginScreen: React.FC = () => {
       }
 
       // Success - log in as admin with the token-derived user ID
+      // Clear any old mock session first to ensure clean state
+      localStorage.removeItem('mock_admin_user');
       await login('admin', userId);
       window.location.href = '/admin';
     } catch (err) {
