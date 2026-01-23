@@ -71,8 +71,8 @@ const LoginScreen: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-square-access-token': token,
           },
+          body: JSON.stringify({ squareAccessToken: token }),
         }
       );
 
@@ -92,8 +92,8 @@ const LoginScreen: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-square-access-token': token,
           },
+          body: JSON.stringify({ squareAccessToken: token }),
         }
       );
 
