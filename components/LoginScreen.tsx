@@ -102,7 +102,8 @@ const LoginScreen: React.FC = () => {
         throw new Error('Client sync returned empty response');
       }
 
-      // Success - redirect to admin
+      // Success - log in as admin and redirect
+      await login('admin');
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
