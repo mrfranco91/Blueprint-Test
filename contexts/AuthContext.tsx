@@ -23,11 +23,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    if (!supabase) {
-      setAuthInitialized(true);
-      return;
-    }
-
     let active = true;
 
     const hydrateFromSession = (session: any) => {
@@ -55,6 +50,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setAuthInitialized(true);
     };
+
+    // Check for mock admin session in localStorage first
+    const savedMockUser = localStorage.getItem('mock_admin_user');
+    if (savedMockUser) {
+      try {
+        const user = JSON.parse(savedMockUser);
+        if (active) {
+          setUser(user);
+          setAuthInitialized(true);
+        }
+      } catch (e) {
+        console.error('Failed to restore mock user session:', e);
+        setAuthInitialized(true);
+      }
+      return;
+    }
+
+    if (!supabase) {
+      setAuthInitialized(true);
+      return;
+    }
 
     // IMPORTANT: hydrate existing session immediately on mount
     supabase.auth.getSession().then(({ data }) => {
