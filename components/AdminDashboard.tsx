@@ -299,10 +299,15 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     }
   };
 
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setEditingPlan(undefined);
+  };
+
   return (
     <div className="flex flex-col h-full bg-brand-bg pb-24">
       {renderActiveTab()}
-      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onChange={handleTabChange} />
     </div>
   );
 }
