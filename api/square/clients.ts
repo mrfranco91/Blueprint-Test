@@ -19,33 +19,38 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ message: 'Supabase config missing.' });
     }
 
-    if (!bearer) {
-      return res.status(401).json({ message: 'Missing Supabase auth token.' });
-    }
+    let supabaseUserId: string | undefined;
 
-    // User-scoped Supabase client (identity only)
-    const supabaseUser = createClient(
-      process.env.VITE_SUPABASE_URL,
-      process.env.VITE_SUPABASE_ANON_KEY,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${bearer}`,
+    if (bearer) {
+      // User-scoped Supabase client (identity only)
+      const supabaseUser = createClient(
+        process.env.VITE_SUPABASE_URL,
+        process.env.VITE_SUPABASE_ANON_KEY,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${bearer}`,
+            },
           },
-        },
+        }
+      );
+
+      // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
+      const { data: userData, error: userErr } =
+        await (supabaseUser.auth as any).getUser();
+
+      if (userErr || !userData?.user) {
+        console.error('[CLIENT SYNC] Invalid Supabase session:', userErr);
+        return res.status(401).json({ message: 'Invalid Supabase session.' });
       }
-    );
 
-    // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
-    const { data: userData, error: userErr } =
-      await (supabaseUser.auth as any).getUser();
-
-    if (userErr || !userData?.user) {
-      console.error('[CLIENT SYNC] Invalid Supabase session:', userErr);
-      return res.status(401).json({ message: 'Invalid Supabase session.' });
+      supabaseUserId = userData.user.id;
+    } else if (squareAccessToken) {
+      // Development mode: use a fixed dev user ID when token is provided directly
+      supabaseUserId = 'dev-user-' + Buffer.from(squareAccessToken).toString('base64').substring(0, 12);
+    } else {
+      return res.status(401).json({ message: 'Missing auth token.' });
     }
-
-    const supabaseUserId = userData.user.id;
 
     // Service-role Supabase client (DB access)
     const supabaseAdmin = createClient(

@@ -16,7 +16,6 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          // FIX: Replaced `process.cwd()` with `'.'` to avoid "Property 'cwd' does not exist on type 'Process'" error in some TS environments.
           '@': path.resolve('.'),
         }
       }
