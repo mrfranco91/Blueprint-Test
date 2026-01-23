@@ -204,19 +204,19 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setTeamError(null);
 
       try {
-        let q = supabase.from('square_team_members').select('*');
-        if (user.id) q = q.eq('supabase_user_id', user.id);
-
-        let { data, error } = await q;
+        let { data, error } = await supabase
+          .from('square_team_members')
+          .select('*')
+          .eq('supabase_user_id', user.id);
 
         if (cancelled) return;
 
-        // Fallback: if no data found and user is mock admin, try the legacy 'admin' ID
-        if ((data?.length ?? 0) === 0 && user.id !== 'admin') {
+        // Fallback: if no data found, try both 'admin' and current user ID
+        if ((data?.length ?? 0) === 0) {
           const { data: legacyData } = await supabase
             .from('square_team_members')
             .select('*')
-            .eq('supabase_user_id', 'admin');
+            .in('supabase_user_id', ['admin', user.id]);
           if (legacyData && legacyData.length > 0) {
             data = legacyData;
           }
