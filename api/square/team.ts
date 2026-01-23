@@ -25,16 +25,21 @@ export default async function handler(req: any, res: any) {
         ? authHeader.slice(7)
         : null;
 
-    if (!bearer) {
+    let supabaseUserId: string | undefined;
+
+    if (bearer) {
+      // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
+      const { data: userData } = await (supabaseAdmin.auth as any).getUser(bearer);
+      supabaseUserId = userData?.user?.id;
+
+      if (!supabaseUserId) {
+        return res.status(401).json({ message: 'Invalid user.' });
+      }
+    } else if (squareAccessToken) {
+      // Development mode: use a fixed dev user ID when token is provided directly
+      supabaseUserId = 'dev-user-' + Buffer.from(squareAccessToken).toString('base64').substring(0, 12);
+    } else {
       return res.status(401).json({ message: 'Missing auth token.' });
-    }
-
-    // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
-    const { data: userData } = await (supabaseAdmin.auth as any).getUser(bearer);
-    const supabaseUserId = userData?.user?.id;
-
-    if (!supabaseUserId) {
-      return res.status(401).json({ message: 'Invalid user.' });
     }
 
     /* -------------------------------------------------
