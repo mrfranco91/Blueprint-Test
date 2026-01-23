@@ -117,7 +117,7 @@ export default async function handler(req: any, res: any) {
       email: m.email_address ?? null,
       role: m.is_owner ? 'Owner' : 'Team Member',
       status: m.status,
-      raw_square_payload: m,
+      raw: m,
       updated_at: new Date().toISOString(),
     }));
 
