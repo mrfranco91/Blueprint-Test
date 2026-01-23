@@ -10,9 +10,27 @@ function generateUUIDFromToken(token: string): string {
 
 export default async function handler(req: any, res: any) {
   try {
-    let squareAccessToken: string | undefined =
-      (req.headers['x-square-access-token'] as string | undefined) ||
-      (req.headers['x-square-access-token'.toLowerCase()] as string | undefined);
+    let squareAccessToken: string | undefined;
+
+    // Try to read token from request body first (preferred)
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        squareAccessToken = body?.squareAccessToken;
+        console.log('[CLIENT SYNC] Token from body:', squareAccessToken ? '✓' : '✗');
+      } catch (e) {
+        console.log('[CLIENT SYNC] Failed to parse body:', e);
+        // Ignore parse errors, fall through to headers
+      }
+    }
+
+    // Fall back to headers if not in body
+    if (!squareAccessToken) {
+      squareAccessToken =
+        (req.headers['x-square-access-token'] as string | undefined) ||
+        (req.headers['x-square-access-token'.toLowerCase()] as string | undefined);
+      console.log('[CLIENT SYNC] Token from headers:', squareAccessToken ? '✓' : '✗');
+    }
 
     const authHeader = req.headers['authorization'] as string | undefined;
     const bearer = authHeader?.startsWith('Bearer ')

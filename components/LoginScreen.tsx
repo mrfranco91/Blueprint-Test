@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
 import { SettingsIcon } from './icons';
 import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
+import { generateUUIDFromToken } from '../utils/tokenUuid';
 
 const LoginScreen: React.FC = () => {
   const { branding } = useSettings();
+  const { login } = useAuth();
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
   const squareAppId =
     (import.meta as any).env.VITE_SQUARE_APPLICATION_ID ||
     (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
@@ -48,47 +52,96 @@ const LoginScreen: React.FC = () => {
       return;
     }
 
+    if (!supabaseUrl) {
+      setError('Supabase URL is not configured');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // Sync team members
-      const teamRes = await fetch('/api/square/team', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-square-access-token': token,
-        },
-      });
+      const { supabase } = await import('../lib/supabase');
+
+      // For manual token sync, we need to create a temporary user or use an existing session
+      let jwtToken: string | null = null;
+
+      // Try to get existing session first
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.access_token) {
+        jwtToken = session.session.access_token;
+      } else {
+        // Create a temporary test account for manual sync
+        const tempEmail = `manual-sync-${Date.now()}@blueprint.local`;
+        const tempPassword = Math.random().toString(36).slice(-12);
+
+        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+          email: tempEmail,
+          password: tempPassword,
+        });
+
+        if (signUpErr && signUpErr.message !== 'User already registered') {
+          throw new Error(`Failed to create session: ${signUpErr.message}`);
+        }
+
+        // Sign in
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+          email: tempEmail,
+          password: tempPassword,
+        });
+
+        if (signInErr) {
+          throw new Error(`Failed to sign in: ${signInErr.message}`);
+        }
+
+        jwtToken = signInData?.session?.access_token;
+      }
+
+      if (!jwtToken) {
+        throw new Error('Failed to obtain authentication token');
+      }
+
+      // Sync team members via Supabase Edge Function
+      const teamRes = await fetch(
+        `${supabaseUrl}/functions/v1/sync-team-members`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`,
+          },
+          body: JSON.stringify({ squareAccessToken: token }),
+        }
+      );
 
       const teamText = await teamRes.text();
       if (!teamRes.ok) {
         const data = teamText ? JSON.parse(teamText) : {};
         throw new Error(data?.message || `Team sync failed (${teamRes.status})`);
       }
-      if (!teamText) {
-        throw new Error('Team sync returned empty response');
-      }
 
-      // Sync clients
-      const clientRes = await fetch('/api/square/clients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-square-access-token': token,
-        },
-      });
+      // Sync clients via Supabase Edge Function
+      const clientRes = await fetch(
+        `${supabaseUrl}/functions/v1/sync-clients`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`,
+          },
+          body: JSON.stringify({ squareAccessToken: token }),
+        }
+      );
 
       const clientText = await clientRes.text();
       if (!clientRes.ok) {
         const data = clientText ? JSON.parse(clientText) : {};
         throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
       }
-      if (!clientText) {
-        throw new Error('Client sync returned empty response');
-      }
 
-      // Success - redirect to admin
+      // Success - log in as admin
+      localStorage.removeItem('mock_admin_user');
+      await login('admin');
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');

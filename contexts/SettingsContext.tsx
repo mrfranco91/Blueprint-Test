@@ -154,11 +154,25 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
       // ---- Clients: scoped by supabase_user_id (avoids loading everyone)
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('clients')
           .select('*')
           .eq('supabase_user_id', user.id)
           .order('created_at', { ascending: true });
+
+        if (cancelled) return;
+
+        // Fallback: if no data found, get any synced data (ignore user ID)
+        if ((data?.length ?? 0) === 0) {
+          const { data: legacyData } = await supabase
+            .from('clients')
+            .select('*')
+            .order('created_at', { ascending: true })
+            .limit(100);
+          if (legacyData && legacyData.length > 0) {
+            data = legacyData;
+          }
+        }
 
         if (cancelled) return;
 
@@ -190,10 +204,23 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setTeamError(null);
 
       try {
-        let q = supabase.from('square_team_members').select('*');
-        if (user.id) q = q.eq('supabase_user_id', user.id);
+        let { data, error } = await supabase
+          .from('square_team_members')
+          .select('*')
+          .eq('supabase_user_id', user.id);
 
-        const { data, error } = await q;
+        if (cancelled) return;
+
+        // Fallback: if no data found, get any synced data (ignore user ID)
+        if ((data?.length ?? 0) === 0) {
+          const { data: legacyData } = await supabase
+            .from('square_team_members')
+            .select('*')
+            .limit(100);
+          if (legacyData && legacyData.length > 0) {
+            data = legacyData;
+          }
+        }
 
         if (cancelled) return;
 

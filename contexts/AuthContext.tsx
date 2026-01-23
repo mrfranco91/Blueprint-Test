@@ -23,11 +23,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    if (!supabase) {
-      setAuthInitialized(true);
-      return;
-    }
-
     let active = true;
 
     const hydrateFromSession = (session: any) => {
@@ -56,6 +51,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setAuthInitialized(true);
     };
 
+    // Check for mock admin session in localStorage first
+    const savedMockUser = localStorage.getItem('mock_admin_user');
+    if (savedMockUser) {
+      try {
+        const user = JSON.parse(savedMockUser);
+        if (active) {
+          setUser(user);
+          setAuthInitialized(true);
+        }
+      } catch (e) {
+        console.error('Failed to restore mock user session:', e);
+        setAuthInitialized(true);
+      }
+      return;
+    }
+
+    if (!supabase) {
+      setAuthInitialized(true);
+      return;
+    }
+
     // IMPORTANT: hydrate existing session immediately on mount
     supabase.auth.getSession().then(({ data }) => {
       hydrateFromSession(data.session);
@@ -78,12 +94,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // (Used only for any existing non-Square demo flows.)
   const login = async (role: UserRole, specificId?: string) => {
     if (role === 'admin') {
-      setUser({
-        id: 'admin',
+      const adminUser = {
+        id: specificId || 'admin',
         name: 'Admin',
         role: 'admin',
         isMock: true,
-      });
+      };
+      setUser(adminUser);
+      // Persist mock admin session to localStorage
+      localStorage.setItem('mock_admin_user', JSON.stringify(adminUser));
       setAuthInitialized(true);
       return;
     }
@@ -96,6 +115,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (supabase) {
       await supabase.auth.signOut();
     }
+    // Clear mock admin session from localStorage
+    localStorage.removeItem('mock_admin_user');
     setUser(null);
     setAuthInitialized(true);
   };

@@ -23,9 +23,27 @@ export default async function handler(req: any, res: any) {
     /* -------------------------------------------------
        1. IDENTIFY AUTHENTICATED USER
     --------------------------------------------------*/
-    let squareAccessToken: string | undefined =
-      (req.headers['x-square-access-token'] as string | undefined) ||
-      (req.headers['x-square-access-token'.toLowerCase()] as string | undefined);
+    let squareAccessToken: string | undefined;
+
+    // Try to read token from request body first (preferred)
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        squareAccessToken = body?.squareAccessToken;
+        console.log('[TEAM SYNC] Token from body:', squareAccessToken ? '✓' : '✗');
+      } catch (e) {
+        console.log('[TEAM SYNC] Failed to parse body:', e);
+        // Ignore parse errors, fall through to headers
+      }
+    }
+
+    // Fall back to headers if not in body
+    if (!squareAccessToken) {
+      squareAccessToken =
+        (req.headers['x-square-access-token'] as string | undefined) ||
+        (req.headers['x-square-access-token'.toLowerCase()] as string | undefined);
+      console.log('[TEAM SYNC] Token from headers:', squareAccessToken ? '✓' : '✗');
+    }
 
     const authHeader = req.headers['authorization'];
     const bearer =
@@ -53,18 +71,30 @@ export default async function handler(req: any, res: any) {
     /* -------------------------------------------------
        2. LOAD MERCHANT SETTINGS (CORRECT SOURCE)
     --------------------------------------------------*/
+    let merchantId: string | undefined;
+
     if (!squareAccessToken) {
       const { data: merchant } = await supabaseAdmin
         .from('merchant_settings')
-        .select('square_access_token, settings')
+        .select('id, square_access_token, settings')
         .eq('supabase_user_id', supabaseUserId)
         .maybeSingle();
 
+      merchantId = merchant?.id;
       squareAccessToken =
         merchant?.square_access_token ??
         merchant?.settings?.square_access_token ??
         merchant?.settings?.oauth?.access_token ??
         null;
+    } else {
+      // If token provided in header, still need to fetch merchant_id
+      const { data: merchant } = await supabaseAdmin
+        .from('merchant_settings')
+        .select('id')
+        .eq('supabase_user_id', supabaseUserId)
+        .maybeSingle();
+
+      merchantId = merchant?.id;
     }
 
     if (!squareAccessToken) {
@@ -112,12 +142,13 @@ export default async function handler(req: any, res: any) {
     --------------------------------------------------*/
     const rows = teamMembers.map((m: any) => ({
       supabase_user_id: supabaseUserId,
+      merchant_id: merchantId,
       square_team_member_id: m.id,
       name: [m.given_name, m.family_name].filter(Boolean).join(' ') || 'Team Member',
       email: m.email_address ?? null,
       role: m.is_owner ? 'Owner' : 'Team Member',
       status: m.status,
-      raw_square_payload: m,
+      raw: m,
       updated_at: new Date().toISOString(),
     }));
 
