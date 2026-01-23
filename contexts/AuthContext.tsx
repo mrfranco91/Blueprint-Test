@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (role: UserRole, specificId?: string) => {
     if (role === 'admin') {
       const adminUser = {
-        id: 'admin',
+        id: specificId || 'admin',
         name: 'Admin',
         role: 'admin',
         isMock: true,
