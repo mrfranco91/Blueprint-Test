@@ -3,6 +3,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SettingsIcon } from './icons';
 import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
+import { generateUUIDFromToken } from '../utils/tokenUuid';
 
 const LoginScreen: React.FC = () => {
   const { branding } = useSettings();
