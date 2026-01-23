@@ -277,6 +277,20 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
   );
 
   const renderActiveTab = () => {
+    // If editing a plan, show the plan editor
+    if (editingPlan !== undefined) {
+      return (
+        <StylistDashboard
+          role="admin"
+          onLogout={() => {}}
+          client={editingPlan?.client}
+          existingPlan={editingPlan || undefined}
+          onPlanChange={setEditingPlan}
+          initialStep={editingPlan ? 'summary' : undefined}
+        />
+      );
+    }
+
     switch (activeTab) {
       case 'dashboard': return renderDashboard();
       case 'plans': return renderPlans();
