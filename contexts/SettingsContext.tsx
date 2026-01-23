@@ -162,12 +162,12 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         if (cancelled) return;
 
-        // Fallback: if no data found and user is mock admin, try the legacy 'admin' ID
-        if ((data?.length ?? 0) === 0 && user.id !== 'admin') {
+        // Fallback: if no data found, try both 'admin' and current user ID
+        if ((data?.length ?? 0) === 0) {
           const { data: legacyData } = await supabase
             .from('clients')
             .select('*')
-            .eq('supabase_user_id', 'admin')
+            .in('supabase_user_id', ['admin', user.id])
             .order('created_at', { ascending: true });
           if (legacyData && legacyData.length > 0) {
             data = legacyData;
