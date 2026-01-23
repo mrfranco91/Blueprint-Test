@@ -253,7 +253,7 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     <div className="p-6">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-black text-brand-accent tracking-tighter">Plans</h1>
-        <button onClick={() => setEditingPlan(null)} className="bg-brand-accent text-white px-6 py-3 rounded-2xl font-black text-sm active:scale-95 transition-transform">+ NEW PLAN</button>
+        <button onClick={() => setIsCreatingPlan(true)} className="bg-brand-accent text-white px-6 py-3 rounded-2xl font-black text-sm active:scale-95 transition-transform">+ NEW PLAN</button>
       </div>
       <div className="space-y-3">
         {plans.length === 0 ? (
@@ -284,16 +284,22 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
   );
 
   const renderActiveTab = () => {
-    // If editing a plan, show the plan editor
-    if (editingPlan !== undefined) {
+    // If creating or editing a plan, show the plan wizard
+    if (isCreatingPlan || editingPlan !== undefined) {
       return (
         <StylistDashboard
           role="admin"
           onLogout={() => {}}
           client={editingPlan?.client}
           existingPlan={editingPlan || undefined}
-          onPlanChange={setEditingPlan}
-          initialStep={editingPlan ? 'summary' : undefined}
+          onPlanChange={(plan) => {
+            setEditingPlan(plan);
+            if (!plan) {
+              setIsCreatingPlan(false);
+              setActiveTab('plans');
+            }
+          }}
+          initialStep={isCreatingPlan ? 'select-client' : (editingPlan ? 'summary' : undefined)}
         />
       );
     }
