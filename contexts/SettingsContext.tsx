@@ -154,11 +154,25 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
       // ---- Clients: scoped by supabase_user_id (avoids loading everyone)
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('clients')
           .select('*')
           .eq('supabase_user_id', user.id)
           .order('created_at', { ascending: true });
+
+        if (cancelled) return;
+
+        // Fallback: if no data found and user is mock admin, try the legacy 'admin' ID
+        if ((data?.length ?? 0) === 0 && user.id !== 'admin') {
+          const { data: legacyData } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('supabase_user_id', 'admin')
+            .order('created_at', { ascending: true });
+          if (legacyData && legacyData.length > 0) {
+            data = legacyData;
+          }
+        }
 
         if (cancelled) return;
 
