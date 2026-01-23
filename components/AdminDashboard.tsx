@@ -277,17 +277,13 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
   );
 
   const renderActiveTab = () => {
-    // If editing a plan, show the plan editor
+    // If viewing a plan, show the plan summary
     if (editingPlan !== undefined) {
       return (
-        <StylistDashboard
-          role="admin"
-          onLogout={() => {}}
-          client={editingPlan?.client}
-          existingPlan={editingPlan || undefined}
-          onPlanChange={setEditingPlan}
-          initialStep={editingPlan ? 'summary' : undefined}
-        />
+        <div className="p-6">
+          <button onClick={() => setEditingPlan(undefined)} className="mb-4 flex items-center text-xs font-black uppercase text-gray-400 hover:text-gray-900"><ChevronLeftIcon className="w-4 h-4 mr-1"/> Back</button>
+          <PlanSummaryStep plan={editingPlan} role="admin" />
+        </div>
       );
     }
 
