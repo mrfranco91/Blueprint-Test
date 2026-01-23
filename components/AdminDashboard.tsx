@@ -250,7 +250,7 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     <div className="p-6">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-black text-brand-accent tracking-tighter">Plans</h1>
-        <button onClick={() => setEditingPlan(null)} className="bg-gray-950 text-white px-6 py-3 rounded-2xl font-black text-sm active:scale-95 transition-transform">+ NEW PLAN</button>
+        <button disabled className="bg-gray-300 text-gray-500 px-6 py-3 rounded-2xl font-black text-sm cursor-not-allowed" title="Create plan functionality coming soon">+ NEW PLAN</button>
       </div>
       <div className="space-y-3">
         {plans.length === 0 ? (
