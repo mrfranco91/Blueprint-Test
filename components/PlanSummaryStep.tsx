@@ -102,6 +102,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
     setIsPublishing(true);
     try {
         const updated = await savePlan({ ...plan, status: 'active' });
+        // Go back to plans list so the updated plan shows as published
         if (onEditPlan) {
           onEditPlan();
         }
