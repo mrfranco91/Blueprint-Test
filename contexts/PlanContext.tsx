@@ -48,6 +48,7 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             try {
                 console.log('User info:', user);
                 console.log('User role:', user?.role);
+                console.log('Supabase available?', !!supabase);
 
                 let plansQuery = supabase.from('plans').select('*');
                 let bookingsQuery = supabase.from('bookings').select('*');
@@ -66,8 +67,10 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     console.log('Admin user - fetching all plans');
                 }
 
-
+                console.log('About to execute query...');
                 const [pRes, bRes] = await Promise.all([plansQuery, bookingsQuery]);
+
+                console.log('Query response:', { hasError: !!pRes.error, dataLength: pRes.data?.length, pRes });
 
                 if (pRes.error) {
                     console.error('DETAILED ERROR:', JSON.stringify(pRes.error, null, 2));
