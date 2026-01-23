@@ -6,9 +6,9 @@ import { usePlans } from '../contexts/PlanContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { SquareIntegrationService } from '../services/squareIntegration';
-import { 
-    RefreshIcon, 
-    CheckCircleIcon, 
+import {
+    RefreshIcon,
+    CheckCircleIcon,
     TrashIcon,
     UsersIcon,
     GlobeIcon,
@@ -16,14 +16,18 @@ import {
     ChevronRightIcon,
     ChevronLeftIcon
 } from './icons';
-import type { Stylist, UserRole } from '../types';
+import type { Stylist, UserRole, GeneratedPlan } from '../types';
 import { GOOGLE_FONTS_LIST } from '../data/fonts';
 import AccountSettings from './AccountSettings';
+import PlanSummaryStep from './PlanSummaryStep';
+import StylistDashboard from './StylistDashboard';
 
 export default function AdminDashboard({ role }: { role: UserRole }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [activeSettingsView, setActiveSettingsView] = useState<'menu' | 'branding' | 'memberships' | 'integrations'>('menu');
   const [editingStylist, setEditingStylist] = useState<Stylist | null>(null);
+  const [editingPlan, setEditingPlan] = useState<GeneratedPlan | null>(null);
+  const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   
@@ -244,43 +248,78 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     );
   };
 
+  const renderPlans = () => (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-black text-brand-accent tracking-tighter">Plans</h1>
+        <button onClick={() => setIsCreatingPlan(true)} className="bg-brand-accent text-white px-6 py-3 rounded-2xl font-black text-sm active:scale-95 transition-transform">+ NEW PLAN</button>
+      </div>
+      <div className="space-y-3">
+        {plans.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 bg-white border-4 border-gray-100 rounded-3xl">
+            <p className="text-gray-400 font-bold mb-4">No plans yet</p>
+            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Create your first plan to get started</p>
+          </div>
+        ) : (
+          plans.map(plan => (
+            <button
+              key={plan.id}
+              onClick={() => setEditingPlan(plan)}
+              className="w-full text-left p-5 bg-white border-4 border-gray-100 rounded-3xl shadow-sm active:scale-95 transition-transform hover:border-brand-accent"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-black text-gray-950 text-lg">{plan.client?.name || 'Unnamed Client'}</h3>
+                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${plan.status === 'active' ? 'bg-green-100 text-green-700' : plan.status === 'draft' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                  {plan.status}
+                </span>
+              </div>
+              <p className="text-sm font-bold text-gray-500 mb-3">${plan.totalCost?.toLocaleString() || '0'}</p>
+              <p className="text-[10px] text-gray-400 font-black">{plan.description || 'No description'}</p>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   const renderActiveTab = () => {
+    // If creating or editing a plan, show the plan wizard
+    if (isCreatingPlan || editingPlan !== undefined) {
+      return (
+        <StylistDashboard
+          role="admin"
+          onLogout={() => {}}
+          client={editingPlan?.client}
+          existingPlan={editingPlan || undefined}
+          onPlanChange={(plan) => {
+            setEditingPlan(plan);
+            if (!plan) {
+              setIsCreatingPlan(false);
+              setActiveTab('plans');
+            }
+          }}
+          initialStep={isCreatingPlan ? 'select-client' : (editingPlan ? 'summary' : undefined)}
+        />
+      );
+    }
+
     switch (activeTab) {
       case 'dashboard': return renderDashboard();
-      case 'calendar': return (
-        <div className="p-8 text-center flex flex-col items-center justify-center h-full min-h-[60vh]">
-          <DatabaseIcon className="w-16 h-16 text-brand-accent mb-6" />
-          <h2 className="text-2xl font-black mb-2 tracking-tighter">Salon Schedule</h2>
-          <p className="text-gray-400 font-bold mb-8">Synchronized with Square Calendar.</p>
-          <button className="bg-gray-950 text-white px-10 py-5 rounded-2xl font-black">LAUNCH POS</button>
-        </div>
-      );
-      case 'clients': return (
-        <div className="p-6">
-          <h1 className="text-3xl font-black text-brand-accent tracking-tighter mb-8">Client Directory</h1>
-          <div className="space-y-3">
-            {clients.map(c => (
-              <div key={c.id} className="w-full flex items-center p-4 bg-white border-4 border-gray-100 rounded-3xl shadow-sm">
-                <img src={c.avatarUrl} className="w-14 h-14 rounded-2xl mr-4 border-2 border-gray-50"/>
-                <div className="flex-grow">
-                  <span className="font-black text-gray-950 block text-lg leading-tight">{c.name}</span>
-                  {c.externalId && <span className="text-[10px] text-green-600 font-black uppercase tracking-widest">Square Linked</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-      case 'team': return renderTeam();
+      case 'plans': return renderPlans();
       case 'settings': return renderSettings();
       default: return renderDashboard();
     }
   };
 
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setEditingPlan(undefined);
+  };
+
   return (
     <div className="flex flex-col h-full bg-brand-bg pb-24">
       {renderActiveTab()}
-      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onChange={handleTabChange} />
     </div>
   );
 }

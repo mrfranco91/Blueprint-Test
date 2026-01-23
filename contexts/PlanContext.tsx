@@ -1,5 +1,3 @@
-
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { GeneratedPlan, PlanAppointment } from '../types';
 import { supabase } from '../lib/supabase';
@@ -48,37 +46,59 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setLoading(true);
 
             try {
+                console.log('User info:', user);
+                console.log('User role:', user?.role);
+                console.log('Supabase available?', !!supabase);
+
                 let plansQuery = supabase.from('plans').select('*');
                 let bookingsQuery = supabase.from('bookings').select('*');
 
                 if (user?.role === 'client' && user.id) {
+                    console.log('Filtering for client:', user.id);
                     plansQuery = plansQuery.eq('client_id', user.id);
                     bookingsQuery = bookingsQuery.eq('client_id', user.id);
                 } else if (user?.role === 'stylist' && user.id) {
                     // SECURITY FIX: Scope data to the logged-in stylist at the database level.
                     // This prevents data leakage by ensuring stylists can only fetch their own data.
+                    console.log('Filtering for stylist:', user.id);
                     plansQuery = plansQuery.eq('plan_data->>stylistId', user.id);
                     bookingsQuery = bookingsQuery.eq('stylist_id', user.id);
+                } else {
+                    console.log('Admin user - fetching all plans');
                 }
 
-
+                console.log('About to execute query...');
                 const [pRes, bRes] = await Promise.all([plansQuery, bookingsQuery]);
+
+                console.log('Query response:', { hasError: !!pRes.error, dataLength: pRes.data?.length, pRes });
+
+                if (pRes.error) {
+                    console.error('DETAILED ERROR:', JSON.stringify(pRes.error, null, 2));
+                }
 
                 if (pRes.error) {
                     console.error("Error fetching plans:", pRes.error.message || pRes.error);
                     setPlans([]);
                 } else if (pRes.data) {
+                    console.log('Raw plans data from DB:', pRes.data);
                     const formattedPlans = pRes.data
                         .map((dbPlan: any) => {
                             const blob = dbPlan.plan_data;
-                            if (!blob || !blob.client) {
-                                console.warn('Skipping malformed plan from DB:', dbPlan.id);
+                            console.log('Processing plan:', dbPlan.id, 'blob:', blob);
+
+                            // Be more flexible - accept plans even without client data
+                            if (!blob) {
+                                console.warn('Skipping plan with no plan_data:', dbPlan.id);
                                 return null;
                             }
+
                             // Reconstruct plan prioritizing the data blob but ensuring ID consistency
                             return {
                                 ...blob,
                                 id: dbPlan.id,
+                                client: blob.client || { name: 'Unknown Client' },
+                                status: blob.status || 'draft',
+                                totalCost: blob.totalCost || 0,
                                 createdAt: blob.createdAt || dbPlan.created_at,
                                 appointments: (blob.appointments || []).map((a: any) => ({
                                     ...a,
@@ -87,7 +107,8 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             };
                         })
                         .filter((p): p is GeneratedPlan => p !== null);
-                    
+
+                    console.log('Formatted plans to display:', formattedPlans);
                     setPlans(formattedPlans);
                 }
 
@@ -117,7 +138,10 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [user]);
 
     const savePlan = async (newPlan: GeneratedPlan): Promise<GeneratedPlan> => {
+        console.log('savePlan called with:', newPlan);
+
         if (!supabase) {
+            console.error('Supabase client not available in savePlan');
             throw new Error("Supabase client not available.");
         }
 
@@ -129,7 +153,7 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         const isNewPlan = newPlan.id.startsWith('plan_');
-        
+
         const { id: _, ...planDataForBlob } = newPlan;
 
         const payloadBase = {
@@ -143,6 +167,8 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
 
         const payload = isNewPlan ? payloadBase : { ...payloadBase, id: newPlan.id };
+
+        console.log('savePlan payload:', payload);
 
         const { data, error } = await supabase
             .from('plans')

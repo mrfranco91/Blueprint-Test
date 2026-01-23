@@ -1,5 +1,3 @@
-
-
 import React, { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { GeneratedPlan, UserRole, Service, PlanAppointment } from '../types';
@@ -60,12 +58,16 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
   const canBook = user?.role === 'admin' || isClient || user?.stylistData?.permissions.canBookAppointments;
 
   const qualifyingTier = useMemo(() => {
+      if (!membershipConfig?.tiers || membershipConfig.tiers.length === 0) return undefined;
       const sortedTiers = [...membershipConfig.tiers].sort((a, b) => b.minSpend - a.minSpend);
       return sortedTiers.find(t => plan.averageMonthlySpend >= t.minSpend) || sortedTiers[sortedTiers.length - 1];
-  }, [plan.averageMonthlySpend, membershipConfig.tiers]);
+  }, [plan.averageMonthlySpend, membershipConfig?.tiers]);
 
   const invitationMessage = useMemo(() => {
-    return `Hi ${plan.client.name.split(' ')[0]}! This is ${user?.name || 'your stylist'} from the salon. Based on your new maintenance roadmap, you qualify for our ${qualifyingTier.name} status! This includes ${qualifyingTier.perks.slice(0, 2).join(' & ')}. Check out your full roadmap here: [Link]`;
+    if (!qualifyingTier || !plan.client.name) return '';
+    const firstName = plan.client.name.split(' ')[0];
+    const perks = qualifyingTier.perks?.slice(0, 2).join(' & ') || 'exclusive benefits';
+    return `Hi ${firstName}! This is ${user?.name || 'your stylist'} from the salon. Based on your new maintenance roadmap, you qualify for our ${qualifyingTier.name} status! This includes ${perks}. Check out your full roadmap here: [Link]`;
   }, [plan, qualifyingTier, user]);
 
   const futureVisits = useMemo(() => {
@@ -99,7 +101,11 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
   const handlePublish = async () => {
     setIsPublishing(true);
     try {
-        await savePlan({ ...plan, status: 'active' });
+        const updated = await savePlan({ ...plan, status: 'active' });
+        // Go back to plans list so the updated plan shows as published
+        if (onEditPlan) {
+          onEditPlan();
+        }
     } catch (e) {
         console.error("Publishing failed:", e);
     } finally {
@@ -409,7 +415,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
                 </div>
                 <div className="text-right">
                     <p className="text-xs font-black uppercase text-gray-400 mb-1 tracking-widest">Membership Tier</p>
-                    <p className="text-xl font-black" style={{color: qualifyingTier.color}}>{qualifyingTier.name}</p>
+                    <p className="text-xl font-black" style={{color: qualifyingTier?.color || '#000'}}>{qualifyingTier?.name || 'Standard'}</p>
                 </div>
             </div>
             <div className="bg-white p-5 rounded-3xl border-4 border-gray-100 shadow-lg">
@@ -576,7 +582,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
                 <div className="p-6 overflow-y-auto flex-grow">
                     <div className="mb-6 bg-gray-50 p-5 rounded-3xl border-2 border-gray-100 text-center">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Your Membership Level</p>
-                        <p className="text-2xl font-black" style={{ color: qualifyingTier.color }}>{qualifyingTier.name}</p>
+                        <p className="text-2xl font-black" style={{ color: qualifyingTier?.color || '#000' }}>{qualifyingTier?.name || 'Standard'}</p>
                     </div>
 
                     <div className="mb-6">

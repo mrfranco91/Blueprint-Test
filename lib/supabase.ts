@@ -1,32 +1,55 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
-// Cast `import.meta` to `any` to prevent TypeScript errors if Vite types aren't loaded.
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+// PERMANENT CREDENTIALS (Hardcoded for persistence)
+const DEFAULT_URL = 'https://szsrnzbwtrvsxzasaphs.supabase.co';
+const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6c3JuemJ3dHJ2c3h6YXNhcGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU2MTI3MTQsImV4cCI6MjA4MTE4ODcxNH0.otzF6gnfVkQAJj-Z1lte4ml6tJ5nZQQh2kwLJJOb6aU';
 
-// Use a singleton pattern to ensure only one Supabase client instance is created.
-let supabaseInstance: SupabaseClient | null = null;
-
-export const getSupabaseClient = (): SupabaseClient => {
-  // If an instance already exists, return it to avoid re-initialization.
-  if (supabaseInstance) return supabaseInstance;
-
-  // Validate that the required environment variables are present.
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase environment variables are missing. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.');
-  }
-
-  // Create the client with specific auth configuration.
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: false,
-    },
-  });
-
-  return supabaseInstance;
+// Helper to get keys from local storage or defaults
+export const getSupabaseConfig = () => {
+    const localUrl = localStorage.getItem('VITE_SUPABASE_URL');
+    const localKey = localStorage.getItem('VITE_SUPABASE_ANON_KEY');
+    
+    // Prefer local storage if set (allows overriding), otherwise use hardcoded defaults
+    return { 
+        url: localUrl || DEFAULT_URL, 
+        key: localKey || DEFAULT_KEY 
+    };
 };
 
-// Export the initialized Supabase client directly for easy import elsewhere.
-export const supabase = getSupabaseClient();
+export const saveSupabaseConfig = (url: string, key: string) => {
+    const cleanUrl = url ? url.trim() : '';
+    const cleanKey = key ? key.trim() : '';
+
+    localStorage.setItem('VITE_SUPABASE_URL', cleanUrl);
+    localStorage.setItem('VITE_SUPABASE_ANON_KEY', cleanKey);
+    
+    // Simple reload to pick up new config
+    window.location.reload();
+};
+
+export const clearSupabaseConfig = () => {
+    localStorage.removeItem('VITE_SUPABASE_URL');
+    localStorage.removeItem('VITE_SUPABASE_ANON_KEY');
+    window.location.reload();
+};
+
+// Initialize the client
+const { url, key } = getSupabaseConfig();
+
+console.log('Supabase init - URL:', url);
+console.log('Supabase init - Key present:', !!key);
+
+let supabaseInstance = null;
+
+if (url && key) {
+    try {
+        supabaseInstance = createClient(url, key);
+        console.log('Supabase client created successfully');
+    } catch (e) {
+        console.error("Failed to initialize Supabase client:", e);
+        // Leaving instance as null will trigger SetupScreen
+    }
+}
+
+console.log('Supabase instance available:', !!supabaseInstance);
+export const supabase = supabaseInstance;
