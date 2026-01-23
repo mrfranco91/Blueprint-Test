@@ -244,7 +244,7 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
               if (_step === 'set-dates') return <SetDatesStep client={activeClient!} selectedServices={selectedServices} onNext={(d) => { setPlanDetails(d); setStep('set-frequency'); }} planDetails={planDetails} onBack={() => setStep('select-services')} />;
               if (_step === 'set-frequency') return <SetFrequencyStep selectedServices={selectedServices} onNext={(d) => { setStep('loading'); setTimeout(() => generatePlan(d), 1500); }} planDetails={planDetails} onBack={() => setStep('set-dates')} />;
               if (_step === 'loading') return <LoadingStep />;
-              if (_step === 'summary' && currentPlan) return <PlanSummaryStep plan={currentPlan} role={propRole || 'stylist'} onEditPlan={() => { if (onPlanChange) onPlanChange(currentPlan); }} />;
+              if (_step === 'summary' && currentPlan) return <PlanSummaryStep plan={currentPlan} role={propRole || 'stylist'} onEditPlan={() => { if (onPlanChange) onPlanChange(null); }} />;
               return renderHome();
           default: return renderHome();
       }
