@@ -1,5 +1,3 @@
-
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { GeneratedPlan, PlanAppointment } from '../types';
 import { supabase } from '../lib/supabase';
@@ -68,17 +66,25 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     console.error("Error fetching plans:", pRes.error.message || pRes.error);
                     setPlans([]);
                 } else if (pRes.data) {
+                    console.log('Raw plans data from DB:', pRes.data);
                     const formattedPlans = pRes.data
                         .map((dbPlan: any) => {
                             const blob = dbPlan.plan_data;
-                            if (!blob || !blob.client) {
-                                console.warn('Skipping malformed plan from DB:', dbPlan.id);
+                            console.log('Processing plan:', dbPlan.id, 'blob:', blob);
+
+                            // Be more flexible - accept plans even without client data
+                            if (!blob) {
+                                console.warn('Skipping plan with no plan_data:', dbPlan.id);
                                 return null;
                             }
+
                             // Reconstruct plan prioritizing the data blob but ensuring ID consistency
                             return {
                                 ...blob,
                                 id: dbPlan.id,
+                                client: blob.client || { name: 'Unknown Client' },
+                                status: blob.status || 'draft',
+                                totalCost: blob.totalCost || 0,
                                 createdAt: blob.createdAt || dbPlan.created_at,
                                 appointments: (blob.appointments || []).map((a: any) => ({
                                     ...a,
@@ -87,7 +93,8 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             };
                         })
                         .filter((p): p is GeneratedPlan => p !== null);
-                    
+
+                    console.log('Formatted plans to display:', formattedPlans);
                     setPlans(formattedPlans);
                 }
 
