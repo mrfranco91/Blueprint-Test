@@ -29,9 +29,13 @@ const LoginScreen: React.FC = () => {
         },
       });
 
+      const teamText = await teamRes.text();
       if (!teamRes.ok) {
-        const data = await teamRes.json();
-        throw new Error(data?.message || 'Failed to sync team');
+        const data = teamText ? JSON.parse(teamText) : {};
+        throw new Error(data?.message || `Team sync failed (${teamRes.status})`);
+      }
+      if (!teamText) {
+        throw new Error('Team sync returned empty response');
       }
 
       // Sync clients
@@ -43,9 +47,13 @@ const LoginScreen: React.FC = () => {
         },
       });
 
+      const clientText = await clientRes.text();
       if (!clientRes.ok) {
-        const data = await clientRes.json();
-        throw new Error(data?.message || 'Failed to sync clients');
+        const data = clientText ? JSON.parse(clientText) : {};
+        throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
+      }
+      if (!clientText) {
+        throw new Error('Client sync returned empty response');
       }
 
       // Success - redirect to admin
