@@ -80,9 +80,7 @@ export default async function handler(req: any, res: any) {
         },
         body: JSON.stringify({
           query: {
-            filter: {
-              status: ['ACTIVE', 'INACTIVE'],
-            },
+            filter: {},
           },
           limit: 100,
         }),
