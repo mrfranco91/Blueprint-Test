@@ -61,40 +61,47 @@ const LoginScreen: React.FC = () => {
     setError(null);
 
     try {
-      // Import supabase here to get current session
       const { supabase } = await import('../lib/supabase');
 
-      // First, get current session or authenticate as a temporary user
-      let session = await supabase.auth.getSession();
+      // For manual token sync, we need to create a temporary user or use an existing session
+      let jwtToken: string | null = null;
 
-      if (!session.data?.session) {
-        // If not authenticated, sign up/in with a Square-derived email for this sync
-        const tempEmail = `square-sync-${Date.now()}@blueprint.local`;
-        const tempPassword = `TempPass${Date.now()}`;
+      // Try to get existing session first
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.access_token) {
+        jwtToken = session.session.access_token;
+      } else {
+        // Create a temporary test account for manual sync
+        const tempEmail = `manual-sync-${Date.now()}@blueprint.local`;
+        const tempPassword = Math.random().toString(36).slice(-12);
 
-        // Try to sign up (will fail if account exists, that's ok)
-        await supabase.auth.signUp({
+        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
           email: tempEmail,
-          password: tempPassword
-        }).catch(() => {
-          // Account might exist, try signing in instead
-          return supabase.auth.signInWithPassword({
-            email: tempEmail,
-            password: tempPassword
-          });
+          password: tempPassword,
         });
 
-        // Get fresh session
-        session = await supabase.auth.getSession();
+        if (signUpErr && signUpErr.message !== 'User already registered') {
+          throw new Error(`Failed to create session: ${signUpErr.message}`);
+        }
+
+        // Sign in
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+          email: tempEmail,
+          password: tempPassword,
+        });
+
+        if (signInErr) {
+          throw new Error(`Failed to sign in: ${signInErr.message}`);
+        }
+
+        jwtToken = signInData?.session?.access_token;
       }
 
-      // Get the JWT token from the session
-      const jwtToken = session.data?.session?.access_token;
       if (!jwtToken) {
         throw new Error('Failed to obtain authentication token');
       }
 
-      // Sync team members via Supabase Edge Function WITH auth header
+      // Sync team members via Supabase Edge Function
       const teamRes = await fetch(
         `${supabaseUrl}/functions/v1/sync-team-members`,
         {
@@ -112,11 +119,8 @@ const LoginScreen: React.FC = () => {
         const data = teamText ? JSON.parse(teamText) : {};
         throw new Error(data?.message || `Team sync failed (${teamRes.status})`);
       }
-      if (!teamText) {
-        throw new Error('Team sync returned empty response');
-      }
 
-      // Sync clients via Supabase Edge Function WITH auth header
+      // Sync clients via Supabase Edge Function
       const clientRes = await fetch(
         `${supabaseUrl}/functions/v1/sync-clients`,
         {
@@ -133,9 +137,6 @@ const LoginScreen: React.FC = () => {
       if (!clientRes.ok) {
         const data = clientText ? JSON.parse(clientText) : {};
         throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
-      }
-      if (!clientText) {
-        throw new Error('Client sync returned empty response');
       }
 
       // Success - log in as admin
