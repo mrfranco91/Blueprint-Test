@@ -1,37 +1,22 @@
 // Generate a deterministic UUID v4-like ID from a Square access token
-// This ensures the same token always produces the same UUID, matching the backend
-export function generateUUIDFromToken(token: string): string {
-  // Use Web Crypto API (available in browser)
-  const encoder = new TextEncoder();
-  const data = encoder.encode(token);
-  
-  // We'll use a simple hash-based approach that produces a deterministic UUID
-  // Since we don't have access to Node.js crypto in the browser, we'll use a stable algorithm
-  let hash = 0;
-  for (let i = 0; i < token.length; i++) {
-    const char = token.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
+// This must match the backend's generateUUIDFromToken function to ensure data consistency
+// Backend uses: crypto.createHash('sha256').update(token).digest('hex')
+// Then formats as: `${hash.substring(0, 8)}-${hash.substring(8, 12)}-...`
+
+export async function generateUUIDFromToken(token: string): Promise<string> {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(token);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    
+    // Convert buffer to hex string
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    
+    // Format as UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    return `${hashHex.substring(0, 8)}-${hashHex.substring(8, 12)}-${hashHex.substring(12, 16)}-${hashHex.substring(16, 20)}-${hashHex.substring(20, 32)}`;
+  } catch (e) {
+    console.error('[TokenUUID] Failed to generate UUID:', e);
+    throw new Error('Failed to generate user ID from token');
   }
-  
-  // Generate a UUID-formatted string from the token using a stable algorithm
-  // This matches the format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  const str = Math.abs(hash).toString(16).padStart(32, '0');
-  
-  // Use token content for more entropy
-  let uuid = '';
-  let charIndex = 0;
-  const tokenChars = token.split('');
-  
-  for (let i = 0; i < 32; i++) {
-    if (i === 8 || i === 12 || i === 16 || i === 20) {
-      uuid += '-';
-    }
-    // Cycle through token characters to create deterministic UUID
-    const char = tokenChars[(charIndex++) % tokenChars.length];
-    const code = char.charCodeAt(0) % 16;
-    uuid += code.toString(16);
-  }
-  
-  return uuid;
 }
