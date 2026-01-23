@@ -247,20 +247,55 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     );
   };
 
+  const renderPlans = () => (
+    <div className="p-6">
+      <h1 className="text-3xl font-black text-brand-accent tracking-tighter mb-8">Plans</h1>
+      <div className="space-y-3">
+        {plans.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 bg-white border-4 border-gray-100 rounded-3xl">
+            <p className="text-gray-400 font-bold mb-4">No plans yet</p>
+            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Create your first plan to get started</p>
+          </div>
+        ) : (
+          plans.map(plan => (
+            <button
+              key={plan.id}
+              onClick={() => setEditingPlan(plan)}
+              className="w-full text-left p-5 bg-white border-4 border-gray-100 rounded-3xl shadow-sm active:scale-95 transition-transform hover:border-brand-accent"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-black text-gray-950 text-lg">{plan.client?.name || 'Unnamed Client'}</h3>
+                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${plan.status === 'active' ? 'bg-green-100 text-green-700' : plan.status === 'draft' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                  {plan.status}
+                </span>
+              </div>
+              <p className="text-sm font-bold text-gray-500 mb-3">${plan.totalCost?.toLocaleString() || '0'}</p>
+              <p className="text-[10px] text-gray-400 font-black">{plan.description || 'No description'}</p>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   const renderActiveTab = () => {
+    // If editing a plan, show the plan editor
+    if (editingPlan !== undefined) {
+      return (
+        <StylistDashboard
+          role="admin"
+          onLogout={() => {}}
+          client={editingPlan?.client}
+          existingPlan={editingPlan || undefined}
+          onPlanChange={setEditingPlan}
+          initialStep={editingPlan ? 'summary' : undefined}
+        />
+      );
+    }
+
     switch (activeTab) {
       case 'dashboard': return renderDashboard();
-      case 'plans':
-        return (
-          <StylistDashboard
-            role="admin"
-            onLogout={() => {}}
-            client={editingPlan?.client}
-            existingPlan={editingPlan || undefined}
-            onPlanChange={setEditingPlan}
-            initialStep={editingPlan ? 'summary' : undefined}
-          />
-        );
+      case 'plans': return renderPlans();
       case 'settings': return renderSettings();
       default: return renderDashboard();
     }
