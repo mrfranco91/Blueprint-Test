@@ -61,16 +61,47 @@ const LoginScreen: React.FC = () => {
     setError(null);
 
     try {
-      // Generate UUID from token to match what the backend will use
-      const userId = await generateUUIDFromToken(token);
+      // Import supabase here to get current session
+      const { supabase } = await import('../lib/supabase');
 
-      // Sync team members via Supabase Edge Function
+      // First, get current session or authenticate as a temporary user
+      let session = await supabase.auth.getSession();
+
+      if (!session.data?.session) {
+        // If not authenticated, sign up/in with a Square-derived email for this sync
+        const tempEmail = `square-sync-${Date.now()}@blueprint.local`;
+        const tempPassword = `TempPass${Date.now()}`;
+
+        // Try to sign up (will fail if account exists, that's ok)
+        await supabase.auth.signUp({
+          email: tempEmail,
+          password: tempPassword
+        }).catch(() => {
+          // Account might exist, try signing in instead
+          return supabase.auth.signInWithPassword({
+            email: tempEmail,
+            password: tempPassword
+          });
+        });
+
+        // Get fresh session
+        session = await supabase.auth.getSession();
+      }
+
+      // Get the JWT token from the session
+      const jwtToken = session.data?.session?.access_token;
+      if (!jwtToken) {
+        throw new Error('Failed to obtain authentication token');
+      }
+
+      // Sync team members via Supabase Edge Function WITH auth header
       const teamRes = await fetch(
         `${supabaseUrl}/functions/v1/sync-team-members`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`,
           },
           body: JSON.stringify({ squareAccessToken: token }),
         }
@@ -85,13 +116,14 @@ const LoginScreen: React.FC = () => {
         throw new Error('Team sync returned empty response');
       }
 
-      // Sync clients via Supabase Edge Function
+      // Sync clients via Supabase Edge Function WITH auth header
       const clientRes = await fetch(
         `${supabaseUrl}/functions/v1/sync-clients`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`,
           },
           body: JSON.stringify({ squareAccessToken: token }),
         }
@@ -106,10 +138,9 @@ const LoginScreen: React.FC = () => {
         throw new Error('Client sync returned empty response');
       }
 
-      // Success - log in as admin with the token-derived user ID
-      // Clear any old mock session first to ensure clean state
+      // Success - log in as admin
       localStorage.removeItem('mock_admin_user');
-      await login('admin', userId);
+      await login('admin');
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
