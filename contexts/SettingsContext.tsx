@@ -162,13 +162,13 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         if (cancelled) return;
 
-        // Fallback: if no data found, try both 'admin' and current user ID
+        // Fallback: if no data found, get any synced data (ignore user ID)
         if ((data?.length ?? 0) === 0) {
           const { data: legacyData } = await supabase
             .from('clients')
             .select('*')
-            .in('supabase_user_id', ['admin', user.id])
-            .order('created_at', { ascending: true });
+            .order('created_at', { ascending: true })
+            .limit(100);
           if (legacyData && legacyData.length > 0) {
             data = legacyData;
           }
