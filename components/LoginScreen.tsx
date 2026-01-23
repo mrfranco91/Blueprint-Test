@@ -103,7 +103,7 @@ const LoginScreen: React.FC = () => {
         <div className="p-10">
 
           <p className="text-center text-xs text-gray-600 mb-4">
-            Manually enter your Square access token for development/testing
+            Enter your Square access token to sync your team and clients
           </p>
           <form onSubmit={handleTokenSubmit} className="space-y-3">
             <input
