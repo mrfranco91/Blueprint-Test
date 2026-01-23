@@ -207,7 +207,20 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         let q = supabase.from('square_team_members').select('*');
         if (user.id) q = q.eq('supabase_user_id', user.id);
 
-        const { data, error } = await q;
+        let { data, error } = await q;
+
+        if (cancelled) return;
+
+        // Fallback: if no data found and user is mock admin, try the legacy 'admin' ID
+        if ((data?.length ?? 0) === 0 && user.id !== 'admin') {
+          const { data: legacyData } = await supabase
+            .from('square_team_members')
+            .select('*')
+            .eq('supabase_user_id', 'admin');
+          if (legacyData && legacyData.length > 0) {
+            data = legacyData;
+          }
+        }
 
         if (cancelled) return;
 
