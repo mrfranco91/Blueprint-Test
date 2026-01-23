@@ -54,8 +54,8 @@ export default async function handler(req: any, res: any) {
 
       supabaseUserId = userData.user.id;
     } else if (squareAccessToken) {
-      // Development mode: use a fixed dev user ID when token is provided directly
-      supabaseUserId = 'dev-user-' + Buffer.from(squareAccessToken).toString('base64').substring(0, 12);
+      // Development mode: use a UUID-formatted dev user ID when token is provided directly
+      supabaseUserId = generateUUIDFromToken(squareAccessToken);
     } else {
       return res.status(401).json({ message: 'Missing auth token.' });
     }
