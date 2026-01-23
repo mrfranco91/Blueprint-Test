@@ -134,6 +134,23 @@ const LoginScreen: React.FC = () => {
 
         <div className="p-10">
 
+          {squareRedirectUri && (
+            <div className="mb-6">
+              <button
+                onClick={startSquareOAuth}
+                className="w-full bg-gray-950 text-white font-black py-3 rounded-lg border-2 border-gray-950 active:scale-95 transition-transform text-sm"
+              >
+                Login with Square
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-gray-300"></div>
+            <span className="text-xs text-gray-500 font-semibold">or</span>
+            <div className="flex-1 h-px bg-gray-300"></div>
+          </div>
+
           <p className="text-center text-xs text-gray-600 mb-4">
             Enter your Square access token to sync your team and clients
           </p>
