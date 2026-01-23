@@ -94,12 +94,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // (Used only for any existing non-Square demo flows.)
   const login = async (role: UserRole, specificId?: string) => {
     if (role === 'admin') {
-      setUser({
+      const adminUser = {
         id: 'admin',
         name: 'Admin',
         role: 'admin',
         isMock: true,
-      });
+      };
+      setUser(adminUser);
+      // Persist mock admin session to localStorage
+      localStorage.setItem('mock_admin_user', JSON.stringify(adminUser));
       setAuthInitialized(true);
       return;
     }
