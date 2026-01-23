@@ -49,18 +49,26 @@ const LoginScreen: React.FC = () => {
       return;
     }
 
+    if (!supabaseUrl) {
+      setError('Supabase URL is not configured');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // Sync team members
-      const teamRes = await fetch('/api/square/team', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-square-access-token': token,
-        },
-      });
+      // Sync team members via Supabase Edge Function
+      const teamRes = await fetch(
+        `${supabaseUrl}/functions/v1/sync-team-members`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-square-access-token': token,
+          },
+        }
+      );
 
       const teamText = await teamRes.text();
       if (!teamRes.ok) {
@@ -71,14 +79,17 @@ const LoginScreen: React.FC = () => {
         throw new Error('Team sync returned empty response');
       }
 
-      // Sync clients
-      const clientRes = await fetch('/api/square/clients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-square-access-token': token,
-        },
-      });
+      // Sync clients via Supabase Edge Function
+      const clientRes = await fetch(
+        `${supabaseUrl}/functions/v1/sync-clients`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-square-access-token': token,
+          },
+        }
+      );
 
       const clientText = await clientRes.text();
       if (!clientRes.ok) {
