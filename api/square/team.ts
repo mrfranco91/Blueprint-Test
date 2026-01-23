@@ -1,4 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'crypto';
+
+// Generate a deterministic UUID v4-like ID from a token
+function generateUUIDFromToken(token: string): string {
+  const hash = createHash('sha256').update(token).digest('hex');
+  // Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  return `${hash.substring(0, 8)}-${hash.substring(8, 12)}-${hash.substring(12, 16)}-${hash.substring(16, 20)}-${hash.substring(20, 32)}`;
+}
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -36,8 +44,8 @@ export default async function handler(req: any, res: any) {
         return res.status(401).json({ message: 'Invalid user.' });
       }
     } else if (squareAccessToken) {
-      // Development mode: use a fixed dev user ID when token is provided directly
-      supabaseUserId = 'dev-user-' + Buffer.from(squareAccessToken).toString('base64').substring(0, 12);
+      // Development mode: use a UUID-formatted dev user ID when token is provided directly
+      supabaseUserId = generateUUIDFromToken(squareAccessToken);
     } else {
       return res.status(401).json({ message: 'Missing auth token.' });
     }
@@ -80,9 +88,7 @@ export default async function handler(req: any, res: any) {
         },
         body: JSON.stringify({
           query: {
-            filter: {
-              status: ['ACTIVE', 'INACTIVE'],
-            },
+            filter: {},
           },
           limit: 100,
         }),
