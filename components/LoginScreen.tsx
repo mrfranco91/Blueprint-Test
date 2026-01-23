@@ -1,14 +1,59 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { SettingsIcon } from './icons';
 import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
 
 const LoginScreen: React.FC = () => {
   const { branding } = useSettings();
+  const [token, setToken] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSquareLogin = () => {
-    // This server-side route constructs the OAuth URL and redirects.
-    window.location.href = '/api/square/oauth/start';
+  const handleTokenSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token.trim()) {
+      setError('Please enter a Square access token');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Sync team members
+      const teamRes = await fetch('/api/square/team', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-square-access-token': token,
+        },
+      });
+
+      if (!teamRes.ok) {
+        const data = await teamRes.json();
+        throw new Error(data?.message || 'Failed to sync team');
+      }
+
+      // Sync clients
+      const clientRes = await fetch('/api/square/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-square-access-token': token,
+        },
+      });
+
+      if (!clientRes.ok) {
+        const data = await clientRes.json();
+        throw new Error(data?.message || 'Failed to sync clients');
+      }
+
+      // Success - redirect to admin
+      window.location.href = '/admin';
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setLoading(false);
+    }
   };
 
   const safeAccentColor = ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#1E3A8A');
