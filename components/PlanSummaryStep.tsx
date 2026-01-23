@@ -1,5 +1,3 @@
-
-
 import React, { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { GeneratedPlan, UserRole, Service, PlanAppointment } from '../types';
@@ -65,7 +63,10 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
   }, [plan.averageMonthlySpend, membershipConfig.tiers]);
 
   const invitationMessage = useMemo(() => {
-    return `Hi ${plan.client.name.split(' ')[0]}! This is ${user?.name || 'your stylist'} from the salon. Based on your new maintenance roadmap, you qualify for our ${qualifyingTier.name} status! This includes ${qualifyingTier.perks.slice(0, 2).join(' & ')}. Check out your full roadmap here: [Link]`;
+    if (!qualifyingTier || !plan.client.name) return '';
+    const firstName = plan.client.name.split(' ')[0];
+    const perks = qualifyingTier.perks?.slice(0, 2).join(' & ') || 'exclusive benefits';
+    return `Hi ${firstName}! This is ${user?.name || 'your stylist'} from the salon. Based on your new maintenance roadmap, you qualify for our ${qualifyingTier.name} status! This includes ${perks}. Check out your full roadmap here: [Link]`;
   }, [plan, qualifyingTier, user]);
 
   const futureVisits = useMemo(() => {
