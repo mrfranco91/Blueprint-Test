@@ -101,7 +101,10 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
   const handlePublish = async () => {
     setIsPublishing(true);
     try {
-        await savePlan({ ...plan, status: 'active' });
+        const updated = await savePlan({ ...plan, status: 'active' });
+        if (onEditPlan) {
+          onEditPlan();
+        }
     } catch (e) {
         console.error("Publishing failed:", e);
     } finally {
