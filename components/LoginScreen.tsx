@@ -9,6 +9,7 @@ const LoginScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
   const squareAppId =
     (import.meta as any).env.VITE_SQUARE_APPLICATION_ID ||
     (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
