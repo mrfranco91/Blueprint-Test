@@ -15,19 +15,7 @@ export default async function handler(req: any, res: any) {
     // Try to read token from request body first (preferred)
     if (req.method === 'POST') {
       try {
-        let body;
-        if (typeof req.body === 'string') {
-          body = JSON.parse(req.body);
-        } else if (req.body instanceof ReadableStream) {
-          // For Deno Edge Functions, body might be a ReadableStream
-          const reader = req.body.getReader();
-          const { value } = await reader.read();
-          const decoder = new TextDecoder();
-          const text = decoder.decode(value);
-          body = JSON.parse(text);
-        } else {
-          body = req.body;
-        }
+        const body = await req.json();
         squareAccessToken = body?.squareAccessToken;
         console.log('[CLIENT SYNC] Token from body:', squareAccessToken ? '✓' : '✗');
       } catch (e) {
