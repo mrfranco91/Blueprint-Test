@@ -25,6 +25,7 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [activeSettingsView, setActiveSettingsView] = useState<'menu' | 'branding' | 'memberships' | 'integrations'>('menu');
   const [editingStylist, setEditingStylist] = useState<Stylist | null>(null);
+  const [editingPlan, setEditingPlan] = useState<GeneratedPlan | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   
