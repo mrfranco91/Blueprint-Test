@@ -1,9 +1,9 @@
 import React from 'react';
-import { HomeIcon, CalendarIcon, UsersIcon, SettingsIcon, ClipboardIcon } from './icons';
+import { HomeIcon, DocumentTextIcon, SettingsIcon } from './icons';
 import { useSettings } from '../contexts/SettingsContext';
 import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
 
-export type Tab = 'dashboard' | 'calendar' | 'clients' | 'team' | 'settings';
+export type Tab = 'dashboard' | 'plans' | 'settings';
 
 interface BottomNavProps {
   activeTab: string;
@@ -12,9 +12,7 @@ interface BottomNavProps {
 
 const NAV_ITEMS: { key: Tab; label: string; icon: any }[] = [
   { key: 'dashboard', label: 'Home', icon: HomeIcon },
-  { key: 'calendar', label: 'Calendar', icon: CalendarIcon },
-  { key: 'clients', label: 'Clients', icon: UsersIcon },
-  { key: 'team', label: 'Team', icon: ClipboardIcon },
+  { key: 'plans', label: 'Plans', icon: DocumentTextIcon },
   { key: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
