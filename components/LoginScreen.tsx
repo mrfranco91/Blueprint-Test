@@ -139,9 +139,9 @@ const LoginScreen: React.FC = () => {
         throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
       }
 
-      // Success - log in as admin
+      // Success - user is already authenticated via Supabase session
+      // Don't call login('admin') - that would create a mock user and lose the real session
       localStorage.removeItem('mock_admin_user');
-      await login('admin');
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
