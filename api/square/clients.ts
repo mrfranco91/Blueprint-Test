@@ -45,6 +45,12 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ message: 'Supabase config missing.' });
     }
 
+    // Service-role Supabase client (DB access)
+    const supabaseAdmin = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
     let supabaseUserId: string | undefined;
 
     if (bearer) {
@@ -61,12 +67,6 @@ export default async function handler(req: any, res: any) {
     } else {
       return res.status(401).json({ message: 'Missing auth token.' });
     }
-
-    // Service-role Supabase client (DB access)
-    const supabaseAdmin = createClient(
-      process.env.VITE_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
 
     if (!squareAccessToken) {
       const { data: ms, error: msErr } = await supabaseAdmin
