@@ -104,6 +104,24 @@ const MissingCredentialsScreen = () => {
         throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
       }
 
+      // Save the token to merchant_settings so the app knows Square is connected
+      const { error: saveErr } = await supabase
+        .from('merchant_settings')
+        .upsert(
+          {
+            supabase_user_id: session.session.user.id,
+            square_access_token: token,
+            square_connected: true,
+            square_connected_at: new Date().toISOString(),
+          },
+          { onConflict: 'supabase_user_id' }
+        );
+
+      if (saveErr) {
+        console.error('Failed to save token:', saveErr);
+        throw new Error('Failed to save Square token');
+      }
+
       // Reload to refresh the settings context
       window.location.reload();
     } catch (err) {
