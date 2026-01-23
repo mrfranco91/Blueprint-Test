@@ -151,6 +151,9 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
     setSelectedHistoryPlan(saved);
     setStep('summary');
     setWizardCompleted(true);
+    if (onPlanChange) {
+      onPlanChange(saved);
+    }
   };
 
   const renderHome = () => {
