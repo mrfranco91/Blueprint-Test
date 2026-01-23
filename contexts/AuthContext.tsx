@@ -115,6 +115,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (supabase) {
       await supabase.auth.signOut();
     }
+    // Clear mock admin session from localStorage
+    localStorage.removeItem('mock_admin_user');
     setUser(null);
     setAuthInitialized(true);
   };
