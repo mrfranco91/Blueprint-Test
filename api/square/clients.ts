@@ -1,4 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'crypto';
+
+// Generate a deterministic UUID v4-like ID from a token
+function generateUUIDFromToken(token: string): string {
+  const hash = createHash('sha256').update(token).digest('hex');
+  // Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  return `${hash.substring(0, 8)}-${hash.substring(8, 12)}-${hash.substring(12, 16)}-${hash.substring(16, 20)}-${hash.substring(20, 32)}`;
+}
 
 export default async function handler(req: any, res: any) {
   try {
