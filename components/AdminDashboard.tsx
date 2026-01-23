@@ -19,7 +19,7 @@ import {
 import type { Stylist, UserRole, GeneratedPlan } from '../types';
 import { GOOGLE_FONTS_LIST } from '../data/fonts';
 import AccountSettings from './AccountSettings';
-import StylistDashboard from './StylistDashboard';
+import PlanSummaryStep from './PlanSummaryStep';
 
 export default function AdminDashboard({ role }: { role: UserRole }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
