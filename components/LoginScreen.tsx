@@ -61,6 +61,9 @@ const LoginScreen: React.FC = () => {
     setError(null);
 
     try {
+      // Generate UUID from token to match what the backend will use
+      const userId = await generateUUIDFromToken(token);
+
       // Sync team members via Supabase Edge Function
       const teamRes = await fetch(
         `${supabaseUrl}/functions/v1/sync-team-members`,
@@ -103,8 +106,8 @@ const LoginScreen: React.FC = () => {
         throw new Error('Client sync returned empty response');
       }
 
-      // Success - log in as admin and redirect
-      await login('admin');
+      // Success - log in as admin with the token-derived user ID
+      await login('admin', userId);
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
