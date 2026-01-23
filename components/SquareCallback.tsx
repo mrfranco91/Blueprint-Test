@@ -71,9 +71,10 @@ export default function SquareCallback() {
           body: JSON.stringify({ squareAccessToken: squareToken }),
         });
 
+        const teamText = await teamRes.text();
         if (!teamRes.ok) {
-          const teamErr = await teamRes.text();
-          console.error('[CALLBACK] Team sync failed:', teamErr);
+          const data = teamText ? JSON.parse(teamText) : {};
+          throw new Error(data?.message || `Team sync failed (${teamRes.status})`);
         }
 
         const clientRes = await fetch(`${edgeFunctionBase}/sync-clients`, {
@@ -85,9 +86,10 @@ export default function SquareCallback() {
           body: JSON.stringify({ squareAccessToken: squareToken }),
         });
 
+        const clientText = await clientRes.text();
         if (!clientRes.ok) {
-          const clientErr = await clientRes.text();
-          console.error('[CALLBACK] Client sync failed:', clientErr);
+          const data = clientText ? JSON.parse(clientText) : {};
+          throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
         }
 
         // Step 4: Redirect to admin dashboard
