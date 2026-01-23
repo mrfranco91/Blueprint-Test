@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
 import { SettingsIcon } from './icons';
 import { ensureAccessibleColor } from '../utils/ensureAccessibleColor';
 
