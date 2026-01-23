@@ -23,16 +23,6 @@ const LoginScreen: React.FC = () => {
     ((import.meta as any).env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ??
     'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_READ APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
 
-  const handleDevAdminLogin = async () => {
-    setLoading(true);
-    try {
-      await login('admin');
-    } catch (err) {
-      setError('Admin login failed');
-      setLoading(false);
-    }
-  };
-
   const startSquareOAuth = () => {
     if (!squareAppId || !squareRedirectUri) {
       alert("Square OAuth is not configured correctly. Missing Application ID or Redirect URI.");
