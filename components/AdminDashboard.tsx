@@ -6,9 +6,9 @@ import { usePlans } from '../contexts/PlanContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { SquareIntegrationService } from '../services/squareIntegration';
-import { 
-    RefreshIcon, 
-    CheckCircleIcon, 
+import {
+    RefreshIcon,
+    CheckCircleIcon,
     TrashIcon,
     UsersIcon,
     GlobeIcon,
@@ -16,9 +16,10 @@ import {
     ChevronRightIcon,
     ChevronLeftIcon
 } from './icons';
-import type { Stylist, UserRole } from '../types';
+import type { Stylist, UserRole, GeneratedPlan } from '../types';
 import { GOOGLE_FONTS_LIST } from '../data/fonts';
 import AccountSettings from './AccountSettings';
+import StylistDashboard from './StylistDashboard';
 
 export default function AdminDashboard({ role }: { role: UserRole }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
