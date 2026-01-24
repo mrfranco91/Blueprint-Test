@@ -213,16 +213,16 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
       switch (activeTab) {
           case 'dashboard': return renderHome();
           case 'calendar': return (
-              <div className="p-6 flex flex-col items-center justify-center h-full text-center min-h-[60vh]">
-                  <CalendarIcon className="w-16 h-16 mb-6 text-brand-accent"/>
-                  <h1 className="text-2xl font-black mb-2 tracking-tighter">Salon Schedule</h1>
-                  <p className="text-gray-400 font-bold mb-8 px-8">Synchronized with Square calendar.</p>
-                  <button className="bg-gray-950 text-white px-10 py-5 rounded-2xl font-black">LAUNCH POS</button>
+              <div className="p-6 flex flex-col items-center justify-center h-full text-center min-h-[60vh] bg-gradient-to-b from-gray-50 to-white">
+                  <CalendarIcon className="w-20 h-20 mb-6 text-brand-accent"/>
+                  <h1 className="text-4xl font-black mb-3 tracking-tighter">Salon Schedule</h1>
+                  <p className="text-gray-500 font-bold mb-8 px-8 text-lg">Synchronized with Square calendar.</p>
+                  <button className="bg-gray-950 text-white px-12 py-5 rounded-2xl font-black border-4 border-gray-950 shadow-lg hover:shadow-xl transition-shadow">LAUNCH POS</button>
               </div>
           );
           case 'clients': return (
-              <div className="p-4 flex flex-col h-full">
-                  <h1 className="text-2xl font-black mb-6 tracking-tighter text-brand-accent">Client Directory</h1>
+              <div className="p-6 flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
+                  <h1 className="text-4xl font-black mb-6 tracking-tighter text-brand-accent">Client Directory</h1>
                   <div className="flex-grow overflow-y-auto space-y-3 px-1">
                     {filteredClients.map(c => (
                         <div key={c.id} className="w-full flex items-center p-4 bg-white border-4 border-gray-100 rounded-[24px] shadow-sm">
