@@ -257,8 +257,8 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
       <div className="space-y-3">
         {plans.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 bg-white border-4 border-gray-100 rounded-3xl">
-            <p className="text-gray-400 font-bold mb-4">No plans yet</p>
-            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Create your first plan to get started</p>
+            <p className="font-bold mb-4" style={{ color: '#374151' }}>No plans yet</p>
+            <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#6B7280' }}>Create your first plan to get started</p>
           </div>
         ) : (
           plans.map(plan => (
