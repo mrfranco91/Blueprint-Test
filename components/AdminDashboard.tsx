@@ -185,11 +185,13 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     return (
       <div className="p-6">
         <h1 className="text-3xl font-black text-brand-accent tracking-tighter mb-8">Settings</h1>
-        <div className="grid grid-cols-2 gap-4">
-          <button onClick={() => setActiveSettingsView('branding')} className="p-6 bg-white border-4 border-gray-100 rounded-3xl flex flex-col items-center justify-center space-y-2 hover:border-brand-accent transition-all">
-            <GlobeIcon className="w-8 h-8 text-brand-primary"/>
-            <span className="text-[10px] font-black uppercase tracking-widest">Branding</span>
-          </button>
+        <div className={`grid gap-4 ${canCustomizeBranding(user) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {canCustomizeBranding(user) && (
+            <button onClick={() => setActiveSettingsView('branding')} className="p-6 bg-white border-4 border-gray-100 rounded-3xl flex flex-col items-center justify-center space-y-2 hover:border-brand-accent transition-all">
+              <GlobeIcon className="w-8 h-8 text-brand-primary"/>
+              <span className="text-[10px] font-black uppercase tracking-widest">Branding</span>
+            </button>
+          )}
           <button onClick={() => setActiveSettingsView('integrations')} className="p-6 bg-white border-4 border-gray-100 rounded-3xl flex flex-col items-center justify-center space-y-2 hover:border-brand-accent transition-all">
             <DatabaseIcon className="w-8 h-8 text-brand-primary"/>
             <span className="text-[10px] font-black uppercase tracking-widest">Integrations</span>
