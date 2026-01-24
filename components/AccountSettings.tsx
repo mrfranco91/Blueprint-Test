@@ -65,21 +65,21 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
 
             <div className="bg-white p-6 rounded-[32px] border-4 border-gray-100 shadow-sm space-y-6">
                 <div>
-                    <h3 className="font-black text-sm tracking-widest uppercase text-gray-400 mb-4 flex items-center">
+                    <h3 className="font-black text-sm tracking-widest uppercase mb-4 flex items-center" style={{ color: '#1F2937' }}>
                         <SettingsIcon className="w-4 h-4 mr-2" />
                         App Settings
                     </h3>
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase text-gray-500 tracking-widest">Text Size</span>
+                            <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#374151' }}>Text Size</span>
                             <div className="flex bg-gray-100 p-1 rounded-xl">
                                 {(['S', 'M', 'L'] as AppTextSize[]).map(sz => (
-                                    <button key={sz} onClick={() => updateTextSize(sz)} className={`px-4 py-1.5 rounded-lg text-xs font-black ${sz === textSize ? 'bg-white shadow text-gray-900' : 'text-gray-400'}`}>{sz}</button>
+                                    <button key={sz} onClick={() => updateTextSize(sz)} className={`px-4 py-1.5 rounded-lg text-xs font-black ${sz === textSize ? 'bg-white shadow text-gray-900' : ''}`} style={sz === textSize ? {} : { color: '#374151' }}>{sz}</button>
                                 ))}
                             </div>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase text-gray-500 tracking-widest">Push Alerts</span>
+                            <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#374151' }}>Push Alerts</span>
                             <button onClick={() => updatePushAlertsEnabled(!pushAlertsEnabled)} className={`w-12 h-6 rounded-full relative transition-colors ${pushAlertsEnabled ? 'bg-brand-secondary' : 'bg-gray-200'}`}>
                                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${pushAlertsEnabled ? 'transform translate-x-7' : 'transform translate-x-1'}`}></div>
                             </button>
