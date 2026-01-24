@@ -99,23 +99,23 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
   };
 
   const renderDashboard = () => (
-    <div className="p-6">
-      <h1 className="text-3xl font-black text-brand-accent tracking-tighter mb-8">Admin Dashboard</h1>
+    <div className="p-6 bg-gradient-to-b from-gray-50 to-white min-h-screen">
+      <h1 className="text-4xl font-black text-brand-accent tracking-tighter mb-8">Admin Dashboard</h1>
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="col-span-2 bg-gray-950 text-white p-6 rounded-[32px] border-4 border-gray-950">
-          <p className="text-sm font-black uppercase text-gray-400 mb-1">Roadmap Pipeline</p>
-          <p className="text-5xl font-black text-brand-secondary">${totalPipeline.toLocaleString()}</p>
+        <div className="col-span-2 bg-gray-950 text-white p-8 rounded-[32px] border-4 border-gray-950 shadow-lg hover:shadow-xl transition-shadow">
+          <p className="text-sm font-black uppercase text-gray-400 mb-2 tracking-widest">Roadmap Pipeline</p>
+          <p className="text-6xl font-black text-brand-secondary">${totalPipeline.toLocaleString()}</p>
         </div>
-        <div className="bg-white p-5 rounded-3xl border-4 border-gray-100 shadow-sm">
-          <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Active Plans</p>
-          <p className="text-4xl font-black text-gray-950">{stats.activePlansCount}</p>
+        <div className="bg-white p-6 rounded-3xl border-4 border-gray-100 shadow-sm hover:shadow-md hover:border-brand-accent transition-all">
+          <p className="text-[10px] text-gray-500 font-black uppercase mb-3 tracking-widest">Active Plans</p>
+          <p className="text-5xl font-black text-brand-primary">{stats.activePlansCount}</p>
         </div>
-        <div className="bg-white p-5 rounded-3xl border-4 border-gray-100 shadow-sm">
-          <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Total Clients</p>
-          <p className="text-4xl font-black text-gray-950">{clients.length}</p>
+        <div className="bg-white p-6 rounded-3xl border-4 border-gray-100 shadow-sm hover:shadow-md hover:border-brand-accent transition-all">
+          <p className="text-[10px] text-gray-500 font-black uppercase mb-3 tracking-widest">Total Clients</p>
+          <p className="text-5xl font-black text-brand-primary">{clients.length}</p>
         </div>
       </div>
-      <div className="bg-white p-5 rounded-3xl border-4 border-gray-100 shadow-sm mb-6">
+      <div className="bg-white p-7 rounded-3xl border-4 border-gray-100 shadow-sm hover:shadow-md transition-shadow mb-6">
         <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-4">Pipeline Growth</h3>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
