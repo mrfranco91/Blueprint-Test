@@ -13,7 +13,7 @@
  * that can be set during development/testing.
  */
 
-import type { User } from './types';
+import type { User } from '../types';
 
 /**
  * Check if a user has enterprise-level access
