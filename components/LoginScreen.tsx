@@ -161,6 +161,12 @@ const LoginScreen: React.FC = () => {
               src={branding.logoUrl}
               alt={`${branding.salonName} Logo`}
               className="w-20 h-20 object-contain mx-auto mb-4"
+              style={{
+                '@media (max-width: 991px)': {
+                  width: '522px',
+                  height: '162px',
+                }
+              }}
             />
           ) : (
             <div
