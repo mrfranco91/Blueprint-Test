@@ -82,7 +82,7 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
           <h1 className="text-2xl font-bold text-gray-900 mb-1">
             Create New Client
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm" style={{ color: '#374151' }}>
             This client will be saved to your database.
           </p>
         </div>
