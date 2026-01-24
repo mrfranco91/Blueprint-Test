@@ -8,7 +8,7 @@ const LoadingStep: React.FC = () => {
         </div>
       <div className="w-24 h-24 border-4 border-brand-secondary border-t-transparent rounded-full animate-spin mb-8"></div>
       <h2 className="text-2xl font-bold text-gray-900 mb-2">One moment please</h2>
-      <p className="text-lg text-gray-600">Creating Your Maintenance Plan</p>
+      <p className="text-lg" style={{ color: '#374151' }}>Creating Your Maintenance Plan</p>
     </div>
   );
 };

@@ -82,13 +82,13 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
           <h1 className="text-2xl font-bold text-gray-900 mb-1">
             Create New Client
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm" style={{ color: '#374151' }}>
             This client will be saved to your database.
           </p>
         </div>
         <form onSubmit={handleCreateClient} className="p-4 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1">
+            <label className="block text-xs font-bold mb-1" style={{ color: '#374151' }}>
               Full Name
             </label>
             <input
@@ -100,7 +100,7 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1">
+            <label className="block text-xs font-bold mb-1" style={{ color: '#374151' }}>
               Email Address
             </label>
             <input
@@ -137,7 +137,8 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="w-full text-gray-600 font-bold py-2"
+              className="w-full font-bold py-2"
+              style={{ color: '#374151' }}
             >
               Cancel
             </button>
@@ -161,7 +162,7 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full p-3 pl-10 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-brand-accent transition-all"
           />
-          <div className="absolute left-3 top-3.5 text-gray-400">
+          <div className="absolute left-3 top-3.5" style={{ color: '#374151' }}>
             <UsersIcon className="w-5 h-5" />
           </div>
         </div>
@@ -187,8 +188,8 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
         )}
 
         {filteredClients.length === 0 ? (
-          <div className="text-center py-10 opacity-50">
-            <p className="font-bold text-gray-500">No clients found.</p>
+          <div className="text-center py-10">
+            <p className="font-bold" style={{ color: '#374151' }}>No clients found.</p>
           </div>
         ) : (
           filteredClients.map(client => (
@@ -204,11 +205,11 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
               />
               <div className="flex-grow text-left">
                 <h3 className="font-bold text-gray-900 leading-tight">{client.name}</h3>
-                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-0.5">
+                <p className="text-[10px] font-black uppercase tracking-widest mt-0.5" style={{ color: '#6B7280' }}>
                   Source: {client.source}
                 </p>
               </div>
-              <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-gray-100">
+              <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-gray-100" style={{ color: '#374151' }}>
                   <PlusIcon className="w-4 h-4" />
               </div>
             </button>
@@ -219,7 +220,8 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
       <div className="p-4 bg-white border-t border-gray-100">
         <button
           onClick={onBack}
-          className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-full hover:bg-gray-200 transition-colors"
+          className="w-full bg-gray-100 font-bold py-3 rounded-full hover:bg-gray-200 transition-colors"
+          style={{ color: '#374151' }}
         >
           Cancel
         </button>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { Service, PlanDetails } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
@@ -41,7 +40,7 @@ const SetFrequencyStep: React.FC<SetFrequencyStepProps> = ({ selectedServices, p
             <div className="absolute top-0 left-0 h-2 bg-brand-primary rounded-full" style={{width: '66%'}}></div>
         </div>
         <h1 className="text-2xl font-bold text-gray-900">Service Frequency</h1>
-        <p className="text-sm text-gray-500">How often should these repeat?</p>
+        <p className="text-sm" style={{ color: '#374151' }}>How often should these repeat?</p>
       </div>
       
       <div className="flex-grow overflow-y-auto p-4 space-y-4">
@@ -49,7 +48,7 @@ const SetFrequencyStep: React.FC<SetFrequencyStepProps> = ({ selectedServices, p
           <div key={service.id} className="p-4 rounded-lg bg-gray-50 border border-gray-200">
             <div className="flex justify-between items-baseline">
                 <h3 className="font-bold text-lg text-gray-900 mb-3">{service.name}</h3>
-                <span className="text-xs text-gray-500">Starts: {formatDate(localDetails[service.id]?.firstDate)}</span>
+                <span className="text-xs" style={{ color: '#6B7280' }}>Starts: {formatDate(localDetails[service.id]?.firstDate)}</span>
             </div>
             <div className="flex items-center space-x-2">
                 <span className="font-medium text-gray-700">Every</span>
@@ -77,7 +76,8 @@ const SetFrequencyStep: React.FC<SetFrequencyStepProps> = ({ selectedServices, p
         </button>
         <button
           onClick={onBack}
-          className="w-full bg-transparent text-gray-600 font-semibold py-2 px-4"
+          className="w-full bg-transparent font-semibold py-2 px-4"
+          style={{ color: '#374151' }}
         >
           Back
         </button>

@@ -143,24 +143,24 @@ const LoginScreen: React.FC = () => {
     }
   };
 
-  const safeAccentColor = ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#1E3A8A');
+  const safeAccentColor = ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#0F4C81');
 
   const headerStyle = {
-    color: ensureAccessibleColor(branding.accentColor, '#F9FAFB', '#1E3A8A'),
+    color: '#0F4C81', /* Blueprint Classic Blue for strong contrast on light background */
   };
 
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500"
-      style={{ backgroundColor: branding.accentColor }}
+      style={{ backgroundColor: '#0F4C81' }}
     >
       <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-gray-950">
-        <div className="bg-gray-50 p-10 text-center border-b-4 border-gray-100">
+        <div className="bg-gray-50 p-10 text-center border-b-4" style={{ borderColor: '#0F4C81' }}>
           {branding.logoUrl ? (
             <img
               src={branding.logoUrl}
               alt={`${branding.salonName} Logo`}
-              className="w-20 h-20 object-contain mx-auto mb-4"
+              className="login-logo w-20 h-20 object-contain mx-auto mb-4"
             />
           ) : (
             <div
@@ -174,18 +174,18 @@ const LoginScreen: React.FC = () => {
           <h1 className="text-3xl font-black tracking-tighter" style={headerStyle}>
             Pro Access
           </h1>
-          <p className="text-gray-400 text-xs font-black uppercase tracking-widest mt-2">
+          <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ color: '#0F4C81' }}>
             Internal Management
           </p>
         </div>
 
-        <div className="p-10">
+        <div className="p-10" style={{ backgroundColor: 'rgba(138, 186, 211, 0.25)' }}>
 
           {squareRedirectUri && (
             <div className="mb-6">
               <button
                 onClick={startSquareOAuth}
-                className="w-full bg-gray-950 text-white font-black py-3 rounded-lg border-2 border-gray-950 active:scale-95 transition-transform text-sm"
+                className="blueprint-button font-black"
               >
                 Login with Square
               </button>
@@ -193,12 +193,12 @@ const LoginScreen: React.FC = () => {
           )}
 
           <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 h-px bg-gray-300"></div>
-            <span className="text-xs text-gray-500 font-semibold">or</span>
-            <div className="flex-1 h-px bg-gray-300"></div>
+            <div className="flex-1" style={{ height: '2px', backgroundColor: '#0F4C81' }}></div>
+            <span className="text-xs font-semibold" style={{ color: '#374151' }}>or</span>
+            <div className="flex-1" style={{ height: '2px', backgroundColor: '#0F4C81' }}></div>
           </div>
 
-          <p className="text-center text-xs text-gray-600 mb-4">
+          <p className="text-center text-xs mb-4" style={{ color: '#374151' }}>
             Enter your Square access token to sync your team and clients
           </p>
           <form onSubmit={handleTokenSubmit} className="space-y-3">
@@ -216,7 +216,7 @@ const LoginScreen: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gray-200 text-gray-950 font-bold py-3 rounded-lg border-2 border-gray-300 active:scale-95 transition-transform disabled:opacity-50 text-sm"
+              className="blueprint-button font-bold"
             >
               {loading ? 'Syncing...' : 'Sync Manually'}
             </button>

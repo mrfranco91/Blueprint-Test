@@ -1,12 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  /* Default Brand Colors - Will be overridden by script below if saved */
-  --color-brand-primary: #BE123C;
-  --color-brand-secondary: #0F766E;
-  --color-brand-accent: #1E3A8A;
-  --color-brand-light-blue: #E0F2FE;
+  /* Blueprint Brand Colors - Heritage Blue, Classic Blue, Sky Blue, Campanula */
+  --color-brand-primary: #0F4C81; /* Classic Blue */
+  --color-brand-secondary: #5D96BC; /* Heritage Blue */
+  --color-brand-accent: #8ABAD3; /* Sky Blue */
+  --color-brand-accent-dark: #0F4C81; /* Classic Blue for contrast on light backgrounds */
   --color-brand-bg: #F8F9FA;
+
+  /* Accessible text colors for backgrounds */
+  --text-on-primary: #FFFFFF; /* White text on Classic Blue */
+  --text-on-secondary: #FFFFFF; /* White text on Heritage Blue */
+  --text-on-accent: #0F4C81; /* Dark text on Sky Blue */
+  --text-on-light: #1F2937; /* Dark gray for body text */
+  --text-muted: #374151; /* Medium gray for secondary text */
 }
 
 /* Tailwind Overrides for Dynamic Text Size */
@@ -33,3 +40,47 @@
 .text-size-l .text-3xl { font-size: 2.25rem; } /* was text-4xl */
 .text-size-l .text-4xl { font-size: 3rem; } /* was text-5xl */
 .text-size-l .text-5xl { font-size: 3.75rem; } /* was text-6xl */
+
+/* LoginScreen responsive logo */
+.login-logo {
+  width: 80px;
+  height: 80px;
+}
+
+@media (max-width: 991px) {
+  .login-logo {
+    width: 522px;
+    height: 162px;
+  }
+}
+
+/* Blueprint Button Styles */
+.blueprint-button {
+  border: 2px solid #0F4C81;
+  color: #0F4C81;
+  background-color: #ffffff;
+  font-weight: bold;
+  padding: 12px;
+  border-radius: 8px;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.blueprint-button:hover:not(:disabled) {
+  background-color: #0F4C81;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.3);
+  transform: translateY(-2px);
+}
+
+.blueprint-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.blueprint-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
