@@ -92,10 +92,11 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const [branding, setBranding] = useState<BrandingSettings>({
     salonName: 'Blueprint',
-    primaryColor: '#4338CA',
-    secondaryColor: '#DB2777',
-    accentColor: '#059669',
+    primaryColor: '#0F4C81', /* Classic Blue */
+    secondaryColor: '#5D96BC', /* Heritage Blue */
+    accentColor: '#8ABAD3', /* Sky Blue */
     font: 'Inter',
+    logoUrl: 'https://cdn.builder.io/api/v1/image/assets%2F8d6a989189ff4d9e8633804d5d0dbd86%2Fa72b6d70b1bc42b2991e3c072f2b3588?format=webp&width=800&height=1200',
   });
 
   const [integration, setIntegration] = useState<IntegrationSettings>({
