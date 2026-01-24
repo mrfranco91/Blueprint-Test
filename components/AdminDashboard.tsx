@@ -168,9 +168,9 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
 
     if (activeSettingsView === 'integrations') {
       return (
-        <div className="p-6">
-          <button onClick={() => setActiveSettingsView('menu')} className="mb-4 flex items-center text-xs font-black uppercase text-gray-400 hover:text-gray-900"><ChevronLeftIcon className="w-4 h-4 mr-1"/> Back</button>
-          <h2 className="text-2xl font-black mb-8">Integrations</h2>
+        <div className="p-6 bg-gradient-to-b from-gray-50 to-white min-h-screen">
+          <button onClick={() => setActiveSettingsView('menu')} className="mb-6 flex items-center text-xs font-black uppercase text-gray-500 hover:text-gray-900 transition-colors"><ChevronLeftIcon className="w-4 h-4 mr-1"/> Back</button>
+          <h2 className="text-4xl font-black mb-8 text-brand-accent">Integrations</h2>
           <div className="bg-white p-6 rounded-[32px] border-4 border-gray-100 shadow-sm mb-6">
             <h3 className="font-black text-xl mb-4">Square Sync</h3>
             <p className="text-xs font-bold text-gray-500 mb-6">Synchronize your service catalog, team members, and client records from Square.</p>
