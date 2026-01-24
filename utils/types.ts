@@ -1,5 +1,3 @@
-
-
 export interface Service {
   id: string;
   version?: number;
@@ -135,4 +133,5 @@ export interface User {
     stylistData?: Stylist;
     clientData?: Client;
     isMock?: boolean;
+    isEnterprise?: boolean;
 }
