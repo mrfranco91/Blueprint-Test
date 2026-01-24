@@ -88,13 +88,13 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
                 </div>
 
                 <div className="pt-6 border-t-2 border-gray-100">
-                    <h3 className="font-black text-sm tracking-widest uppercase text-gray-400 mb-4 flex items-center">
+                    <h3 className="font-black text-sm tracking-widest uppercase mb-4 flex items-center" style={{ color: '#1F2937' }}>
                         <UsersIcon className="w-4 h-4 mr-2" />
                         Account Security
                     </h3>
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Email</label>
+                            <label className="block text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#374151' }}>Email</label>
                             {isMockUser && !user?.email ? (
                                 <div className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl font-bold text-sm text-gray-500 italic">
                                     Mock account — no email associated
