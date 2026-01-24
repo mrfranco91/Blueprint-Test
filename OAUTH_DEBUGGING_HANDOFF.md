@@ -1,108 +1,166 @@
-# OAuth Data Sync Issue - Debugging Handoff
+# OAuth Integration Issue - Debugging Handoff (Session 2)
 
-## Problem Summary
-After OAuth sign-in via Square, data is being written to Supabase but **NOT displaying in the app UI**. Users see 0 clients, 0 team members, and 0 plans even though the Supabase logs show 25+ records being synced successfully.
+## Current Status
+OAuth flow is partially working but hitting errors during the sync phase. The PR from Session 1 failed deployment due to an **invalid route pattern in vercel.json**. This has been fixed.
 
-## Root Causes Identified
+## Root Issues Identified
 
-### 1. Missing Vercel API Route Configuration (BLOCKING)
-**Issue:** `vercel.json` was rewriting ALL routes (including `/api`) to `/index.html`, making the OAuth token exchange endpoint unreachable.
-
-**Status:** ✅ FIXED in code
-- Updated `vercel.json` to use negative lookahead: `/(?!api)(.*)`
-- This allows `/api/*` routes to reach the serverless functions
-- **Action Required:** PR must be merged for this to deploy to Vercel
-
-### 2. Missing Supabase Edge Functions (RESOLVED)
-**Issue:** SquareCallback.tsx tries to call `/functions/v1/sync-clients` and `/functions/v1/sync-team-members` but they weren't deployed.
-
-**Status:** ✅ DEPLOYED
-- `sync-clients` - ACTIVE (version 14, `verify_jwt: false`)
-- `sync-team-members` - ACTIVE (version 15, `verify_jwt: false`)
-- Both include proper CORS headers for cross-origin requests
-- Changed from `verify_jwt: true` to `verify_jwt: false` to allow preflight OPTIONS requests
-
-### 3. Data Scoping/Display Issue (PARTIALLY FIXED)
-**Issue:** Even when data exists in Supabase, it wasn't displaying because of user ID mismatch or missing fallback queries.
-
-**Status:** ✅ PARTIALLY FIXED
-- ✅ Added fallback queries to `SettingsContext.tsx` (clients & team members)
-  - If user-scoped query returns 0 results, automatically fetch ALL data without user filter
-  - Added detailed console logging to debug user IDs and query results
-- ✅ Added same fallback pattern to `PlanContext.tsx`
-  - If admin-scoped query returns 0 plans, fetch all plans
-  - Added logging to show when fallback is triggered
-
-## Changes Made (Ready to PR)
-
-### 1. `vercel.json`
+### 1. ✅ FIXED: Invalid vercel.json Route Pattern (Session 2)
+**Issue:** Previous PR used `/(?!api)(.*)` which is incorrect Vercel syntax for negative lookahead
+**Root Cause:** Negative lookaheads must be wrapped in a group per Vercel documentation
+**Fix Applied:**
 ```json
 {
   "rewrites": [
     {
-      "source": "/(?!api)(.*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ]
 }
 ```
+- This allows `/api/*` routes to bypass the rewrite and reach serverless functions
+- Fixes the 401 errors on `/api/square/oauth/token` endpoint
 
-### 2. `contexts/SettingsContext.tsx`
-- Added debug logging for current user ID
-- Added debug logging for merchant settings lookup
-- Added debug logging for scoped vs fallback queries
+### 2. ✅ FIXED: SquareCallback Resilience (Session 2)
+**Issue:** OAuth callback was blocking on sync function calls, causing timeout errors
+**Fix Applied:** Made sync calls non-blocking (background promises)
+```typescript
+// Sync calls now run in background, don't block OAuth completion
+Promise.all([
+  fetch(`${edgeFunctionBase}/sync-team-members`, ...),
+  fetch(`${edgeFunctionBase}/sync-clients`, ...),
+]).catch(err => console.warn('Sync functions error:', err));
 
-### 3. `contexts/PlanContext.tsx`
-- Added fallback query for admin users
-- If initial query returns 0 plans, executes: `await supabase.from('plans').select('*')`
-- Added console logging to show fallback triggering
+window.location.replace('/admin'); // Redirect immediately
+```
+- OAuth completes even if sync functions are slow or fail
+- Gives the app time to display and boot up
 
-## Next Steps
+### 3. ⚠️ NEEDS VERIFICATION: Supabase Edge Functions (Session 2)
+**Status:** Attempted to deploy cleaner versions but hit Supabase internal errors
+- Current versions (v16 sync-team-members, v15 sync-clients) are marked ACTIVE
+- Logs show many 503 errors on OPTIONS requests in recent attempts
+- May need to be redeployed or replaced with simpler implementations
+- Network test showed: `Status Code 503 Service Unavailable` on CORS preflight
 
-### Immediate (Before PR)
-1. Confirm all code changes look correct
-2. Test locally if possible (requires changing VITE_SQUARE_REDIRECT_URI to http://localhost:3000/square/callback)
+### 4. Still Present: OAuth Token Exchange Error
+**Current Error:** "Failed to exchange Square OAuth token"
+**What We Know:**
+- OAuth code is being sent correctly to `/api/square/oauth/token`
+- The endpoint exists and should be accessible now (with vercel.json fix)
+- Error appears to be coming from token exchange with Square API
+- Check `/api/square/oauth/token` logs on Vercel to see what's failing
 
-### After PR & Deployment
-1. **Test OAuth flow on Vercel**
-   - Start OAuth sign-in
+## Changes Made This Session
+
+### vercel.json
+```diff
+- "source": "/(?!api)(.*)"
++ "source": "/((?!api).*)"
+```
+
+### components/SquareCallback.tsx
+- Made sync function calls non-blocking (Promise.all with .catch())
+- Redirects to `/admin` immediately after auth succeeds
+- Data syncs in background; UI doesn't wait for it
+
+## Files to Check if Fixes Don't Work
+
+1. **Vercel Deployment Logs**
+   - Check build logs for errors
+   - Verify `/api/square/oauth/token` endpoint is deployed
+
+2. **Supabase Edge Function Logs**
+   - Check `sync-team-members` logs (service: edge-function)
+   - Check `sync-clients` logs
+   - Look for 503 errors and deployment issues
+   - May need to redeploy with simpler implementation
+
+3. **Environment Variables on Vercel**
+   - `VITE_SQUARE_APPLICATION_ID` (or `VITE_SQUARE_CLIENT_ID`)
+   - `SQUARE_APPLICATION_SECRET` (server-side, not exposed)
+   - `VITE_SQUARE_REDIRECT_URI` must match Square OAuth app settings
+   - `VITE_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+   - `VITE_SQUARE_ENV` (should be 'production' unless sandbox)
+
+4. **Square OAuth Configuration**
+   - Verify redirect URI is set correctly in Square dashboard
+   - Verify Application ID is correct
+   - Verify Application Secret is correct and matches `SQUARE_APPLICATION_SECRET`
+
+## Testing Steps for Next Chat
+
+1. **Deploy the fixes** - Push/merge the changes from this session
+2. **Monitor Vercel build** - Check that build succeeds
+3. **Test OAuth flow:**
+   - Click "Login with Square" on production
    - Complete Square authorization
-   - Check console for these logs:
-     - `[Settings] Current user ID: ...`
-     - `[Settings] Scoped clients query for user ... : ...`
-     - If returns 0: `[Settings] Fallback clients query returned: ...`
-     - `[TEAM SYNC] Token from body: ✓`
-     - `[TEAM SYNC] Inserted: X` (should be > 0)
+   - Watch for "Failed to exchange Square OAuth token" error
+   - If that still appears, check `/api/square/oauth/token` logs
 
-2. **Expected Success Indicators**
-   - OAuth redirects to login (not error page)
-   - Clients appear in sidebar/settings
-   - Team members appear in settings
-   - Plans appear on dashboard
-   - Console shows successful sync logs
+4. **Check browser console:**
+   - Look for detailed error messages
+   - Check Network tab to see response from `/api/square/oauth/token`
+   - Should return `{ merchant_id, business_name, access_token }`
 
-3. **If Still Fails**
-   - Check Supabase logs for edge function errors
-   - Verify `/api/square/oauth/token` is now accessible (was 401 before)
-   - Check user IDs match between OAuth token creation and queries
-   - Verify edge functions are actually inserting data (check Supabase clients/square_team_members tables)
+5. **If token exchange fails:**
+   - Verify all Square credentials are correct
+   - Check Square API is returning proper response
+   - Look at server logs in `/api/square/oauth/token` endpoint
 
-## Key Files Modified
-- `vercel.json` - Routes fix (CRITICAL)
-- `contexts/SettingsContext.tsx` - Debugging logging
-- `contexts/PlanContext.tsx` - Fallback query pattern
-- `components/SquareCallback.tsx` - No changes (uses edge functions)
+## Key Locations
 
-## Supabase Functions Deployed
-- `sync-clients` (v14) - Syncs Square customers to `clients` table
-- `sync-team-members` (v15) - Syncs Square team members to `square_team_members` table
-- Both: `verify_jwt: false`, proper CORS headers
+**OAuth Endpoints:**
+- `/api/square/oauth/start` - Initiates OAuth flow with state cookie
+- `/api/square/oauth/token` - Exchanges code for access token (THIS IS FAILING)
 
-## Known Issues
-- None remaining once PR is deployed
-- Edge functions have been updated and deployed independently of PR
+**Frontend Components:**
+- `components/SquareCallback.tsx` - Handles OAuth callback (line 60-75 is token exchange)
+- `components/LoginScreen.tsx` - Shows "Login with Square" button
 
-## Testing Data
-User ID: `c6598212-8148-4cf9-b53f-15066b92f679`
-- Has 15+ clients in Supabase `clients` table
-- Should see all data after OAuth completes successfully
+**Supabase Edge Functions:**
+- `sync-team-members` (v16) - Should fetch and sync team data
+- `sync-clients` (v15) - Should fetch and sync client data
+
+**Context:**
+- `contexts/SettingsContext.tsx` - Has fallback queries and logging
+- `contexts/AuthContext.tsx` - Manages auth state
+
+## Next Actions if Fixes Don't Work
+
+1. **Check Vercel Logs:**
+   - Go to Vercel dashboard > Blueprint > Deployments
+   - Look at latest build logs
+   - Check Function Logs for `/api/square/oauth/token`
+
+2. **Verify Square Configuration:**
+   - Application ID correct?
+   - Secret correct and matches env var?
+   - Redirect URI matches what's in Square settings?
+
+3. **Check Token Exchange:**
+   - In browser Network tab, inspect `/api/square/oauth/token` response
+   - What status code? (should be 200)
+   - What error message? (check response body)
+
+4. **Consider Alternative Approach:**
+   - If token endpoint keeps failing, may need to debug Square API response
+   - Could bypass sync functions temporarily and just complete OAuth
+   - Then manually trigger sync when needed
+
+## Environment Variables Needed
+
+These MUST be set in Vercel for OAuth to work:
+- `VITE_SQUARE_APPLICATION_ID` - Your Square app's client ID
+- `SQUARE_APPLICATION_SECRET` - Your Square app's secret (server-side only!)
+- `VITE_SQUARE_REDIRECT_URI` - Must be `https://blueprint-test-mu.vercel.app/square/callback`
+- `VITE_SUPABASE_URL` - Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
+- `VITE_SUPABASE_ANON_KEY` - Supabase public key
+
+## Current Error
+When testing on production: **"Failed to exchange Square OAuth token"**
+- This error comes from SquareCallback.tsx line 77
+- Means the response from `/api/square/oauth/token` was not ok (not 200 status)
+- Need to check actual response from that endpoint to see what's wrong
