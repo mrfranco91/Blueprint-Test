@@ -88,7 +88,7 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
         </div>
         <form onSubmit={handleCreateClient} className="p-4 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1">
+            <label className="block text-xs font-bold mb-1" style={{ color: '#374151' }}>
               Full Name
             </label>
             <input
