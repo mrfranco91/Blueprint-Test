@@ -127,57 +127,85 @@ const MissingCredentialsScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6 font-sans">
-      <div className="bg-white p-10 rounded-[40px] border-4 border-gray-950 shadow-2xl max-w-sm w-full">
-        <h1 className="text-2xl font-black tracking-tighter mb-4 text-center">
-          Connect Square
-        </h1>
-        <p className="text-sm font-bold text-gray-700 mb-6 text-center">
-          Connect your Square account to access the Pro/Admin dashboard.
-        </p>
-
-        {squareRedirectUri && (
-          <div className="mb-6">
-            <button
-              onClick={startOAuth}
-              className="w-full bg-gray-950 text-white font-black py-3 rounded-2xl border-4 border-gray-950 shadow-lg hover:bg-gray-800 transition-colors"
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500"
+      style={{ backgroundColor: branding.primaryColor }}
+    >
+      <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-gray-950">
+        {/* Header Section with Branding */}
+        <div className="bg-gray-50 p-10 text-center border-b-4" style={{ borderColor: branding.primaryColor }}>
+          {branding.logoUrl ? (
+            <img
+              src={branding.logoUrl}
+              alt={`${branding.salonName} Logo`}
+              className="login-logo w-20 h-20 object-contain mx-auto mb-4"
+            />
+          ) : (
+            <div
+              className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-xl transform -rotate-3"
+              style={{ backgroundColor: branding.accentColor }}
             >
-              Continue with Square OAuth
-            </button>
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1 h-px bg-gray-300"></div>
-          <span className="text-xs font-semibold" style={{ color: '#374151' }}>or</span>
-          <div className="flex-1 h-px bg-gray-300"></div>
+              <SettingsIcon className="w-10 h-10 text-white" />
+            </div>
+          )}
+          <h1 className="text-3xl font-black tracking-tighter" style={{ color: branding.primaryColor }}>
+            Connect Square
+          </h1>
+          <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ color: branding.primaryColor }}>
+            Pro Access Required
+          </p>
         </div>
 
-        <form onSubmit={handleTokenSubmit} className="space-y-3">
-          <div>
-            <label className="block text-xs font-bold mb-2" style={{ color: '#374151' }}>
-              Square Access Token
-            </label>
-            <input
-              type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Paste your Square access token"
-              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-gray-950"
-              disabled={loading}
-            />
-          </div>
-          {error && (
-            <p className="text-red-600 text-xs font-bold">{error}</p>
+        {/* Content Section */}
+        <div className="p-10" style={{ backgroundColor: 'rgba(138, 186, 211, 0.25)' }}>
+          <p className="text-center text-sm font-bold mb-8" style={{ color: '#374151' }}>
+            Connect your Square account to access the Pro/Admin dashboard.
+          </p>
+
+          {squareRedirectUri && (
+            <div className="mb-6">
+              <button
+                onClick={startOAuth}
+                className="blueprint-button font-black"
+              >
+                Continue with Square OAuth
+              </button>
+            </div>
           )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gray-200 text-gray-950 font-bold py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-300 transition-colors disabled:opacity-50 text-sm"
-          >
-            {loading ? 'Syncing...' : 'Sync with Token'}
-          </button>
-        </form>
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
+            <span className="text-xs font-semibold" style={{ color: '#374151' }}>or</span>
+            <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
+          </div>
+
+          <form onSubmit={handleTokenSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[9px] font-black uppercase tracking-widest mb-2" style={{ color: '#374151' }}>
+                Square Access Token
+              </label>
+              <input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Paste your Square access token"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-bold text-sm focus:outline-none focus:border-gray-950"
+                disabled={loading}
+              />
+            </div>
+            {error && (
+              <p className="text-red-600 text-xs font-bold text-center bg-red-50 p-3 rounded-lg">{error}</p>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full font-black py-4 rounded-2xl border-4 border-gray-950 uppercase tracking-widest text-sm shadow-lg active:scale-95 transition-all flex items-center justify-center"
+              style={{ backgroundColor: branding.accentColor, color: '#FFFFFF' }}
+            >
+              {loading ? 'Syncing...' : 'Sync with Token'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
