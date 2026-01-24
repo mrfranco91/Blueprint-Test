@@ -136,9 +136,9 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
       // ENTERPRISE FEATURE: Branding customization is only available for enterprise accounts
       // This view should not be accessible for standard accounts (menu item is conditionally hidden)
       return (
-        <div className="p-6">
-          <button onClick={() => setActiveSettingsView('menu')} className="mb-4 flex items-center text-xs font-black uppercase text-gray-400 hover:text-gray-900"><ChevronLeftIcon className="w-4 h-4 mr-1"/> Back</button>
-          <h2 className="text-2xl font-black mb-8">Branding</h2>
+        <div className="p-6 bg-gradient-to-b from-gray-50 to-white min-h-screen">
+          <button onClick={() => setActiveSettingsView('menu')} className="mb-6 flex items-center text-xs font-black uppercase text-gray-500 hover:text-gray-900 transition-colors"><ChevronLeftIcon className="w-4 h-4 mr-1"/> Back</button>
+          <h2 className="text-4xl font-black mb-8 text-brand-accent">Branding</h2>
           <div className="space-y-6">
             <div>
               <label className="block text-[10px] font-black uppercase mb-2">Salon Name</label>
