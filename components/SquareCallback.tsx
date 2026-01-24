@@ -59,40 +59,31 @@ export default function SquareCallback() {
 
         const jwtToken = authData.session.access_token;
 
-        // Step 3: Sync data via Supabase Edge Functions with Bearer token
+        // Step 3: Sync data via Supabase Edge Functions (non-blocking)
+        // These calls happen in the background; we don't wait for them
         const edgeFunctionBase = `${supabaseUrl}/functions/v1`;
 
-        const teamRes = await fetch(`${edgeFunctionBase}/sync-team-members`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`,
-          },
-          body: JSON.stringify({ squareAccessToken: squareToken }),
-        });
+        Promise.all([
+          fetch(`${edgeFunctionBase}/sync-team-members`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify({ squareAccessToken: squareToken }),
+          }).catch(err => console.warn('Team sync failed:', err)),
+          fetch(`${edgeFunctionBase}/sync-clients`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify({ squareAccessToken: squareToken }),
+          }).catch(err => console.warn('Client sync failed:', err)),
+        ]).catch(err => console.warn('Sync functions error:', err));
 
-        const teamText = await teamRes.text();
-        if (!teamRes.ok) {
-          const data = teamText ? JSON.parse(teamText) : {};
-          throw new Error(data?.message || `Team sync failed (${teamRes.status})`);
-        }
-
-        const clientRes = await fetch(`${edgeFunctionBase}/sync-clients`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`,
-          },
-          body: JSON.stringify({ squareAccessToken: squareToken }),
-        });
-
-        const clientText = await clientRes.text();
-        if (!clientRes.ok) {
-          const data = clientText ? JSON.parse(clientText) : {};
-          throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
-        }
-
-        // Step 4: Redirect to admin dashboard
+        // Step 4: Redirect to admin dashboard immediately
+        // Data will sync in background
         window.location.replace('/admin');
       } catch (err) {
         console.error('Square OAuth callback failed:', err);
