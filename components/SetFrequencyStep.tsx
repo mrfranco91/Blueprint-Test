@@ -76,7 +76,8 @@ const SetFrequencyStep: React.FC<SetFrequencyStepProps> = ({ selectedServices, p
         </button>
         <button
           onClick={onBack}
-          className="w-full bg-transparent text-gray-600 font-semibold py-2 px-4"
+          className="w-full bg-transparent font-semibold py-2 px-4"
+          style={{ color: '#374151' }}
         >
           Back
         </button>
