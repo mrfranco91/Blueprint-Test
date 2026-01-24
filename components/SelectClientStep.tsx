@@ -137,7 +137,8 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="w-full text-gray-600 font-bold py-2"
+              className="w-full font-bold py-2"
+              style={{ color: '#374151' }}
             >
               Cancel
             </button>
