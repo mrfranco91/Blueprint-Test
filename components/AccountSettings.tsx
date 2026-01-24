@@ -48,10 +48,10 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
 
             {squareRedirectUri && (
               <div className="bg-white p-6 rounded-[32px] border-4 border-gray-950 shadow-sm">
-                <h3 className="font-black text-sm tracking-widest uppercase text-gray-400 mb-4">
+                <h3 className="font-black text-sm tracking-widest uppercase mb-4" style={{ color: '#1F2937' }}>
                   Square Connection
                 </h3>
-                <p className="text-xs font-bold text-gray-700 leading-relaxed mb-4">
+                <p className="text-xs font-bold leading-relaxed mb-4" style={{ color: '#374151' }}>
                   Connect this Pro/Admin app to your Square account via OAuth.
                 </p>
                 <button
