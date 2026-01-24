@@ -194,11 +194,11 @@ const LoginScreen: React.FC = () => {
 
           <div className="flex items-center gap-3 mb-6">
             <div className="flex-1 h-px bg-gray-300"></div>
-            <span className="text-xs text-gray-500 font-semibold">or</span>
+            <span className="text-xs font-semibold" style={{ color: '#374151' }}>or</span>
             <div className="flex-1 h-px bg-gray-300"></div>
           </div>
 
-          <p className="text-center text-xs text-gray-600 mb-4">
+          <p className="text-center text-xs mb-4" style={{ color: '#374151' }}>
             Enter your Square access token to sync your team and clients
           </p>
           <form onSubmit={handleTokenSubmit} className="space-y-3">
