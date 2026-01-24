@@ -220,12 +220,16 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         if (cancelled) return;
 
+        console.log('[Settings] Scoped team members query for user', user.id, ':', { count: data?.length || 0, error });
+
         // Fallback: if no data found, get any synced data (ignore user ID)
         if ((data?.length ?? 0) === 0) {
+          console.log('[Settings] Team members query returned 0, trying fallback (no user filter)');
           const { data: legacyData } = await supabase
             .from('square_team_members')
             .select('*')
             .limit(100);
+          console.log('[Settings] Fallback team members query returned:', { count: legacyData?.length || 0 });
           if (legacyData && legacyData.length > 0) {
             data = legacyData;
           }
@@ -238,6 +242,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
           setStylists([]);
           setTeamError(null);
         } else {
+          console.log('[Settings] Setting stylists:', (data || []).length);
           const mapped: Stylist[] = (data || []).map((row: any) => ({
             id: row.square_team_member_id,
             name: row.name,
