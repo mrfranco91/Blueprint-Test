@@ -205,11 +205,11 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
               />
               <div className="flex-grow text-left">
                 <h3 className="font-bold text-gray-900 leading-tight">{client.name}</h3>
-                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-0.5">
+                <p className="text-[10px] font-black uppercase tracking-widest mt-0.5" style={{ color: '#6B7280' }}>
                   Source: {client.source}
                 </p>
               </div>
-              <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-gray-100">
+              <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-gray-100" style={{ color: '#374151' }}>
                   <PlusIcon className="w-4 h-4" />
               </div>
             </button>
