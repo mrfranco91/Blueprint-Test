@@ -188,8 +188,8 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
         )}
 
         {filteredClients.length === 0 ? (
-          <div className="text-center py-10 opacity-50">
-            <p className="font-bold text-gray-500">No clients found.</p>
+          <div className="text-center py-10">
+            <p className="font-bold" style={{ color: '#374151' }}>No clients found.</p>
           </div>
         ) : (
           filteredClients.map(client => (
