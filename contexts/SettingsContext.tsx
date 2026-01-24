@@ -20,6 +20,17 @@ import type {
 
 import { ALL_SERVICES, STYLIST_LEVELS } from '../data/mockData';
 import { supabase } from '../lib/supabase';
+import { canCustomizeBranding } from '../utils/isEnterpriseAccount';
+
+// Blueprint default branding - used for all non-enterprise accounts
+export const BLUEPRINT_DEFAULT_BRANDING: BrandingSettings = {
+  salonName: 'Blueprint',
+  primaryColor: '#0F4C81', /* Classic Blue */
+  secondaryColor: '#5D96BC', /* Heritage Blue */
+  accentColor: '#8ABAD3', /* Sky Blue */
+  font: 'Inter',
+  logoUrl: 'https://cdn.builder.io/api/v1/image/assets%2F8d6a989189ff4d9e8633804d5d0dbd86%2Fa72b6d70b1bc42b2991e3c072f2b3588?format=webp&width=800&height=1200',
+};
 
 type IntegrationProvider = 'square' | 'vagaro' | 'mindbody';
 type IntegrationEnvironment = 'sandbox' | 'production';
