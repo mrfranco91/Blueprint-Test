@@ -221,7 +221,12 @@ const LoginScreen: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gray-200 text-gray-950 font-bold py-3 rounded-lg border-2 border-gray-300 active:scale-95 transition-transform disabled:opacity-50 text-sm"
+              className="w-full font-bold py-3 rounded-lg border-2 text-sm active:scale-95 transition-all hover:bg-blue-50 disabled:opacity-50"
+              style={{
+                borderColor: '#0F4C81',
+                color: '#0F4C81',
+                backgroundColor: '#ffffff'
+              }}
             >
               {loading ? 'Syncing...' : 'Sync Manually'}
             </button>
