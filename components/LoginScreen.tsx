@@ -143,10 +143,10 @@ const LoginScreen: React.FC = () => {
     }
   };
 
-  const safeAccentColor = ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#1E3A8A');
+  const safeAccentColor = ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#0F4C81');
 
   const headerStyle = {
-    color: ensureAccessibleColor(branding.accentColor, '#F9FAFB', '#1E3A8A'),
+    color: '#0F4C81', /* Blueprint Classic Blue for strong contrast on light background */
   };
 
   return (
