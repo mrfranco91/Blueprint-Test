@@ -159,31 +159,31 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
   const renderHome = () => {
     const safeAccentColor = ensureAccessibleColor(branding.accentColor, '#F8F9FA', '#1E3A8A');
     return (
-        <div className="p-6 overflow-y-auto h-full pb-24">
+        <div className="p-6 overflow-y-auto h-full pb-24 bg-gradient-to-b from-gray-50 to-white">
             <div className="flex justify-between items-start mb-8">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tighter" style={{ color: safeAccentColor }}>Welcome, {user?.name?.split(' ')[0]}</h1>
-                    <p className="text-gray-950 font-black text-sm uppercase tracking-widest">Stylist Dashboard</p>
+                    <h1 className="text-4xl font-black tracking-tighter" style={{ color: safeAccentColor }}>Welcome, {user?.name?.split(' ')[0]}</h1>
+                    <p className="text-gray-500 font-black text-sm uppercase tracking-widest mt-1">Stylist Dashboard</p>
                 </div>
-                <div className="w-14 h-14 bg-brand-primary rounded-2xl flex items-center justify-center text-white font-black border-4 border-gray-950 shadow-lg text-2xl">
+                <div className="w-16 h-16 bg-brand-primary rounded-2xl flex items-center justify-center text-white font-black border-4 border-gray-950 shadow-lg text-2xl hover:shadow-xl transition-shadow">
                     {user?.name?.[0] || 'S'}
                 </div>
             </div>
             <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="col-span-3 bg-gray-950 text-white p-6 rounded-[32px] shadow-2xl border-4 border-gray-900">
-                    <p className="text-sm font-black uppercase text-gray-400 mb-1 tracking-widest">My Pipeline</p>
-                    <p className="text-5xl font-black" style={{ color: branding.secondaryColor }}>${myStats.myPipeline.toLocaleString()}</p>
+                <div className="col-span-3 bg-gray-950 text-white p-8 rounded-[32px] shadow-lg border-4 border-gray-900 hover:shadow-xl transition-shadow">
+                    <p className="text-sm font-black uppercase text-gray-400 mb-2 tracking-widest">My Pipeline</p>
+                    <p className="text-6xl font-black" style={{ color: branding.secondaryColor }}>${myStats.myPipeline.toLocaleString()}</p>
                 </div>
-                <div className="bg-white col-span-2 p-5 rounded-3xl border-4 border-gray-100 shadow-sm">
-                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Active Plans</p>
-                    <p className="text-4xl font-black text-gray-950">{myStats.myActivePlansCount}</p>
+                <div className="bg-white col-span-2 p-6 rounded-3xl border-4 border-gray-100 shadow-sm hover:shadow-md hover:border-brand-accent transition-all">
+                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">Active Plans</p>
+                    <p className="text-5xl font-black text-brand-primary">{myStats.myActivePlansCount}</p>
                 </div>
-                <div className="bg-white p-5 rounded-3xl border-4 border-gray-100 shadow-sm">
-                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">My Clients</p>
-                    <p className="text-4xl font-black text-gray-950">{myStats.myClientsCount}</p>
+                <div className="bg-white p-6 rounded-3xl border-4 border-gray-100 shadow-sm hover:shadow-md hover:border-brand-accent transition-all">
+                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">My Clients</p>
+                    <p className="text-5xl font-black text-brand-primary">{myStats.myClientsCount}</p>
                 </div>
             </div>
-            <div className="bg-white p-5 rounded-3xl border-4 border-gray-100 shadow-sm mb-6">
+            <div className="bg-white p-7 rounded-3xl border-4 border-gray-100 shadow-sm hover:shadow-md transition-shadow mb-6">
                 <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-4">My Pipeline Growth</h3>
                 <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
@@ -196,8 +196,8 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
                     </ResponsiveContainer>
                 </div>
             </div>
-            <div className="my-6 space-y-3">
-                <button onClick={() => { setActiveTab('plans'); setStep('select-client'); }} className="w-full bg-brand-accent text-white font-black py-4 px-4 rounded-2xl shadow-xl flex items-center justify-center space-x-3 active:scale-95 transition-all">
+            <div className="my-8 space-y-3">
+                <button onClick={() => { setActiveTab('plans'); setStep('select-client'); }} className="w-full bg-brand-accent text-white font-black py-5 px-6 rounded-2xl shadow-lg hover:shadow-xl flex items-center justify-center space-x-3 active:scale-95 transition-all border-4 border-gray-950">
                     <PlusIcon className="w-6 h-6" />
                     <span>New Roadmap</span>
                 </button>
