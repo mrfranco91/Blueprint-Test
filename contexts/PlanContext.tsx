@@ -81,7 +81,19 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     setPlans([]);
                 } else if (pRes.data) {
                     console.log('Raw plans data from DB:', pRes.data);
-                    const formattedPlans = pRes.data
+
+                    // Fallback: if scoped query returns 0 results, fetch all plans (ignore user filter)
+                    let planData = pRes.data;
+                    if ((planData?.length ?? 0) === 0 && user?.role === 'admin') {
+                        console.log('Admin query returned 0, trying fallback (no user filter)');
+                        const fallbackRes = await supabase.from('plans').select('*');
+                        if (!fallbackRes.error && fallbackRes.data && fallbackRes.data.length > 0) {
+                            console.log('Fallback query returned:', { count: fallbackRes.data.length });
+                            planData = fallbackRes.data;
+                        }
+                    }
+
+                    const formattedPlans = planData
                         .map((dbPlan: any) => {
                             const blob = dbPlan.plan_data;
                             console.log('Processing plan:', dbPlan.id, 'blob:', blob);

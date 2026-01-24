@@ -136,12 +136,16 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         return;
       }
 
+      console.log('[Settings] Current user ID:', user.id, 'Email:', user.email);
+
       // --- Check Square Connection Status ---
       const { data: merchantSettings, error: msError } = await supabase
         .from('merchant_settings')
         .select('square_access_token')
         .eq('supabase_user_id', user.id)
         .maybeSingle();
+
+      console.log('[Settings] Merchant settings lookup for user', user.id, ':', { found: !!merchantSettings, error: msError });
 
       if (cancelled) return;
 
@@ -162,13 +166,17 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         if (cancelled) return;
 
+        console.log('[Settings] Scoped clients query for user', user.id, ':', { count: data?.length || 0, error });
+
         // Fallback: if no data found, get any synced data (ignore user ID)
         if ((data?.length ?? 0) === 0) {
+          console.log('[Settings] Clients query returned 0, trying fallback (no user filter)');
           const { data: legacyData } = await supabase
             .from('clients')
             .select('*')
             .order('created_at', { ascending: true })
             .limit(100);
+          console.log('[Settings] Fallback clients query returned:', { count: legacyData?.length || 0 });
           if (legacyData && legacyData.length > 0) {
             data = legacyData;
           }
@@ -180,6 +188,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
           console.error('[Settings] Failed to load clients:', error);
           setClients([]);
         } else {
+          console.log('[Settings] Setting clients:', (data || []).length);
           const mapped: Client[] = (data || []).map((row: any) => ({
             id: row.id,
             externalId: row.external_id,
@@ -211,12 +220,16 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         if (cancelled) return;
 
+        console.log('[Settings] Scoped team members query for user', user.id, ':', { count: data?.length || 0, error });
+
         // Fallback: if no data found, get any synced data (ignore user ID)
         if ((data?.length ?? 0) === 0) {
+          console.log('[Settings] Team members query returned 0, trying fallback (no user filter)');
           const { data: legacyData } = await supabase
             .from('square_team_members')
             .select('*')
             .limit(100);
+          console.log('[Settings] Fallback team members query returned:', { count: legacyData?.length || 0 });
           if (legacyData && legacyData.length > 0) {
             data = legacyData;
           }
@@ -229,6 +242,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
           setStylists([]);
           setTeamError(null);
         } else {
+          console.log('[Settings] Setting stylists:', (data || []).length);
           const mapped: Stylist[] = (data || []).map((row: any) => ({
             id: row.square_team_member_id,
             name: row.name,
