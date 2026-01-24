@@ -18,7 +18,7 @@ const NAV_ITEMS: { key: Tab; label: string; icon: any }[] = [
 
 export default function BottomNav({ activeTab, onChange }: BottomNavProps) {
   const { branding } = useSettings();
-  const safePrimaryColor = ensureAccessibleColor(branding.primaryColor, '#111827', '#BE123C');
+  const safePrimaryColor = ensureAccessibleColor(branding.primaryColor, '#111827', '#0F4C81');
 
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-white border-t-4 border-gray-900 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
@@ -30,12 +30,15 @@ export default function BottomNav({ activeTab, onChange }: BottomNavProps) {
             <button
               key={key}
               onClick={() => onChange(key)}
-              className="flex flex-col items-center justify-center w-full p-1 rounded-lg transition-colors"
-              style={isActive ? { color: safePrimaryColor } : {}}
+              className={`flex flex-col items-center justify-center w-full p-1 rounded-lg transition-all ${isActive ? 'bg-blue-50' : ''}`}
+              style={{
+                color: isActive ? safePrimaryColor : '#374151',
+              }}
               aria-label={label}
+              aria-current={isActive ? 'page' : undefined}
             >
               <Icon className={`h-7 w-7 mb-1 ${isActive ? 'stroke-[3]' : 'stroke-[2.5]'}`} />
-              <span className={`text-[10px] font-black uppercase tracking-tight ${isActive ? '' : 'text-gray-950'}`}>
+              <span className="text-[10px] font-black uppercase tracking-tight">
                 {label}
               </span>
             </button>
