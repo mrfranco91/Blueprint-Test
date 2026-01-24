@@ -48,7 +48,7 @@ const SetFrequencyStep: React.FC<SetFrequencyStepProps> = ({ selectedServices, p
           <div key={service.id} className="p-4 rounded-lg bg-gray-50 border border-gray-200">
             <div className="flex justify-between items-baseline">
                 <h3 className="font-bold text-lg text-gray-900 mb-3">{service.name}</h3>
-                <span className="text-xs text-gray-500">Starts: {formatDate(localDetails[service.id]?.firstDate)}</span>
+                <span className="text-xs" style={{ color: '#6B7280' }}>Starts: {formatDate(localDetails[service.id]?.firstDate)}</span>
             </div>
             <div className="flex items-center space-x-2">
                 <span className="font-medium text-gray-700">Every</span>
