@@ -40,3 +40,16 @@
 .text-size-l .text-3xl { font-size: 2.25rem; } /* was text-4xl */
 .text-size-l .text-4xl { font-size: 3rem; } /* was text-5xl */
 .text-size-l .text-5xl { font-size: 3.75rem; } /* was text-6xl */
+
+/* LoginScreen responsive logo */
+.login-logo {
+  width: 80px;
+  height: 80px;
+}
+
+@media (max-width: 991px) {
+  .login-logo {
+    width: 522px;
+    height: 162px;
+  }
+}
