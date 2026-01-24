@@ -166,13 +166,17 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         if (cancelled) return;
 
+        console.log('[Settings] Scoped clients query for user', user.id, ':', { count: data?.length || 0, error });
+
         // Fallback: if no data found, get any synced data (ignore user ID)
         if ((data?.length ?? 0) === 0) {
+          console.log('[Settings] Clients query returned 0, trying fallback (no user filter)');
           const { data: legacyData } = await supabase
             .from('clients')
             .select('*')
             .order('created_at', { ascending: true })
             .limit(100);
+          console.log('[Settings] Fallback clients query returned:', { count: legacyData?.length || 0 });
           if (legacyData && legacyData.length > 0) {
             data = legacyData;
           }
@@ -184,6 +188,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
           console.error('[Settings] Failed to load clients:', error);
           setClients([]);
         } else {
+          console.log('[Settings] Setting clients:', (data || []).length);
           const mapped: Client[] = (data || []).map((row: any) => ({
             id: row.id,
             externalId: row.external_id,
