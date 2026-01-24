@@ -136,12 +136,16 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         return;
       }
 
+      console.log('[Settings] Current user ID:', user.id, 'Email:', user.email);
+
       // --- Check Square Connection Status ---
       const { data: merchantSettings, error: msError } = await supabase
         .from('merchant_settings')
         .select('square_access_token')
         .eq('supabase_user_id', user.id)
         .maybeSingle();
+
+      console.log('[Settings] Merchant settings lookup for user', user.id, ':', { found: !!merchantSettings, error: msError });
 
       if (cancelled) return;
 
