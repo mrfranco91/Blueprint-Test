@@ -209,9 +209,9 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
   const renderTeam = () => {
     if (editingStylist) {
       return (
-        <div className="p-6">
-          <button onClick={() => setEditingStylist(null)} className="mb-4 flex items-center text-xs font-black uppercase text-gray-400 hover:text-gray-900"><ChevronLeftIcon className="w-4 h-4 mr-1"/> Back</button>
-          <h2 className="text-2xl font-black mb-8">Editing {editingStylist.name}</h2>
+        <div className="p-6 bg-gradient-to-b from-gray-50 to-white min-h-screen">
+          <button onClick={() => setEditingStylist(null)} className="mb-6 flex items-center text-xs font-black uppercase text-gray-500 hover:text-gray-900 transition-colors"><ChevronLeftIcon className="w-4 h-4 mr-1"/> Back</button>
+          <h2 className="text-4xl font-black mb-8 text-brand-accent">Editing {editingStylist.name}</h2>
           <div className="space-y-4">
             {Object.keys(editingStylist.permissions).map((permKey) => (
               <div key={permKey} className="flex justify-between items-center p-4 bg-white border-4 border-gray-100 rounded-2xl">
