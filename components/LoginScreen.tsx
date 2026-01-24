@@ -179,7 +179,7 @@ const LoginScreen: React.FC = () => {
           </p>
         </div>
 
-        <div className="p-10" style={{ backgroundColor: 'rgba(138, 186, 211, 0.1)' }}>
+        <div className="p-10" style={{ backgroundColor: 'rgba(138, 186, 211, 0.25)' }}>
 
           {squareRedirectUri && (
             <div className="mb-6">
