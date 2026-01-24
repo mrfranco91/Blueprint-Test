@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { Service, PlanDetails } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
@@ -41,7 +40,7 @@ const SetFrequencyStep: React.FC<SetFrequencyStepProps> = ({ selectedServices, p
             <div className="absolute top-0 left-0 h-2 bg-brand-primary rounded-full" style={{width: '66%'}}></div>
         </div>
         <h1 className="text-2xl font-bold text-gray-900">Service Frequency</h1>
-        <p className="text-sm text-gray-500">How often should these repeat?</p>
+        <p className="text-sm" style={{ color: '#374151' }}>How often should these repeat?</p>
       </div>
       
       <div className="flex-grow overflow-y-auto p-4 space-y-4">
