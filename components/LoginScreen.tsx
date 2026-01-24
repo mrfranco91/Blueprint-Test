@@ -155,7 +155,7 @@ const LoginScreen: React.FC = () => {
       style={{ backgroundColor: '#0F4C81' }}
     >
       <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-gray-950">
-        <div className="bg-gray-50 p-10 text-center border-b-4 border-gray-100">
+        <div className="bg-gray-50 p-10 text-center border-b-4" style={{ borderColor: '#0F4C81' }}>
           {branding.logoUrl ? (
             <img
               src={branding.logoUrl}
