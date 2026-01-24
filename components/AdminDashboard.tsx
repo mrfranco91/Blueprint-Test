@@ -254,32 +254,32 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
   };
 
   const renderPlans = () => (
-    <div className="p-6">
+    <div className="p-6 bg-gradient-to-b from-gray-50 to-white min-h-screen">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-black text-brand-accent tracking-tighter">Plans</h1>
-        <button onClick={() => setIsCreatingPlan(true)} className="bg-brand-accent text-white px-6 py-3 rounded-2xl font-black text-sm active:scale-95 transition-transform">+ NEW PLAN</button>
+        <h1 className="text-4xl font-black text-brand-accent tracking-tighter">Plans</h1>
+        <button onClick={() => setIsCreatingPlan(true)} className="bg-brand-accent text-white px-8 py-3 rounded-2xl font-black text-sm active:scale-95 transition-transform shadow-lg hover:shadow-xl">+ NEW PLAN</button>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {plans.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 bg-white border-4 border-gray-100 rounded-3xl">
-            <p className="font-bold mb-4" style={{ color: '#374151' }}>No plans yet</p>
-            <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#6B7280' }}>Create your first plan to get started</p>
+          <div className="flex flex-col items-center justify-center py-20 bg-white border-4 border-gray-100 rounded-3xl shadow-sm">
+            <p className="font-black text-lg mb-2 text-gray-950">No plans yet</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Create your first plan to get started</p>
           </div>
         ) : (
           plans.map(plan => (
             <button
               key={plan.id}
               onClick={() => setEditingPlan(plan)}
-              className="w-full text-left p-5 bg-white border-4 border-gray-100 rounded-3xl shadow-sm active:scale-95 transition-transform hover:border-brand-accent"
+              className="w-full text-left p-6 bg-white border-4 border-gray-100 rounded-3xl shadow-sm hover:shadow-md hover:border-brand-accent active:scale-95 transition-all"
             >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-black text-gray-950 text-lg">{plan.client?.name || 'Unnamed Client'}</h3>
-                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${plan.status === 'active' ? 'bg-green-100 text-green-700' : plan.status === 'draft' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="font-black text-gray-950 text-xl">{plan.client?.name || 'Unnamed Client'}</h3>
+                <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-full ${plan.status === 'active' ? 'bg-green-100 text-green-700' : plan.status === 'draft' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
                   {plan.status}
                 </span>
               </div>
-              <p className="text-sm font-bold text-gray-500 mb-3">${plan.totalCost?.toLocaleString() || '0'}</p>
-              <p className="text-[10px] text-gray-400 font-black">{plan.description || 'No description'}</p>
+              <p className="text-lg font-black text-brand-primary mb-2">${plan.totalCost?.toLocaleString() || '0'}</p>
+              <p className="text-sm text-gray-500 font-bold">{plan.description || 'No description'}</p>
             </button>
           ))
         )}
