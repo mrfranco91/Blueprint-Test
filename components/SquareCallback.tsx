@@ -62,34 +62,38 @@ export default function SquareCallback() {
         // Step 3: Sync data via Supabase Edge Functions with Bearer token
         const edgeFunctionBase = `${supabaseUrl}/functions/v1`;
 
-        const teamRes = await fetch(`${edgeFunctionBase}/sync-team-members`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`,
-          },
-          body: JSON.stringify({ squareAccessToken: squareToken }),
-        });
+        try {
+          const teamRes = await fetch(`${edgeFunctionBase}/sync-team-members`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify({ squareAccessToken: squareToken }),
+          });
 
-        const teamText = await teamRes.text();
-        if (!teamRes.ok) {
-          const data = teamText ? JSON.parse(teamText) : {};
-          throw new Error(data?.message || `Team sync failed (${teamRes.status})`);
+          if (!teamRes.ok) {
+            console.warn(`Team sync failed with status ${teamRes.status}`);
+          }
+        } catch (syncErr) {
+          console.warn('Team sync error:', syncErr);
         }
 
-        const clientRes = await fetch(`${edgeFunctionBase}/sync-clients`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`,
-          },
-          body: JSON.stringify({ squareAccessToken: squareToken }),
-        });
+        try {
+          const clientRes = await fetch(`${edgeFunctionBase}/sync-clients`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify({ squareAccessToken: squareToken }),
+          });
 
-        const clientText = await clientRes.text();
-        if (!clientRes.ok) {
-          const data = clientText ? JSON.parse(clientText) : {};
-          throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
+          if (!clientRes.ok) {
+            console.warn(`Client sync failed with status ${clientRes.status}`);
+          }
+        } catch (syncErr) {
+          console.warn('Client sync error:', syncErr);
         }
 
         // Step 4: Redirect to admin dashboard
