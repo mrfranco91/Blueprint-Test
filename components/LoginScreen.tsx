@@ -193,9 +193,9 @@ const LoginScreen: React.FC = () => {
           )}
 
           <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 h-px bg-gray-300"></div>
+            <div className="flex-1 h-px" style={{ backgroundColor: '#0F4C81' }}></div>
             <span className="text-xs font-semibold" style={{ color: '#374151' }}>or</span>
-            <div className="flex-1 h-px bg-gray-300"></div>
+            <div className="flex-1 h-px" style={{ backgroundColor: '#0F4C81' }}></div>
           </div>
 
           <p className="text-center text-xs mb-4" style={{ color: '#374151' }}>
