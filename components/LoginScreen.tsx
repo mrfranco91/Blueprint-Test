@@ -101,18 +101,15 @@ const LoginScreen: React.FC = () => {
         throw new Error('Failed to obtain authentication token');
       }
 
-      // Sync team members via Supabase Edge Function
-      const teamRes = await fetch(
-        `${supabaseUrl}/functions/v1/sync-team-members`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`,
-          },
-          body: JSON.stringify({ squareAccessToken: token }),
-        }
-      );
+      // Sync team members via local API endpoint
+      const teamRes = await fetch('/api/square/team', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({ squareAccessToken: token }),
+      });
 
       const teamText = await teamRes.text();
       if (!teamRes.ok) {
@@ -120,18 +117,15 @@ const LoginScreen: React.FC = () => {
         throw new Error(data?.message || `Team sync failed (${teamRes.status})`);
       }
 
-      // Sync clients via Supabase Edge Function
-      const clientRes = await fetch(
-        `${supabaseUrl}/functions/v1/sync-clients`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`,
-          },
-          body: JSON.stringify({ squareAccessToken: token }),
-        }
-      );
+      // Sync clients via local API endpoint
+      const clientRes = await fetch('/api/square/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({ squareAccessToken: token }),
+      });
 
       const clientText = await clientRes.text();
       if (!clientRes.ok) {

@@ -68,17 +68,14 @@ const MissingCredentialsScreen = () => {
       const jwtToken = session.session.access_token;
 
       // Sync team members
-      const teamRes = await fetch(
-        `${supabaseUrl}/functions/v1/sync-team-members`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`,
-          },
-          body: JSON.stringify({ squareAccessToken: token }),
-        }
-      );
+      const teamRes = await fetch('/api/square/team', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({ squareAccessToken: token }),
+      });
 
       const teamText = await teamRes.text();
       if (!teamRes.ok) {
@@ -87,17 +84,14 @@ const MissingCredentialsScreen = () => {
       }
 
       // Sync clients
-      const clientRes = await fetch(
-        `${supabaseUrl}/functions/v1/sync-clients`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`,
-          },
-          body: JSON.stringify({ squareAccessToken: token }),
-        }
-      );
+      const clientRes = await fetch('/api/square/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({ squareAccessToken: token }),
+      });
 
       const clientText = await clientRes.text();
       if (!clientRes.ok) {
