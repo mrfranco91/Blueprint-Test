@@ -100,7 +100,7 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1">
+            <label className="block text-xs font-bold mb-1" style={{ color: '#374151' }}>
               Email Address
             </label>
             <input
