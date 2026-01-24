@@ -185,17 +185,17 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     }
 
     return (
-      <div className="p-6">
-        <h1 className="text-3xl font-black text-brand-accent tracking-tighter mb-8">Settings</h1>
-        <div className={`grid gap-4 ${canCustomizeBranding(user) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      <div className="p-6 bg-gradient-to-b from-gray-50 to-white min-h-screen">
+        <h1 className="text-4xl font-black text-brand-accent tracking-tighter mb-8">Settings</h1>
+        <div className={`grid gap-6 mb-8 ${canCustomizeBranding(user) ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {canCustomizeBranding(user) && (
-            <button onClick={() => setActiveSettingsView('branding')} className="p-6 bg-white border-4 border-gray-100 rounded-3xl flex flex-col items-center justify-center space-y-2 hover:border-brand-accent transition-all">
-              <GlobeIcon className="w-8 h-8 text-brand-primary"/>
+            <button onClick={() => setActiveSettingsView('branding')} className="p-8 bg-white border-4 border-gray-100 rounded-3xl flex flex-col items-center justify-center space-y-3 hover:border-brand-accent hover:shadow-md transition-all shadow-sm">
+              <GlobeIcon className="w-10 h-10 text-brand-primary"/>
               <span className="text-[10px] font-black uppercase tracking-widest">Branding</span>
             </button>
           )}
-          <button onClick={() => setActiveSettingsView('integrations')} className="p-6 bg-white border-4 border-gray-100 rounded-3xl flex flex-col items-center justify-center space-y-2 hover:border-brand-accent transition-all">
-            <DatabaseIcon className="w-8 h-8 text-brand-primary"/>
+          <button onClick={() => setActiveSettingsView('integrations')} className="p-8 bg-white border-4 border-gray-100 rounded-3xl flex flex-col items-center justify-center space-y-3 hover:border-brand-accent hover:shadow-md transition-all shadow-sm">
+            <DatabaseIcon className="w-10 h-10 text-brand-primary"/>
             <span className="text-[10px] font-black uppercase tracking-widest">Integrations</span>
           </button>
         </div>
