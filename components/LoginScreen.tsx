@@ -174,7 +174,7 @@ const LoginScreen: React.FC = () => {
           <h1 className="text-3xl font-black tracking-tighter" style={headerStyle}>
             Pro Access
           </h1>
-          <p className="text-gray-400 text-xs font-black uppercase tracking-widest mt-2">
+          <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ color: '#0F4C81' }}>
             Internal Management
           </p>
         </div>
