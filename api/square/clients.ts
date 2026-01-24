@@ -45,44 +45,28 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ message: 'Supabase config missing.' });
     }
 
+    // Service-role Supabase client (DB access)
+    const supabaseAdmin = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
     let supabaseUserId: string | undefined;
 
     if (bearer) {
-      // User-scoped Supabase client (identity only)
-      const supabaseUser = createClient(
-        process.env.VITE_SUPABASE_URL,
-        process.env.VITE_SUPABASE_ANON_KEY,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${bearer}`,
-            },
-          },
-        }
-      );
-
       // FIX: Cast to 'any' to bypass Supabase auth method type errors, likely from an environment configuration issue.
-      const { data: userData, error: userErr } =
-        await (supabaseUser.auth as any).getUser();
+      const { data: userData } = await (supabaseAdmin.auth as any).getUser(bearer);
+      supabaseUserId = userData?.user?.id;
 
-      if (userErr || !userData?.user) {
-        console.error('[CLIENT SYNC] Invalid Supabase session:', userErr);
-        return res.status(401).json({ message: 'Invalid Supabase session.' });
+      if (!supabaseUserId) {
+        return res.status(401).json({ message: 'Invalid user.' });
       }
-
-      supabaseUserId = userData.user.id;
     } else if (squareAccessToken) {
       // Development mode: use a UUID-formatted dev user ID when token is provided directly
       supabaseUserId = generateUUIDFromToken(squareAccessToken);
     } else {
       return res.status(401).json({ message: 'Missing auth token.' });
     }
-
-    // Service-role Supabase client (DB access)
-    const supabaseAdmin = createClient(
-      process.env.VITE_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
 
     if (!squareAccessToken) {
       const { data: ms, error: msErr } = await supabaseAdmin
