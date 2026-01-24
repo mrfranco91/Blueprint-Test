@@ -43,14 +43,15 @@
 
 /* LoginScreen responsive logo */
 .login-logo {
-  width: 80px;
-  height: 80px;
+  width: 300px;
+  height: auto;
+  max-width: 90%;
 }
 
 @media (max-width: 991px) {
   .login-logo {
-    width: 522px;
-    height: 162px;
+    width: 280px;
+    height: auto;
   }
 }
 
