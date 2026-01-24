@@ -70,8 +70,9 @@
 }
 
 .blueprint-button:hover:not(:disabled) {
-  background-color: #E0F2FE;
-  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.15);
+  background-color: #0F4C81;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.3);
   transform: translateY(-2px);
 }
 
