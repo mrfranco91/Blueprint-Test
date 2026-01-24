@@ -152,7 +152,7 @@ const LoginScreen: React.FC = () => {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500"
-      style={{ backgroundColor: branding.accentColor }}
+      style={{ backgroundColor: '#0F4C81' }}
     >
       <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-gray-950">
         <div className="bg-gray-50 p-10 text-center border-b-4 border-gray-100">
