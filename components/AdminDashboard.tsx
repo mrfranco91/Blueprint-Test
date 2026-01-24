@@ -235,17 +235,17 @@ export default function AdminDashboard({ role }: { role: UserRole }) {
     }
 
     return (
-      <div className="p-6">
-        <h1 className="text-3xl font-black text-brand-accent tracking-tighter mb-8">Team Management</h1>
-        <div className="space-y-3">
+      <div className="p-6 bg-gradient-to-b from-gray-50 to-white min-h-screen">
+        <h1 className="text-4xl font-black text-brand-accent tracking-tighter mb-8">Team Management</h1>
+        <div className="space-y-4">
           {stylists.map(s => (
-            <button key={s.id} onClick={() => setEditingStylist(s)} className="w-full flex items-center p-5 bg-white border-4 border-gray-100 rounded-3xl hover:border-brand-primary transition-all group">
-              <div className="w-12 h-12 bg-brand-primary text-white rounded-2xl flex items-center justify-center font-black mr-4">{s.name[0]}</div>
+            <button key={s.id} onClick={() => setEditingStylist(s)} className="w-full flex items-center p-6 bg-white border-4 border-gray-100 rounded-3xl hover:border-brand-accent hover:shadow-md transition-all shadow-sm group">
+              <div className="w-14 h-14 bg-brand-primary text-white rounded-2xl flex items-center justify-center font-black mr-5 text-lg">{s.name[0]}</div>
               <div className="flex-grow text-left">
-                <p className="font-black text-gray-950">{s.name}</p>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{s.role}</p>
+                <p className="font-black text-gray-950 text-lg">{s.name}</p>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">{s.role}</p>
               </div>
-              <ChevronRightIcon className="w-6 h-6 text-gray-200"/>
+              <ChevronRightIcon className="w-6 h-6 text-gray-300 group-hover:text-brand-accent transition-colors"/>
             </button>
           ))}
         </div>
