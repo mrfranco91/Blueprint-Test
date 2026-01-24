@@ -59,11 +59,9 @@ export default function SquareCallback() {
 
         const jwtToken = authData.session.access_token;
 
-        // Step 3: Sync data via Supabase Edge Functions with Bearer token
-        const edgeFunctionBase = `${supabaseUrl}/functions/v1`;
-
+        // Step 3: Sync data via local API endpoints with Bearer token
         try {
-          const teamRes = await fetch(`${edgeFunctionBase}/sync-team-members`, {
+          const teamRes = await fetch('/api/square/team', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -74,13 +72,15 @@ export default function SquareCallback() {
 
           if (!teamRes.ok) {
             console.warn(`Team sync failed with status ${teamRes.status}`);
+          } else {
+            console.log('Team sync succeeded');
           }
         } catch (syncErr) {
           console.warn('Team sync error:', syncErr);
         }
 
         try {
-          const clientRes = await fetch(`${edgeFunctionBase}/sync-clients`, {
+          const clientRes = await fetch('/api/square/clients', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -91,6 +91,8 @@ export default function SquareCallback() {
 
           if (!clientRes.ok) {
             console.warn(`Client sync failed with status ${clientRes.status}`);
+          } else {
+            console.log('Client sync succeeded');
           }
         } catch (syncErr) {
           console.warn('Client sync error:', syncErr);
