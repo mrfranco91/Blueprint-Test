@@ -220,7 +220,8 @@ const SelectClientStep: React.FC<SelectClientStepProps> = ({
       <div className="p-4 bg-white border-t border-gray-100">
         <button
           onClick={onBack}
-          className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-full hover:bg-gray-200 transition-colors"
+          className="w-full bg-gray-100 font-bold py-3 rounded-full hover:bg-gray-200 transition-colors"
+          style={{ color: '#374151' }}
         >
           Cancel
         </button>
