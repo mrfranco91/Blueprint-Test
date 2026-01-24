@@ -152,10 +152,10 @@ const LoginScreen: React.FC = () => {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500"
-      style={{ backgroundColor: '#0F4C81' }}
+      style={{ backgroundColor: branding.primaryColor }}
     >
       <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-gray-950">
-        <div className="bg-gray-50 p-10 text-center border-b-4" style={{ borderColor: '#0F4C81' }}>
+        <div className="bg-gray-50 p-10 text-center border-b-4" style={{ borderColor: branding.primaryColor }}>
           {branding.logoUrl ? (
             <img
               src={branding.logoUrl}
@@ -165,21 +165,21 @@ const LoginScreen: React.FC = () => {
           ) : (
             <div
               className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-xl transform -rotate-3"
-              style={{ backgroundColor: safeAccentColor }}
+              style={{ backgroundColor: branding.accentColor }}
             >
               <SettingsIcon className="w-10 h-10 text-white" />
             </div>
           )}
 
-          <h1 className="text-3xl font-black tracking-tighter" style={headerStyle}>
+          <h1 className="text-3xl font-black tracking-tighter" style={{ color: branding.primaryColor }}>
             Pro Access
           </h1>
-          <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ color: '#0F4C81' }}>
+          <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ color: branding.primaryColor }}>
             Internal Management
           </p>
         </div>
 
-        <div className="p-10" style={{ backgroundColor: 'rgba(138, 186, 211, 0.25)' }}>
+        <div className="p-10" style={{ backgroundColor: `rgba(${parseInt(branding.primaryColor.slice(1, 3), 16)}, ${parseInt(branding.primaryColor.slice(3, 5), 16)}, ${parseInt(branding.primaryColor.slice(5, 7), 16)}, 0.08)` }}>
 
           {squareRedirectUri && (
             <div className="mb-6">
