@@ -33,7 +33,7 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
 
   return (
     <div className="p-4 flex flex-col h-full bg-gray-50 overflow-y-auto pb-48">
-        <h1 className="text-3xl font-black tracking-tighter px-2 pt-2 mb-8" style={{ color: '#0F4C81' }}>Account</h1>
+        <h1 className="text-3xl font-black tracking-tighter px-2 pt-2 mb-8" style={{ color: ensureAccessibleColor(branding.accentColor, '#F9FAFB', '#1E3A8A') }}>Account</h1>
 
         <div className="space-y-6 animate-fade-in px-1">
             <div className="bg-white p-8 rounded-[40px] border-4 border-gray-950 shadow-2xl text-center">
@@ -48,10 +48,10 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
 
             {squareRedirectUri && (
               <div className="bg-white p-6 rounded-[32px] border-4 border-gray-950 shadow-sm">
-                <h3 className="font-black text-sm tracking-widest uppercase mb-4" style={{ color: '#1F2937' }}>
+                <h3 className="font-black text-sm tracking-widest uppercase text-gray-400 mb-4">
                   Square Connection
                 </h3>
-                <p className="text-xs font-bold leading-relaxed mb-4" style={{ color: '#374151' }}>
+                <p className="text-xs font-bold text-gray-700 leading-relaxed mb-4">
                   Connect this Pro/Admin app to your Square account via OAuth.
                 </p>
                 <button
@@ -65,21 +65,21 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
 
             <div className="bg-white p-6 rounded-[32px] border-4 border-gray-100 shadow-sm space-y-6">
                 <div>
-                    <h3 className="font-black text-sm tracking-widest uppercase mb-4 flex items-center" style={{ color: '#1F2937' }}>
+                    <h3 className="font-black text-sm tracking-widest uppercase text-gray-400 mb-4 flex items-center">
                         <SettingsIcon className="w-4 h-4 mr-2" />
                         App Settings
                     </h3>
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#374151' }}>Text Size</span>
+                            <span className="text-xs font-black uppercase text-gray-500 tracking-widest">Text Size</span>
                             <div className="flex bg-gray-100 p-1 rounded-xl">
                                 {(['S', 'M', 'L'] as AppTextSize[]).map(sz => (
-                                    <button key={sz} onClick={() => updateTextSize(sz)} className={`px-4 py-1.5 rounded-lg text-xs font-black ${sz === textSize ? 'bg-white shadow text-gray-900' : ''}`} style={sz === textSize ? {} : { color: '#374151' }}>{sz}</button>
+                                    <button key={sz} onClick={() => updateTextSize(sz)} className={`px-4 py-1.5 rounded-lg text-xs font-black ${sz === textSize ? 'bg-white shadow text-gray-900' : 'text-gray-400'}`}>{sz}</button>
                                 ))}
                             </div>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#374151' }}>Push Alerts</span>
+                            <span className="text-xs font-black uppercase text-gray-500 tracking-widest">Push Alerts</span>
                             <button onClick={() => updatePushAlertsEnabled(!pushAlertsEnabled)} className={`w-12 h-6 rounded-full relative transition-colors ${pushAlertsEnabled ? 'bg-brand-secondary' : 'bg-gray-200'}`}>
                                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${pushAlertsEnabled ? 'transform translate-x-7' : 'transform translate-x-1'}`}></div>
                             </button>
@@ -88,13 +88,13 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
                 </div>
 
                 <div className="pt-6 border-t-2 border-gray-100">
-                    <h3 className="font-black text-sm tracking-widest uppercase mb-4 flex items-center" style={{ color: '#1F2937' }}>
+                    <h3 className="font-black text-sm tracking-widest uppercase text-gray-400 mb-4 flex items-center">
                         <UsersIcon className="w-4 h-4 mr-2" />
                         Account Security
                     </h3>
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#374151' }}>Email</label>
+                            <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Email</label>
                             {isMockUser && !user?.email ? (
                                 <div className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl font-bold text-sm text-gray-500 italic">
                                     Mock account — no email associated
@@ -114,7 +114,7 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
                                     <input type="password" required className="w-full p-3 bg-white border-2 border-gray-200 rounded-xl font-bold text-sm outline-none" />
                                 </div>
                                 <div className="flex space-x-2 pt-2">
-                                     <button type="submit" className="w-full text-white font-black py-3 rounded-xl border-b-4 border-black/20 uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all" style={{ backgroundColor: branding.accentColor, color: ensureAccessibleColor('#FFFFFF', branding.accentColor, '#1F2937') }}>Save</button>
+                                     <button type="submit" className="w-full text-white font-black py-3 rounded-xl border-b-4 border-black/20 uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all" style={{ backgroundColor: branding.accentColor, color: ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#BE123C') }}>Save</button>
                                      <button type="button" onClick={() => setIsChangingPassword(false)} className="w-full text-gray-800 font-black py-3 bg-gray-100 rounded-xl border-b-4 border-gray-300 uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all">Cancel</button>
                                 </div>
                             </form>
@@ -139,7 +139,7 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, onLogout, subti
                 </div>
             </div>
 
-            <button onClick={onLogout} className="w-full font-black py-5 rounded-[28px] border-b-8 border-black/20 uppercase tracking-widest text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-3" style={{ backgroundColor: branding.accentColor, color: ensureAccessibleColor('#FFFFFF', branding.accentColor, '#FFFFFF') }}>
+            <button onClick={onLogout} className="w-full font-black py-5 rounded-[28px] border-b-8 border-black/20 uppercase tracking-widest text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-3" style={{ backgroundColor: branding.accentColor, color: ensureAccessibleColor(branding.accentColor, '#FFFFFF', '#FFFFFF') }}>
                 <TrashIcon className="w-6 h-6" />
                 <span>SIGN OUT</span>
             </button>
