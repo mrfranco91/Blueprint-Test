@@ -53,3 +53,33 @@
     height: 162px;
   }
 }
+
+/* Blueprint Button Styles */
+.blueprint-button {
+  border: 2px solid #0F4C81;
+  color: #0F4C81;
+  background-color: #ffffff;
+  font-weight: bold;
+  padding: 12px;
+  border-radius: 8px;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.blueprint-button:hover:not(:disabled) {
+  background-color: #E0F2FE;
+  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.15);
+  transform: translateY(-2px);
+}
+
+.blueprint-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.blueprint-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
