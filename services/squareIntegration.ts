@@ -1,4 +1,5 @@
 import { Service, Stylist, Client, PlanAppointment } from '../types';
+import { supabase } from '../lib/supabase';
 
 // Square API Types (Simplified)
 interface SquareLocation {
@@ -23,7 +24,18 @@ const getSquareAccessToken = async () => {
     try {
       if (typeof window === 'undefined') return null;
 
-      const res = await fetch('/api/square/get-token');
+      // Get the current Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.error('No Supabase session available');
+        return null;
+      }
+
+      const res = await fetch('/api/square/get-token', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
       if (!res.ok) {
         console.error('Failed to retrieve Square token:', res.status);
         return null;
