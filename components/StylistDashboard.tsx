@@ -168,7 +168,7 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
                 <img
                     src="https://cdn.builder.io/api/v1/image/assets%2F8d6a989189ff4d9e8633804d5d0dbd86%2Ff696039a46fe41c5b3ed739d192f7f66"
                     alt="Favicon"
-                    className="w-16 h-16 rounded-2xl border-4 border-gray-950 shadow-lg hover:shadow-xl transition-shadow object-cover"
+                    className="w-16 h-16 object-cover"
                 />
             </div>
             <div className="grid grid-cols-3 gap-4 mb-6">
