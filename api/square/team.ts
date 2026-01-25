@@ -9,12 +9,18 @@ function generateUUIDFromToken(token: string): string {
 }
 
 export default async function handler(req: any, res: any) {
+  console.log('[TEAM SYNC] Request received:', req.method);
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
+    // Check environment
+    console.log('[TEAM SYNC] Env check - VITE_SUPABASE_URL:', !!process.env.VITE_SUPABASE_URL);
+    console.log('[TEAM SYNC] Env check - SUPABASE_SERVICE_ROLE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+
     const supabaseAdmin = createClient(
       process.env.VITE_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -30,7 +36,8 @@ export default async function handler(req: any, res: any) {
       try {
         const body = await req.json();
         squareAccessToken = body?.squareAccessToken;
-        console.log('[TEAM SYNC] Token from body:', squareAccessToken ? '✓' : '✗');
+        console.log('[TEAM SYNC] Token from body:', squareAccessToken ? '✓ (found)' : '✗ (not found)');
+        console.log('[TEAM SYNC] Body keys:', Object.keys(body || {}));
       } catch (e) {
         console.log('[TEAM SYNC] Failed to parse body:', e);
         // Ignore parse errors, fall through to headers
