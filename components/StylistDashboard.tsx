@@ -165,9 +165,11 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
                     <h1 className="text-4xl font-black tracking-tighter" style={{ color: safeAccentColor }}>Welcome, {user?.name?.split(' ')[0]}</h1>
                     <p className="text-gray-500 font-black text-sm uppercase tracking-widest mt-1">Stylist Dashboard</p>
                 </div>
-                <div className="w-16 h-16 bg-brand-primary rounded-2xl flex items-center justify-center text-white font-black border-4 border-gray-950 shadow-lg text-2xl hover:shadow-xl transition-shadow">
-                    {user?.name?.[0] || 'S'}
-                </div>
+                <img
+                    src="https://cdn.builder.io/api/v1/image/assets%2F8d6a989189ff4d9e8633804d5d0dbd86%2Ff696039a46fe41c5b3ed739d192f7f66"
+                    alt="Favicon"
+                    className="w-16 h-16 rounded-2xl border-4 border-gray-950 shadow-lg hover:shadow-xl transition-shadow object-cover"
+                />
             </div>
             <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="col-span-3 bg-gray-950 text-white p-8 rounded-[32px] shadow-lg border-4 border-gray-900 hover:shadow-xl transition-shadow">
