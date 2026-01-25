@@ -67,6 +67,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    // Dev auth bypass: if VITE_DEV_SKIP_OAUTH is enabled and no existing session, create mock admin
+    const skipOAuth = import.meta.env.VITE_DEV_SKIP_OAUTH === 'true';
+    if (skipOAuth) {
+      const merchantId = import.meta.env.VITE_DEV_MERCHANT_ID;
+      const devUser = {
+        id: merchantId || 'dev-admin',
+        name: 'Dev Admin',
+        role: 'admin' as UserRole,
+        email: 'dev@example.com',
+        isMock: true,
+      };
+      if (active) {
+        setUser(devUser);
+        localStorage.setItem('mock_admin_user', JSON.stringify(devUser));
+        setAuthInitialized(true);
+      }
+      return;
+    }
+
     if (!supabase) {
       setAuthInitialized(true);
       return;
