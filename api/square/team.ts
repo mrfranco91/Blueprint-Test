@@ -73,22 +73,28 @@ export default async function handler(req: any, res: any) {
     --------------------------------------------------*/
     let merchantId: string | undefined;
 
-    // Try to load merchant settings
-    const { data: merchant } = await supabaseAdmin
-      .from('merchant_settings')
-      .select('id, square_access_token, settings')
-      .eq('supabase_user_id', supabaseUserId)
-      .maybeSingle();
-
-    merchantId = merchant?.id;
-
-    // If no token was provided in request, try to get it from merchant settings
     if (!squareAccessToken) {
+      const { data: merchant } = await supabaseAdmin
+        .from('merchant_settings')
+        .select('id, square_access_token, settings')
+        .eq('supabase_user_id', supabaseUserId)
+        .maybeSingle();
+
+      merchantId = merchant?.id;
       squareAccessToken =
         merchant?.square_access_token ??
         merchant?.settings?.square_access_token ??
         merchant?.settings?.oauth?.access_token ??
         null;
+    } else {
+      // If token provided in header, still need to fetch merchant_id
+      const { data: merchant } = await supabaseAdmin
+        .from('merchant_settings')
+        .select('id')
+        .eq('supabase_user_id', supabaseUserId)
+        .maybeSingle();
+
+      merchantId = merchant?.id;
     }
 
     if (!squareAccessToken) {
