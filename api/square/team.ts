@@ -80,36 +80,33 @@ export default async function handler(req: any, res: any) {
     --------------------------------------------------*/
     let merchantId: string | undefined;
 
-    if (!squareAccessToken) {
-      const { data: merchant } = await supabaseAdmin
-        .from('merchant_settings')
-        .select('id, square_access_token, settings')
-        .eq('supabase_user_id', supabaseUserId)
-        .maybeSingle();
+    // Try to fetch merchant settings (optional - may not exist for new users)
+    const { data: merchant } = await supabaseAdmin
+      .from('merchant_settings')
+      .select('id, square_access_token, settings')
+      .eq('supabase_user_id', supabaseUserId)
+      .maybeSingle();
 
-      merchantId = merchant?.id;
+    merchantId = merchant?.id;
+
+    // If token wasn't provided in request, try to get it from merchant_settings
+    if (!squareAccessToken && merchant) {
       squareAccessToken =
-        merchant?.square_access_token ??
-        merchant?.settings?.square_access_token ??
-        merchant?.settings?.oauth?.access_token ??
+        merchant.square_access_token ??
+        merchant.settings?.square_access_token ??
+        merchant.settings?.oauth?.access_token ??
         null;
-    } else {
-      // If token provided in header, still need to fetch merchant_id
-      const { data: merchant } = await supabaseAdmin
-        .from('merchant_settings')
-        .select('id')
-        .eq('supabase_user_id', supabaseUserId)
-        .maybeSingle();
-
-      merchantId = merchant?.id;
+      console.log('[TEAM SYNC] Token from merchant_settings:', squareAccessToken ? '✓' : '✗');
     }
 
     if (!squareAccessToken) {
-      console.error('[TEAM SYNC] Missing Square OAuth token');
+      console.error('[TEAM SYNC] Missing Square access token (not in request or merchant_settings)');
       return res.status(400).json({
-        message: 'Square OAuth token not found in merchant settings.',
+        message: 'Square access token not provided and not found in merchant settings.',
       });
     }
+
+    console.log('[TEAM SYNC] Using token source:', squareAccessToken ? 'provided/stored' : 'none');
 
     /* -------------------------------------------------
        3. FETCH TEAM MEMBERS FROM SQUARE
