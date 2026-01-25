@@ -108,6 +108,30 @@ export default async function handler(req: any, res: any) {
 
     console.log('[TEAM SYNC] Using token source:', squareAccessToken ? 'provided/stored' : 'none');
 
+    // If token was provided in request and no merchant_settings exists, save it now
+    if (squareAccessToken && !merchantId) {
+      console.log('[TEAM SYNC] Creating merchant_settings for user:', supabaseUserId);
+      const { data: newMerchant, error: createErr } = await supabaseAdmin
+        .from('merchant_settings')
+        .insert([{
+          supabase_user_id: supabaseUserId,
+          square_access_token: squareAccessToken,
+          settings: {},
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }])
+        .select('id')
+        .single();
+
+      if (createErr) {
+        console.error('[TEAM SYNC] Failed to create merchant_settings:', createErr);
+        // Continue anyway - we have the token
+      } else {
+        merchantId = newMerchant?.id;
+        console.log('[TEAM SYNC] Created merchant_settings with ID:', merchantId);
+      }
+    }
+
     /* -------------------------------------------------
        3. FETCH TEAM MEMBERS FROM SQUARE
     --------------------------------------------------*/
