@@ -10,82 +10,30 @@ interface SquareLocation {
     status: string;
 }
 
-let cachedToken: string | null = null;
-let tokenFetchPromise: Promise<string | null> | null = null;
-
-const getSquareAccessToken = async () => {
-  // Return cached token if available
-  if (cachedToken) return cachedToken;
-
-  // Prevent multiple concurrent requests
-  if (tokenFetchPromise) return tokenFetchPromise;
-
-  tokenFetchPromise = (async () => {
-    try {
-      if (typeof window === 'undefined') return null;
-
-      // Get the current Supabase session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        console.error('No Supabase session available');
-        return null;
-      }
-
-      const res = await fetch('/api/square/get-token', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-      if (!res.ok) {
-        console.error('Failed to retrieve Square token:', res.status);
-        return null;
-      }
-
-      const data = await res.json();
-      cachedToken = data.access_token;
-      return cachedToken;
-    } catch (error) {
-      console.error('Error fetching Square token:', error);
-      return null;
-    } finally {
-      tokenFetchPromise = null;
-    }
-  })();
-
-  return tokenFetchPromise;
-};
-
 // OAuth is now the ONLY valid auth mechanism
-// Note: This check is performed asynchronously, so it may not be accurate immediately on page load
-export const isSquareTokenMissing = cachedToken === null;
-
-// FIX: Revert to import.meta.env, the standard Vite mechanism for environment variables.
-// FIX: Cast `import.meta` to `any` to resolve TypeScript error "Property 'env' does not exist on type 'ImportMeta'".
-const SQUARE_ENV = (import.meta as any).env.VITE_SQUARE_ENV || 'production';
-
-const baseUrl = SQUARE_ENV === 'sandbox'
-    ? 'https://connect.squareupsandbox.com'
-    : 'https://connect.squareup.com';
+export const isSquareTokenMissing = false;
 
 async function squareApiFetch<T>(path: string, options: { method?: string, body?: any } = {}): Promise<T> {
     const { method = 'GET', body } = options;
 
-    const token = await getSquareAccessToken();
-    if (!token) {
+    // Get the current Supabase session to pass auth to the proxy
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
         throw new Error('Square OAuth token missing. User must authenticate with Square.');
     }
-    
-    const response = await fetch(`${baseUrl}${path}`, {
+
+    // Route all Square API calls through the server proxy to avoid CORS issues
+    const response = await fetch(`/api/square/proxy?path=${encodeURIComponent(path)}`, {
         method,
         headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'Square-Version': '2023-10-20',
         },
         body: body ? JSON.stringify(body) : undefined,
     });
-    
+
     const text = await response.text();
     let data;
     try {
