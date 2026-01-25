@@ -32,6 +32,10 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
   const [_step, _setStep] = useState<Step | 'idle'>('idle');
   const [wizardCompleted, setWizardCompleted] = useState(false);
   const [isViewingReports, setIsViewingReports] = useState(false);
+  const [squareToken, setSquareToken] = useState('');
+  const [isSubmittingToken, setIsSubmittingToken] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [showTokenModal, setShowTokenModal] = useState(false);
   
   const stepRef = useRef(_step);
   stepRef.current = _step;
