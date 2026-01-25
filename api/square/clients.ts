@@ -68,6 +68,7 @@ export default async function handler(req: any, res: any) {
       return res.status(401).json({ message: 'Missing auth token.' });
     }
 
+    // If token not provided in request, try to fetch from merchant_settings
     if (!squareAccessToken) {
       const { data: ms, error: msErr } = await supabaseAdmin
         .from('merchant_settings')
@@ -78,11 +79,14 @@ export default async function handler(req: any, res: any) {
       if (msErr || !ms?.square_access_token) {
         console.error('[CLIENT SYNC] merchant_settings lookup failed:', msErr);
         return res.status(401).json({
-          message: 'Missing Square connection for user.',
+          message: 'Missing Square access token in request or merchant settings.',
         });
       }
 
       squareAccessToken = ms.square_access_token;
+      console.log('[CLIENT SYNC] Token from merchant_settings:', squareAccessToken ? '✓' : '✗');
+    } else {
+      console.log('[CLIENT SYNC] Token from request body:', squareAccessToken ? '✓' : '✗');
     }
 
     const squareRes = await fetch(
