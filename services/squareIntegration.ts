@@ -58,11 +58,56 @@ export const SquareIntegrationService = {
   formatDate(date: Date, timezone: string = 'UTC') {
     if (!date || isNaN(date.getTime())) {
         const now = new Date();
-        return now.toISOString().split('.')[0] + 'Z';
+        // Return default format for invalid dates
+        return new Date().toISOString().split('.')[0] + 'Z';
     }
 
-    // Square API requires dates in RFC 3339 format with Z suffix (UTC) without milliseconds
-    // Format: 2026-03-24T04:19:35Z
+    // Square API requires dates in RFC 3339 format
+    // For local times (with timezone), use offset format: 2026-02-20T00:00:00-08:00
+    // For UTC times, use Z format: 2026-03-22T08:00:00Z
+
+    if (timezone && timezone !== 'UTC') {
+        // Get the date in local timezone with offset
+        const formatter = new Intl.DateTimeFormat('sv-SE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZone: timezone
+        });
+
+        const parts = formatter.formatToParts(date);
+        const dateObj = {
+            year: '',
+            month: '',
+            day: '',
+            hour: '',
+            minute: '',
+            second: ''
+        };
+
+        parts.forEach(part => {
+            if (part.type in dateObj) {
+                dateObj[part.type as keyof typeof dateObj] = part.value;
+            }
+        });
+
+        // Get timezone offset (e.g., "-08:00")
+        const tempDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+        const localDate = new Date(date);
+        const diff = localDate.getTime() - tempDate.getTime();
+        const offsetMs = -diff;
+        const offsetHours = Math.floor(offsetMs / 3600000);
+        const offsetMinutes = Math.abs(Math.floor((offsetMs % 3600000) / 60000));
+        const offsetSign = offsetHours >= 0 ? '+' : '-';
+        const offsetStr = `${offsetSign}${String(Math.abs(offsetHours)).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
+
+        return `${dateObj.year}-${dateObj.month}-${dateObj.day}T${dateObj.hour}:${dateObj.minute}:${dateObj.second}${offsetStr}`;
+    }
+
+    // UTC format with Z suffix
     return date.toISOString().split('.')[0] + 'Z';
   },
   
