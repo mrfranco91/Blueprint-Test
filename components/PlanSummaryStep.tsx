@@ -328,24 +328,22 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               throw new Error("No services were selected for this visit.");
           }
 
-          // Map mock service IDs to real Square IDs if needed
-          let squareServices = mockServices.filter(s => s.id && !s.id.startsWith('s'));
+          // Map service IDs to real Square IDs if needed
+          const squareCatalog = await SquareIntegrationService.fetchCatalog();
 
-          if (squareServices.length < mockServices.length) {
-              // Some services have mock IDs, need to look them up
-              const squareCatalog = await SquareIntegrationService.fetchCatalog();
-              squareServices = mockServices.map(ms => {
-                  if (ms.id && !ms.id.startsWith('s')) {
-                      return ms; // Already has real ID
-                  }
-                  // Look up by exact name match
-                  const found = squareCatalog.find(s => s.name === ms.name);
-                  if (!found) {
-                      throw new Error(`Service "${ms.name}" not found in your Square catalog.`);
-                  }
-                  return found;
-              });
-          }
+          const squareServices = mockServices.map(ms => {
+              // Check if this service ID exists in current Square catalog
+              const existing = squareCatalog.find(s => s.id === ms.id);
+              if (existing) {
+                  return existing; // Already has valid Square ID
+              }
+              // Service ID not found - look it up by exact name match
+              const found = squareCatalog.find(s => s.name === ms.name);
+              if (!found) {
+                  throw new Error(`Service "${ms.name}" not found in your Square catalog.`);
+              }
+              return found;
+          });
 
           const stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
 
