@@ -306,7 +306,9 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
           );
 
           if (squareServices.length === 0) {
-              throw new Error("Could not find matching services in Square. Make sure your salon's service catalog is synced.");
+              const availableServices = squareCatalog.map(s => s.name).join(', ');
+              const requestedServices = mockServices.map(s => s.name).join(', ');
+              throw new Error(`Services not found in your Square catalog.\nRequested: ${requestedServices}\nAvailable: ${availableServices || 'None'}`);
           }
 
           const stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
