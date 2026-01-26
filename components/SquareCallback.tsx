@@ -98,8 +98,17 @@ export default function SquareCallback() {
           console.warn('Client sync error:', syncErr);
         }
 
-        // Step 4: Redirect to admin dashboard
-        window.location.replace('/admin');
+        // Step 4: Send success message to opener window and close popup
+        if (window.opener) {
+          // This is a popup - send message and close
+          window.opener.postMessage({ type: 'oauth-success' }, window.location.origin);
+          setTimeout(() => {
+            window.close();
+          }, 500);
+        } else {
+          // This is a direct navigation - redirect to admin
+          window.location.replace('/admin');
+        }
       } catch (err) {
         console.error('Square OAuth callback failed:', err);
         setError(
