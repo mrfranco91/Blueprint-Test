@@ -236,8 +236,8 @@ export const SquareIntegrationService = {
       const startDate = new Date(params.startAt);
       if (isNaN(startDate.getTime())) throw new Error("Invalid start time passed to Square.");
 
-      // Try with a 1-day window first for debugging
-      const endDate = new Date(startDate.getTime() + (1 * 24 * 60 * 60 * 1000));
+      // Use a 30-day window for availability search
+      const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
       const endAtFormatted = SquareIntegrationService.formatDate(endDate, 'UTC');
 
       console.log('[AVAILABILITY] Searching from', params.startAt, 'to', endAtFormatted);
