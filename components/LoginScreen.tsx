@@ -42,7 +42,52 @@ const LoginScreen: React.FC = () => {
       `&redirect_uri=${encodeURIComponent(squareRedirectUri)}` +
       `&session=false`;
 
-    window.location.href = url;
+    // Open OAuth in a popup instead of redirecting
+    const width = 600;
+    const height = 700;
+    const left = (window.innerWidth - width) / 2;
+    const top = (window.innerHeight - height) / 2;
+
+    const popup = window.open(
+      url,
+      'SquareOAuth',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
+
+    if (!popup) {
+      alert('Failed to open OAuth popup. Please check if popups are blocked.');
+      return;
+    }
+
+    // Listen for messages from the OAuth callback popup
+    const handleOAuthMessage = (event: MessageEvent) => {
+      // Verify the message is from our OAuth popup
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (event.data.type === 'oauth-success') {
+        console.log('✓ OAuth authentication successful');
+        // Remove the message listener
+        window.removeEventListener('message', handleOAuthMessage);
+        // Reload the page to check the session
+        window.location.reload();
+      } else if (event.data.type === 'oauth-error') {
+        console.error('OAuth error:', event.data.message);
+        window.removeEventListener('message', handleOAuthMessage);
+        setError(`OAuth authentication failed: ${event.data.message}`);
+      }
+    };
+
+    window.addEventListener('message', handleOAuthMessage);
+
+    // Close popup listener if user closes it manually
+    const checkPopupClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkPopupClosed);
+        window.removeEventListener('message', handleOAuthMessage);
+      }
+    }, 500);
   };
 
   const handleTokenSubmit = async (e: React.FormEvent) => {
