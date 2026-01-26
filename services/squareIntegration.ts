@@ -10,7 +10,7 @@ interface SquareLocation {
     status: string;
 }
 
-// OAuth is now the ONLY valid auth mechanism
+// Support both OAuth and manual token-based authentication
 export const isSquareTokenMissing = false;
 
 async function squareApiFetch<T>(path: string, options: { method?: string, body?: any } = {}): Promise<T> {
@@ -18,19 +18,22 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
 
     // Get the current Supabase session to pass auth to the proxy
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-        throw new Error('Square OAuth token missing. User must authenticate with Square.');
-    }
 
     // Route all Square API calls through the server proxy to avoid CORS issues
+    const headers: any = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Square-Version': '2023-10-20',
+    };
+
+    // If we have a Supabase session, use it; otherwise the proxy will fall back to stored token
+    if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
     const response = await fetch(`/api/square/proxy?path=${encodeURIComponent(path)}`, {
         method,
-        headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Square-Version': '2023-10-20',
-        },
+        headers,
         body: body ? JSON.stringify(body) : undefined,
     });
 
