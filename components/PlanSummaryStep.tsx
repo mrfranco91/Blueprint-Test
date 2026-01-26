@@ -337,15 +337,15 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
           }
 
           // Use service IDs from the plan if they exist (from Square catalog)
-          // For any mock IDs, look them up by name
+          // For any mock IDs, look them up by name (with fuzzy matching)
           let squareServices = mockServices.filter(s => s.id && !s.id.startsWith('s'));
 
-          if (squareServices.length === 0) {
-              // All services have mock IDs, need to look them up
+          if (squareServices.length < mockServices.length) {
+              // Some services have mock IDs, need to look them up
               const squareCatalog = await SquareIntegrationService.fetchCatalog();
-              squareServices = squareCatalog.filter(s =>
-                  mockServices.some(ms => ms.name === s.name)
-              );
+              squareServices = mockServices
+                  .map(ms => ms.id && !ms.id.startsWith('s') ? ms : findMatchingService(ms.name, squareCatalog))
+                  .filter((s): s is Service => s !== undefined);
 
               if (squareServices.length === 0) {
                   const availableServices = squareCatalog.map(s => s.name).join(', ');
