@@ -10,7 +10,7 @@ interface SquareLocation {
     status: string;
 }
 
-// OAuth is now the ONLY valid auth mechanism
+// Support both OAuth and manual token-based authentication
 export const isSquareTokenMissing = false;
 
 async function squareApiFetch<T>(path: string, options: { method?: string, body?: any } = {}): Promise<T> {
@@ -18,19 +18,22 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
 
     // Get the current Supabase session to pass auth to the proxy
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-        throw new Error('Square OAuth token missing. User must authenticate with Square.');
-    }
 
     // Route all Square API calls through the server proxy to avoid CORS issues
+    const headers: any = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Square-Version': '2025-10-16',
+    };
+
+    // If we have a Supabase session, use it; otherwise the proxy will fall back to stored token
+    if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
     const response = await fetch(`/api/square/proxy?path=${encodeURIComponent(path)}`, {
         method,
-        headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Square-Version': '2023-10-20',
-        },
+        headers,
         body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -45,66 +48,29 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
     if (!response.ok) {
         const err = data.errors?.[0];
         const fieldInfo = err?.field ? ` (Field: ${err.field})` : '';
-        throw new Error(err ? `${err.detail}${fieldInfo}` : `Square API Error: ${response.status}`);
+        const errorMessage = err?.detail || 'Unknown error';
+        console.error('[SQUARE API ERROR] Full response:', JSON.stringify(data, null, 2));
+        throw new Error(`Square API Error (${response.status}): ${errorMessage}${fieldInfo}`);
     }
     return data as T;
 }
 
 
 export const SquareIntegrationService = {
-  formatDate(date: Date, timezone: string = 'UTC') {
+  formatDate(date: Date, timezone?: string) {
     if (!date || isNaN(date.getTime())) {
         return new Date().toISOString();
     }
 
-    try {
-        const formatter = new Intl.DateTimeFormat('en-US', {
-            timeZone: timezone,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-            timeZoneName: 'shortOffset'
-        });
-
-        const parts = formatter.formatToParts(date);
-        const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
-
-        const Y = getPart('year');
-        const M = getPart('month');
-        const D = getPart('day');
-        const h = getPart('hour');
-        const m = getPart('minute');
-        const s = getPart('second');
-        let tz = getPart('timeZoneName');
-
-        let offset = '+00:00';
-        if (tz === 'UTC' || tz === 'GMT') {
-            offset = '+00:00';
-        } else {
-            let numeric = tz.replace('GMT', '');
-            if (numeric.includes(':')) {
-                offset = numeric;
-            } else {
-                const sign = numeric.startsWith('-') ? '-' : '+';
-                const hours = numeric.replace(/[+-]/, '').padStart(2, '0');
-                offset = `${sign}${hours}:00`;
-            }
-        }
-
-        return `${Y}-${M}-${D}T${h}:${m}:${s}${offset}`;
-    } catch (e) {
-        console.error("[Date Formatter Error]", e);
-        return date.toISOString();
-    }
+    // Square Bookings API requires RFC 3339 format with milliseconds: YYYY-MM-DDTHH:mm:ss.sssZ
+    return date.toISOString();
   },
   
   fetchLocation: async (): Promise<SquareLocation> => {
       const data: any = await squareApiFetch('/v2/locations');
+      console.log('[LOCATION] Full locations response:', JSON.stringify(data, null, 2));
       const activeLocation = data.locations?.find((loc: any) => loc.status === 'ACTIVE');
+      console.log('[LOCATION] Active location selected:', JSON.stringify(activeLocation, null, 2));
       if (!activeLocation) throw new Error("No active location found.");
       return activeLocation;
   },
@@ -122,11 +88,34 @@ export const SquareIntegrationService = {
   },
 
   fetchCatalog: async (): Promise<Service[]> => {
-    const data: any = await squareApiFetch('/v2/catalog/list?types=ITEM,ITEM_VARIATION,CATEGORY');
-    const objects = data.objects || [];
-    const items = objects.filter((o: any) => o.type === 'ITEM');
-    const variations = objects.filter((o: any) => o.type === 'ITEM_VARIATION');
-    const categories = objects.filter((o: any) => o.type === 'CATEGORY');
+    let cursor: string | undefined = undefined;
+    const allObjects: any[] = [];
+    let pageCount = 0;
+
+    // Fetch all pages of the catalog
+    do {
+        const path = `/v2/catalog/list?types=ITEM,ITEM_VARIATION,CATEGORY${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+        console.log('[CATALOG] Fetching page', pageCount + 1, 'cursor:', cursor ? cursor.substring(0, 20) + '...' : 'none');
+        const data: any = await squareApiFetch(path);
+
+        if (data.objects) {
+            console.log('[CATALOG] Page', pageCount + 1, 'returned', data.objects.length, 'objects');
+            allObjects.push(...data.objects);
+        }
+        cursor = data.cursor;
+        pageCount++;
+        console.log('[CATALOG] Next cursor:', cursor ? 'exists' : 'none (end of pages)');
+    } while (cursor);
+
+    console.log('[CATALOG] Total objects fetched across', pageCount, 'pages:', allObjects.length);
+
+    const items = allObjects.filter((o: any) => o.type === 'ITEM');
+    const variations = allObjects.filter((o: any) => o.type === 'ITEM_VARIATION');
+    const categories = allObjects.filter((o: any) => o.type === 'CATEGORY');
+
+    console.log('[CATALOG] Breakdown - Items:', items.length, 'Variations:', variations.length);
+    console.log('[CATALOG] All items:', items.map(i => ({ id: i.id, name: i.item_data?.name })));
+    console.log('[CATALOG] All variations:', variations.map(v => ({ id: v.id, itemId: v.item_variation_data?.item_id, name: v.item_variation_data?.name })));
 
     const services: Service[] = [];
 
@@ -137,34 +126,36 @@ export const SquareIntegrationService = {
             const priceMoney = variation.item_variation_data.price_money;
             const durationMs = variation.item_variation_data.service_duration;
 
+            const serviceName = `${item.item_data.name}${variation.item_variation_data.name !== 'Regular' ? ` - ${variation.item_variation_data.name}` : ''}`.trim();
+
             services.push({
                 id: variation.id,
                 version: variation.version,
-                name: `${item.item_data.name}${variation.item_variation_data.name !== 'Regular' ? ` - ${variation.item_variation_data.name}` : ''}`.trim(),
+                name: serviceName,
                 category: categoryObj?.category_data?.name || 'Uncategorized',
                 cost: priceMoney ? Number(priceMoney.amount) / 100 : 0,
                 duration: durationMs ? durationMs / 1000 / 60 : 0,
             });
         }
     });
+
+    console.log('[CATALOG] Available services (total):', services.length, services.map(s => ({ name: s.name, id: s.id })));
     return services;
   },
 
   fetchTeam: async (): Promise<Stylist[]> => {
       try {
-          const res = await fetch('/api/square/team');
-          if (!res.ok) {
-              const errorText = await res.text();
-              console.error('Square team fetch failed via proxy:', res.status, errorText);
-              return [];
-          }
+          const data: any = await squareApiFetch('/v2/team-members/search', { method: 'POST', body: { query: { filter: {} }, limit: 100 } });
+          const members = data.team_members || [];
 
-          const json = await res.json();
-          const members = json.team_members || [];
+          console.log('[TEAM] Raw response:', JSON.stringify(data, null, 2));
 
           if (members.length === 0) {
+              console.warn('[TEAM] No team members found in Square');
               return [];
           }
+
+          console.log('[TEAM] Fetched team members:', members.map((m: any) => ({ id: m.id, name: `${m.given_name} ${m.family_name}` })));
 
           return members.map((member: any) => ({
               id: member.id,
@@ -184,7 +175,7 @@ export const SquareIntegrationService = {
               }
           }));
       } catch (err) {
-          console.error('Failed to load Square team members from proxy:', err);
+          console.error('Failed to load Square team members:', err);
           return [];
       }
   },
@@ -214,34 +205,30 @@ export const SquareIntegrationService = {
   },
 
   searchCustomer: async (name: string): Promise<string | null> => {
-      const nameParts = name.trim().split(/\s+/);
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(' ');
-
       const body: any = {
           query: {
-              filter: {},
               sort: {
                   field: "CREATED_AT",
                   order: "DESC"
               }
           },
-          limit: 1
+          limit: 100
       };
-      
-      if (lastName) {
-          body.query.filter.given_name = { exact: firstName };
-          body.query.filter.family_name = { exact: lastName };
-      } else if (firstName) {
-          body.query.filter.given_name = { exact: firstName };
-      }
 
       const data: any = await squareApiFetch('/v2/customers/search', {
           method: 'POST',
           body: body
       });
-      
-      const customer = data.customers?.[0];
+
+      // Search through returned customers for name match
+      const customers = data.customers || [];
+      const searchName = name.toLowerCase();
+
+      const customer = customers.find((c: any) => {
+          const fullName = `${c.given_name || ''} ${c.family_name || ''}`.toLowerCase().trim();
+          return fullName === searchName || fullName.includes(searchName);
+      });
+
       return customer ? customer.id : null;
   },
 
@@ -254,31 +241,26 @@ export const SquareIntegrationService = {
       const startDate = new Date(params.startAt);
       if (isNaN(startDate.getTime())) throw new Error("Invalid start time passed to Square.");
 
-      const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000)); 
+      const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
 
-      const segment_filter: {
-          service_variation_id: string;
-          team_member_id_filter?: { any: string[] };
-      } = {
-          service_variation_id: params.serviceVariationId,
-      };
-
-      const teamMemberId = params.teamMemberId;
-      const isInvalidForFilter = !teamMemberId || teamMemberId.startsWith('TM-') || teamMemberId === 'admin';
-
-      if (!isInvalidForFilter) {
-          segment_filter.team_member_id_filter = { any: [teamMemberId] };
-      }
+      // Ensure both timestamps have milliseconds in ISO format
+      const startAtFormatted = startDate.toISOString();
+      const endAtFormatted = endDate.toISOString();
 
       const body = {
           query: {
               filter: {
+                  booking_id: "",
                   location_id: params.locationId,
                   start_at_range: {
-                      start_at: params.startAt,
-                      end_at: endDate.toISOString()
+                      end_at: endAtFormatted,
+                      start_at: startAtFormatted
                   },
-                  segment_filters: [segment_filter]
+                  segment_filters: [
+                      {
+                          service_variation_id: params.serviceVariationId
+                      }
+                  ]
               }
           }
       };
@@ -286,7 +268,7 @@ export const SquareIntegrationService = {
       const data: any = await squareApiFetch('/v2/bookings/availability/search', { method: 'POST', body });
       const slots = (data.availabilities || [])
           .map((a: any) => a.start_at);
-      
+
       return slots;
   },
 

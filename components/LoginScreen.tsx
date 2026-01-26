@@ -13,19 +13,26 @@ const LoginScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-  const squareAppId =
-    (import.meta as any).env.VITE_SQUARE_APPLICATION_ID ||
-    (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
+
+  // Detect if we're in local development
+  const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  // Use sandbox credentials locally, production credentials otherwise
+  const squareAppId = isLocalDev
+    ? 'sandbox-sq0idb-bAxH8Wu8_6HnCSCYzfPEEg'
+    : (import.meta as any).env.VITE_SQUARE_APPLICATION_ID ||
+      (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
+
   const squareRedirectUri = (import.meta as any).env.VITE_SQUARE_REDIRECT_URI;
-  const squareEnv = ((import.meta as any).env.VITE_SQUARE_ENV || 'production').toLowerCase();
+  const squareEnv = isLocalDev ? 'sandbox' : ((import.meta as any).env.VITE_SQUARE_ENV || 'production').toLowerCase();
 
   const scopes =
     ((import.meta as any).env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ??
     'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_READ APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
 
   const startSquareOAuth = () => {
-    if (!squareAppId || !squareRedirectUri) {
-      alert("Square OAuth is not configured correctly. Missing Application ID or Redirect URI.");
+    if (!squareAppId) {
+      alert("Square OAuth is not configured correctly. Missing Application ID.");
       return;
     }
 
@@ -34,15 +41,43 @@ const LoginScreen: React.FC = () => {
         ? 'https://connect.squareupsandbox.com/oauth2/authorize'
         : 'https://connect.squareup.com/oauth2/authorize';
 
+    // For sandbox, use the localhost redirect URI (HTTPS required)
+    // For production, use the environment variable
+    const redirectUri = isLocalDev
+      ? 'https://localhost:3000/square/callback'
+      : squareRedirectUri;
+
     const url =
       `${base}` +
       `?client_id=${encodeURIComponent(squareAppId)}` +
       `&response_type=code` +
       `&scope=${encodeURIComponent(scopes)}` +
-      `&redirect_uri=${encodeURIComponent(squareRedirectUri)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&session=false`;
 
-    window.location.href = url;
+    // For sandbox, just redirect (simpler since redirect URI is configured)
+    // For production, use popup to avoid losing context
+    if (isLocalDev) {
+      console.log('Sandbox mode: redirecting to Square OAuth');
+      window.location.href = url;
+    } else {
+      console.log('Production mode: opening OAuth in popup');
+      // Open OAuth in a popup for production
+      const width = 600;
+      const height = 700;
+      const left = (window.innerWidth - width) / 2;
+      const top = (window.innerHeight - height) / 2;
+
+      const popup = window.open(
+        url,
+        'SquareOAuth',
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+
+      if (!popup) {
+        alert('Failed to open OAuth popup. Please check if popups are blocked.');
+      }
+    }
   };
 
   const handleTokenSubmit = async (e: React.FormEvent) => {
@@ -52,90 +87,91 @@ const LoginScreen: React.FC = () => {
       return;
     }
 
-    if (!supabaseUrl) {
-      setError('Supabase URL is not configured');
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
       const { supabase } = await import('../lib/supabase');
 
-      // For manual token sync, we need to create a temporary user or use an existing session
-      let jwtToken: string | null = null;
-
-      // Try to get existing session first
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session?.access_token) {
-        jwtToken = session.session.access_token;
-      } else {
-        // Create a temporary test account for manual sync
-        const tempEmail = `manual-sync-${Date.now()}@blueprint.local`;
-        const tempPassword = Math.random().toString(36).slice(-12);
-
-        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-          email: tempEmail,
-          password: tempPassword,
-        });
-
-        if (signUpErr && signUpErr.message !== 'User already registered') {
-          throw new Error(`Failed to create session: ${signUpErr.message}`);
-        }
-
-        // Sign in
-        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-          email: tempEmail,
-          password: tempPassword,
-        });
-
-        if (signInErr) {
-          throw new Error(`Failed to sign in: ${signInErr.message}`);
-        }
-
-        jwtToken = signInData?.session?.access_token;
-      }
-
-      if (!jwtToken) {
-        throw new Error('Failed to obtain authentication token');
-      }
-
-      // Sync team members via local API endpoint
+      // Sync team members via local API endpoint (no auth needed, uses token-based UID)
       const teamRes = await fetch('/api/square/team', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwtToken}`,
         },
         body: JSON.stringify({ squareAccessToken: token }),
       });
 
       const teamText = await teamRes.text();
+      console.log('Team sync response:', { status: teamRes.status, text: teamText });
       if (!teamRes.ok) {
         const data = teamText ? JSON.parse(teamText) : {};
-        throw new Error(data?.message || `Team sync failed (${teamRes.status})`);
+        console.warn('Team sync failed:', data?.message || `Team sync failed (${teamRes.status})`);
+        // Don't throw - team sync is not critical
+      } else {
+        console.log('Team sync succeeded');
       }
 
-      // Sync clients via local API endpoint
+      // Sync clients via local API endpoint (no auth needed, uses token-based UID)
       const clientRes = await fetch('/api/square/clients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwtToken}`,
         },
         body: JSON.stringify({ squareAccessToken: token }),
       });
 
       const clientText = await clientRes.text();
+      console.log('Client sync response:', { status: clientRes.status, text: clientText });
       if (!clientRes.ok) {
         const data = clientText ? JSON.parse(clientText) : {};
-        throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
+        console.warn('Client sync failed:', data?.message || `Client sync failed (${clientRes.status})`);
+        // Don't throw - client sync is not critical
+      } else {
+        console.log('Client sync succeeded');
       }
 
-      // Success - user is already authenticated via Supabase session
-      // Don't call login('admin') - that would create a mock user and lose the real session
+      // Get temporary credentials for the real account
+      const sessionRes = await fetch('/api/square/create-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ squareAccessToken: token }),
+      });
+
+      if (!sessionRes.ok) {
+        const errorData = await sessionRes.json();
+        throw new Error(
+          `Failed to create session: ${errorData.message || 'Unknown error'}`
+        );
+      }
+
+      const { email, password } = await sessionRes.json();
+      if (!email || !password) {
+        throw new Error('Failed to get session credentials');
+      }
+
+      console.log('✓ Got temporary credentials, signing in as real account...');
+
+      // Sign in with the temporary password
+      const signInData = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInData.error) {
+        throw new Error(`Failed to sign in: ${signInData.error.message}`);
+      }
+
+      // Verify the session is set
+      const { data: sessionCheck } = await supabase.auth.getSession();
+      if (!sessionCheck?.session) {
+        throw new Error('Failed to create session');
+      }
+
       localStorage.removeItem('mock_admin_user');
+      console.log('✓ Authenticated as real account:', sessionCheck.session.user.id);
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -192,11 +228,13 @@ const LoginScreen: React.FC = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
-            <span className="text-xs font-semibold" style={{ color: '#374151' }}>or</span>
-            <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
-          </div>
+          {squareRedirectUri && (
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
+              <span className="text-xs font-semibold" style={{ color: '#374151' }}>or</span>
+              <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
+            </div>
+          )}
 
           <p className="text-center text-sm font-bold mb-6" style={{ color: '#374151' }}>
             Enter your Square access token to sync your team and clients

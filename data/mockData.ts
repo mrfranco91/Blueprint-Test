@@ -1,4 +1,3 @@
-
 import type { Service, MembershipTier, StylistLevel } from '../types';
 
 export const STYLIST_LEVELS: StylistLevel[] = [

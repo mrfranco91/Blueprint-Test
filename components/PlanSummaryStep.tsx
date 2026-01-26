@@ -21,6 +21,13 @@ type TimePeriod = 'morning' | 'afternoon' | 'evening' | 'all';
 type DeliveryMethod = 'sms' | 'email' | 'link';
 
 const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPlan }) => {
+  // Log plan details for debugging
+  console.log('[PLAN SUMMARY] Plan loaded:', {
+    clientName: plan.client.name,
+    appointmentCount: plan.appointments.length,
+    services: plan.appointments[0]?.services.map(s => ({ name: s.name, id: s.id })) || []
+  });
+
   const [isMembershipModalOpen, setMembershipModalOpen] = useState(false);
   const [isBookingModalOpen, setBookingModalOpen] = useState(false);
   
@@ -172,15 +179,77 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
     setFetchError(null);
     try {
         if (!visit) throw new Error("No visit selected.");
-        
+
         const loc = await SquareIntegrationService.fetchLocation();
-        
-        const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+
+        // Resolve stylist ID: prefer Square Team Member ID (starts with TM), fall back to allStylists
+        let stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+
+        // If stylistId doesn't start with 'TM', it's an old Supabase UUID - resolve it to the first stylist with a valid Square ID
+        if (stylistId && !String(stylistId).startsWith('TM')) {
+            console.log('[BOOKING CALENDAR] Stylist ID is not a Square Team Member ID, finding valid one:', stylistId);
+            const validStylist = allStylists.find(s => String(s.id).startsWith('TM'));
+            if (validStylist) {
+                stylistId = validStylist.id;
+                console.log('[BOOKING CALENDAR] Resolved to valid Square Team Member:', stylistId);
+            }
+        }
+
+        console.log('[BOOKING CALENDAR] Stylist lookup:', {
+            isClient,
+            planStylistId: plan.stylistId,
+            userStylistDataId: user?.stylistData?.id,
+            allStylists: allStylists.map(s => ({ id: s.id, name: s.name })),
+            resolvedId: stylistId
+        });
         if (!stylistId) throw new Error("No team member selected or found.");
-        
-        const roadmapService = visit.services[0];
-        if (!roadmapService || !roadmapService.id) {
-            throw new Error(`SYSTEM ERROR: A service in this plan is missing a valid Square ID.`);
+
+        const serviceToBook = visit.services[0];
+        if (!serviceToBook) {
+            throw new Error(`No service selected for this visit.`);
+        }
+
+        console.log('[BOOKING] Service from plan (full object):', serviceToBook);
+
+        if (!serviceToBook.name) {
+            console.error('[BOOKING] Service missing name:', serviceToBook);
+            throw new Error(`Service is missing name property: ${JSON.stringify(serviceToBook)}. This plan may be corrupted. Please regenerate the plan.`);
+        }
+
+        console.log('[BOOKING] Service from plan:', { name: serviceToBook.name, id: serviceToBook.id });
+
+        // Fetch Square catalog and validate service ID
+        const squareCatalog = await SquareIntegrationService.fetchCatalog();
+        console.log('[BOOKING] Catalog has', squareCatalog.length, 'services');
+        console.log('[BOOKING] Catalog service IDs:', squareCatalog.map(s => s.id));
+
+        let serviceVariationId = serviceToBook.id;
+
+        // Check if service ID exists in current Square catalog
+        const existingService = squareCatalog.find(s => s.id === serviceVariationId);
+        console.log('[BOOKING] Looking for service ID', serviceVariationId, '- found:', !!existingService);
+
+        if (!existingService) {
+            // Service ID not found - try exact name match first, then case-insensitive
+            console.log('[BOOKING] Trying to find by name:', serviceToBook.name);
+            let squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+
+            // If exact match fails, try case-insensitive match
+            if (!squareService) {
+                const searchName = serviceToBook.name.toLowerCase();
+                squareService = squareCatalog.find(s => s.name.toLowerCase() === searchName);
+                if (squareService) {
+                    console.log('[BOOKING] Found by case-insensitive name match:', serviceToBook.name, '->', squareService.name);
+                }
+            }
+
+            console.log('[BOOKING] Found by name:', !!squareService);
+            if (!squareService || !squareService.id) {
+                const availableServices = squareCatalog.map(s => s.name).join(', ');
+                throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available: ${availableServices}`);
+            }
+            serviceVariationId = squareService.id;
+            console.log('[BOOKING] Mapped service to Square by name:', { name: serviceToBook.name, plannedId: serviceToBook.id, squareId: serviceVariationId });
         }
 
         const searchStart = new Date(visit.date);
@@ -192,7 +261,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
             locationId: loc.id,
             startAt: SquareIntegrationService.formatDate(searchStart, loc.timezone),
             teamMemberId: stylistId,
-            serviceVariationId: roadmapService.id
+            serviceVariationId: serviceVariationId
         });
 
         const dates = new Set<string>();
@@ -224,15 +293,59 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
 
     try {
         if (!selectedVisit || !bookingDate) throw new Error("No visit selected.");
-        
+
         const loc = await SquareIntegrationService.fetchLocation();
-        
-        const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+
+        // Resolve stylist ID: prefer Square Team Member ID (starts with TM), fall back to allStylists
+        let stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+
+        // If stylistId doesn't start with 'TM', it's an old Supabase UUID - resolve it to the first stylist with a valid Square ID
+        if (stylistId && !String(stylistId).startsWith('TM')) {
+            console.log('[BOOKING PERIOD] Stylist ID is not a Square Team Member ID, finding valid one:', stylistId);
+            const validStylist = allStylists.find(s => String(s.id).startsWith('TM'));
+            if (validStylist) {
+                stylistId = validStylist.id;
+                console.log('[BOOKING PERIOD] Resolved to valid Square Team Member:', stylistId);
+            }
+        }
+
+        console.log('[BOOKING PERIOD] Stylist lookup:', {
+            isClient,
+            planStylistId: plan.stylistId,
+            userStylistDataId: user?.stylistData?.id,
+            allStylists: allStylists.map(s => ({ id: s.id, name: s.name })),
+            resolvedId: stylistId
+        });
         if (!stylistId) throw new Error("No team member selected or found.");
-        
-        const roadmapService = selectedVisit.services[0];
-        if (!roadmapService || !roadmapService.id) {
-            throw new Error(`SYSTEM ERROR: A service in this plan is missing a valid Square ID.`);
+
+        const serviceToBook = selectedVisit.services[0];
+        if (!serviceToBook) {
+            throw new Error(`No service selected for this visit.`);
+        }
+
+        // Fetch Square catalog and validate service ID
+        const squareCatalog = await SquareIntegrationService.fetchCatalog();
+        let serviceVariationId = serviceToBook.id;
+
+        // Check if service ID exists in current Square catalog
+        const existingService = squareCatalog.find(s => s.id === serviceVariationId);
+
+        if (!existingService) {
+            // Service ID not found - try exact name match first, then case-insensitive
+            let squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+
+            // If exact match fails, try case-insensitive match
+            if (!squareService) {
+                const searchName = serviceToBook.name.toLowerCase();
+                squareService = squareCatalog.find(s => s.name.toLowerCase() === searchName);
+            }
+
+            if (!squareService || !squareService.id) {
+                const availableServices = squareCatalog.map(s => s.name).join(', ');
+                throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available: ${availableServices}`);
+            }
+            serviceVariationId = squareService.id;
+            console.log('[BOOKING] Mapped service to Square by name:', { name: serviceToBook.name, plannedId: serviceToBook.id, squareId: serviceVariationId });
         }
 
         const searchStart = new Date(bookingDate);
@@ -244,13 +357,13 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
             locationId: loc.id,
             startAt: SquareIntegrationService.formatDate(searchStart, loc.timezone),
             teamMemberId: stylistId,
-            serviceVariationId: roadmapService.id
+            serviceVariationId: serviceVariationId
         });
         setAvailableSlots(slots);
-    } catch (e: any) { 
-        setFetchError(e.message); 
-    } finally { 
-        setIsFetchingSlots(false); 
+    } catch (e: any) {
+        setFetchError(e.message);
+    } finally {
+        setIsFetchingSlots(false);
     }
   };
 
@@ -278,18 +391,51 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
       setIsBooking(true);
       setFetchError(null);
       try {
-          const servicesToBook = selectedVisit!.services;
-          if (!servicesToBook || servicesToBook.length === 0) {
+          const mockServices = selectedVisit!.services;
+          if (!mockServices || mockServices.length === 0) {
               throw new Error("No services were selected for this visit.");
           }
 
-          const stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
-          
+          // Map service IDs to real Square IDs if needed
+          const squareCatalog = await SquareIntegrationService.fetchCatalog();
+
+          const squareServices = mockServices.map(ms => {
+              // Check if this service ID exists in current Square catalog
+              const existing = squareCatalog.find(s => s.id === ms.id);
+              if (existing) {
+                  return existing; // Already has valid Square ID
+              }
+              // Service ID not found - try exact name match first, then case-insensitive
+              let found = squareCatalog.find(s => s.name === ms.name);
+
+              // If exact match fails, try case-insensitive match
+              if (!found) {
+                  const searchName = ms.name.toLowerCase();
+                  found = squareCatalog.find(s => s.name.toLowerCase() === searchName);
+              }
+
+              if (!found) {
+                  throw new Error(`Service "${ms.name}" not found in your Square catalog.`);
+              }
+              return found;
+          });
+
+          // Resolve stylist ID: prefer Square Team Member ID (starts with TM), fall back to allStylists
+          let stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+
+          // If stylistId doesn't start with 'TM', it's an old Supabase UUID - resolve it to the first stylist with a valid Square ID
+          if (stylistIdToBookFor && !String(stylistIdToBookFor).startsWith('TM')) {
+              const validStylist = allStylists.find(s => String(s.id).startsWith('TM'));
+              if (validStylist) {
+                  stylistIdToBookFor = validStylist.id;
+              }
+          }
+
           if (user?.role === 'stylist' && user.stylistData) {
               const loggedInStylist = allStylists.find(s => s.id === user.stylistData!.id);
               if (loggedInStylist) {
                   const isBookingForSelf = stylistIdToBookFor === loggedInStylist.id;
-                  
+
                   if (isBookingForSelf && !loggedInStylist.permissions.can_book_own_schedule) {
                       throw new Error("You do not have permission to book appointments for your own schedule.");
                   }
@@ -301,16 +447,16 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
           }
 
           const loc = await SquareIntegrationService.fetchLocation();
-          
+
           let customerId = plan.client.externalId || await SquareIntegrationService.searchCustomer(plan.client.name);
           if (!customerId) throw new Error(`Could not find client "${plan.client.name}" in Square.`);
-          
+
           const squareResponse = await SquareIntegrationService.createAppointment({
               locationId: loc.id,
               startAt: slotTime,
               customerId,
               teamMemberId: stylistIdToBookFor,
-              services: servicesToBook
+              services: squareServices
           });
 
           const squareBooking = squareResponse.booking;
@@ -321,7 +467,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
                   stylist_id: stylistIdToBookFor,
                   start_time: slotTime,
                   status: squareBooking.status,
-                  services: servicesToBook.map(s => ({ variation_id: s.id, name: s.name })),
+                  services: squareServices.map(s => ({ variation_id: s.id, name: s.name })),
                   source: 'square'
               });
           }

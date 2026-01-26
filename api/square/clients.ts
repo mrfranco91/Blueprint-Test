@@ -62,8 +62,8 @@ export default async function handler(req: any, res: any) {
         return res.status(401).json({ message: 'Invalid user.' });
       }
     } else if (squareAccessToken) {
-      // Development mode: use a UUID-formatted dev user ID when token is provided directly
-      supabaseUserId = generateUUIDFromToken(squareAccessToken);
+      // For token-based sync, use the real admin account UID (Square OAuth account)
+      supabaseUserId = 'c6598212-8148-4cf9-b53f-15066b92f679';
     } else {
       return res.status(401).json({ message: 'Missing auth token.' });
     }
@@ -104,9 +104,6 @@ export default async function handler(req: any, res: any) {
           .insert([{
             supabase_user_id: supabaseUserId,
             square_access_token: squareAccessToken,
-            settings: {},
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           }])
           .select('id')
           .single();
@@ -114,6 +111,22 @@ export default async function handler(req: any, res: any) {
         console.log('[CLIENT SYNC] Created merchant_settings with ID:', merchantId);
       } else {
         merchantId = ms.id;
+        // If token provided and merchant_settings exists, update the token
+        if (squareAccessToken && ms.id) {
+          const { error: updateErr } = await supabaseAdmin
+            .from('merchant_settings')
+            .update({
+              square_access_token: squareAccessToken,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', ms.id);
+
+          if (updateErr) {
+            console.error('[CLIENT SYNC] Failed to update merchant_settings:', updateErr);
+          } else {
+            console.log('[CLIENT SYNC] Updated merchant_settings token');
+          }
+        }
       }
     }
 

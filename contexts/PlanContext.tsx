@@ -105,7 +105,7 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             }
 
                             // Reconstruct plan prioritizing the data blob but ensuring ID consistency
-                            return {
+                            const plan = {
                                 ...blob,
                                 id: dbPlan.id,
                                 client: blob.client || { name: 'Unknown Client' },
@@ -117,6 +117,17 @@ export const PlanProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                     date: new Date(a.date)
                                 }))
                             };
+
+                            // Ensure all services have required fields
+                            plan.appointments = plan.appointments.map((appt: any) => ({
+                                ...appt,
+                                services: (appt.services || []).map((s: any) => ({
+                                    ...s,
+                                    name: s.name || s.variation_id || 'Unknown Service'
+                                }))
+                            }));
+
+                            return plan;
                         })
                         .filter((p): p is GeneratedPlan => p !== null);
 

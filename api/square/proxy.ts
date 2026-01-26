@@ -52,15 +52,20 @@ export default async function handler(req: any, res: any) {
             .eq('supabase_user_id', userId)
             .maybeSingle();
 
+          console.log(`[SQUARE PROXY] Supabase lookup for user ${userId}:`, { found: !!ms, hasToken: !!ms?.square_access_token });
           if (ms?.square_access_token) {
             squareAccessToken = ms.square_access_token;
+            console.log(`[SQUARE PROXY] Using token from Supabase merchant_settings`);
           }
+        } else {
+          console.log(`[SQUARE PROXY] Auth lookup failed:`, { userErr, userId });
         }
       }
     }
 
     if (!squareAccessToken) {
       squareAccessToken = process.env.VITE_SQUARE_ACCESS_TOKEN;
+      console.log(`[SQUARE PROXY] Using token from environment variable`);
     }
 
     if (!squareAccessToken) {
@@ -70,19 +75,37 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    console.log(`[SQUARE PROXY] Token source determined, proceeding with request`);
+
     const url = `${squareBase}${path}`;
     const method = (req.method || 'GET').toUpperCase();
     const hasBody =
       method !== 'GET' && method !== 'HEAD' && method !== 'DELETE';
+
+    // Handle body - it might be a string from squareIntegration.ts or parsed object
+    let requestBody = undefined;
+    if (hasBody) {
+      if (typeof req.body === 'string') {
+        requestBody = JSON.parse(req.body);
+      } else {
+        requestBody = req.body;
+      }
+    }
+
+    console.log(`[SQUARE PROXY] ${method} ${url}`);
+    if (requestBody) {
+        console.log(`[SQUARE PROXY] Request body:`);
+        console.log(JSON.stringify(requestBody, null, 2));
+    }
 
     const squareResp = await fetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${squareAccessToken}`,
         'Content-Type': 'application/json',
-        'Square-Version': '2023-10-20',
+        'Square-Version': '2025-10-16',
       },
-      body: hasBody ? JSON.stringify(req.body ?? {}) : undefined,
+      body: requestBody ? JSON.stringify(requestBody) : undefined,
     });
 
     const text = await squareResp.text();
@@ -92,6 +115,9 @@ export default async function handler(req: any, res: any) {
     } catch {
       payload = { raw: text };
     }
+
+    console.log(`[SQUARE PROXY] Response status: ${squareResp.status}`);
+    console.log(`[SQUARE PROXY] Response:`, JSON.stringify(payload, null, 2));
 
     return res.status(squareResp.status).json(payload);
   } catch (e: any) {
