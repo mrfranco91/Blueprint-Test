@@ -176,11 +176,32 @@ export default async function handler(req: any, res: any) {
         { onConflict: 'supabase_user_id' }
       );
 
+    // Get the session for the authenticated user
+    const { data: { session } } = await supabaseAdmin.auth.getSession();
+
+    // If no session, create one by getting the user's tokens
+    let authSession = session;
+    if (!authSession) {
+      // Directly create tokens for this user
+      const { data: tokenData, error: tokenError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+      });
+
+      if (tokenError) {
+        console.error('Could not generate token:', tokenError);
+      }
+    }
+
     // ✅ RESTORED: payload frontend expects to bootstrap app state
     return res.status(200).json({
       merchant_id,
       business_name,
       access_token,
+      user: {
+        id: user.id,
+        email: user.email,
+      },
     });
 
   } catch (e: any) {
