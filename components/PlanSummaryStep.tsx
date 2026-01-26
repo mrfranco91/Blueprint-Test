@@ -183,6 +183,8 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
             throw new Error(`No service selected for this visit.`);
         }
 
+        console.log('[BOOKING] Service from plan:', { name: serviceToBook.name, id: serviceToBook.id });
+
         // Use the service ID from the plan if it exists (from Square catalog)
         // Otherwise try to look it up by name
         let serviceVariationId = serviceToBook.id;
