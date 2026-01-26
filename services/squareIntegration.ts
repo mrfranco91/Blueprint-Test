@@ -270,21 +270,13 @@ export const SquareIntegrationService = {
           teamMemberIdStartsWithTM: params.teamMemberId?.startsWith?.('TM')
       });
 
-      // Build segment filter with service
+      // Build segment filter with service only (no team member filter for now)
+      // We'll add team member filter back once we confirm the basic request works
       const segmentFilter: any = {
           service_variation_id: params.serviceVariationId
       };
 
-      // Include team_member_id_filter if we have a valid team member ID (MUST start with TM)
-      // For now, we'll try without it first to see if that's the issue
-      if (params.teamMemberId && String(params.teamMemberId).startsWith('TM')) {
-          segmentFilter.team_member_id_filter = {
-              any: [params.teamMemberId]
-          };
-          console.log('[AVAILABILITY] Added team_member_id_filter:', params.teamMemberId);
-      } else {
-          console.warn('[AVAILABILITY] Team member ID invalid, skipping team_member_id_filter:', params.teamMemberId);
-      }
+      console.log('[AVAILABILITY] Using segment filter:', JSON.stringify(segmentFilter));
 
       const body = {
           query: {
