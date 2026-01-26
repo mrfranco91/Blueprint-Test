@@ -57,12 +57,13 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
 export const SquareIntegrationService = {
   formatDate(date: Date, timezone: string = 'UTC') {
     if (!date || isNaN(date.getTime())) {
-        return new Date().toISOString();
+        const now = new Date();
+        return now.toISOString().split('.')[0] + 'Z';
     }
 
-    // Square API requires dates in RFC 3339 format with Z suffix (UTC)
-    // Convert to UTC ISO string format
-    return date.toISOString();
+    // Square API requires dates in RFC 3339 format with Z suffix (UTC) without milliseconds
+    // Format: 2026-03-24T04:19:35Z
+    return date.toISOString().split('.')[0] + 'Z';
   },
   
   fetchLocation: async (): Promise<SquareLocation> => {
