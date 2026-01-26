@@ -248,17 +248,20 @@ export const SquareIntegrationService = {
 
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
 
-      // Format end_at with milliseconds as required by Square API
-      const endAtFormatted = endDate.toISOString();
-
       const body = {
           query: {
               filter: {
+                  booking_id: "",
                   location_id: params.locationId,
                   start_at_range: {
                       start_at: params.startAt,
-                      end_at: endAtFormatted
-                  }
+                      end_at: endDate.toISOString()
+                  },
+                  segment_filters: [
+                      {
+                          service_variation_id: params.serviceVariationId
+                      }
+                  ]
               }
           }
       };
