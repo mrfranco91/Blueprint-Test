@@ -56,9 +56,45 @@ const LoginScreen: React.FC = () => {
     setError(null);
 
     try {
-      // For manual token sync, use the token directly without creating Supabase auth users
-      // This prevents duplicate user creation on each sync
-      // The team.ts and clients.ts endpoints will use generateUUIDFromToken for consistent identification
+      const { supabase } = await import('../lib/supabase');
+
+      // For manual token sync, use a persistent test account
+      const tempEmail = 'manual-sync@blueprint.local';
+      const tempPassword = 'blueprint-manual-sync';
+
+      // Try to sign in with existing account
+      let signInData = await supabase.auth.signInWithPassword({
+        email: tempEmail,
+        password: tempPassword,
+      });
+
+      // Only try to sign up if sign in fails AND it's not already registered
+      if (signInData.error && signInData.error.message !== 'Invalid login credentials') {
+        const { error: signUpErr } = await supabase.auth.signUp({
+          email: tempEmail,
+          password: tempPassword,
+        });
+
+        // If signup failed with "already registered", just try signin again
+        if (signUpErr && signUpErr.message !== 'User already registered') {
+          throw new Error(`Failed to create session: ${signUpErr.message}`);
+        }
+
+        // Try signing in again after signup
+        signInData = await supabase.auth.signInWithPassword({
+          email: tempEmail,
+          password: tempPassword,
+        });
+      }
+
+      if (signInData.error) {
+        throw new Error(`Failed to sign in: ${signInData.error.message}`);
+      }
+
+      const jwtToken = signInData?.data?.session?.access_token;
+      if (!jwtToken) {
+        throw new Error('Failed to obtain authentication token');
+      }
 
       // Sync team members via local API endpoint
       const teamRes = await fetch('/api/square/team', {
