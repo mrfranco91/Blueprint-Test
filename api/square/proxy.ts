@@ -82,8 +82,15 @@ export default async function handler(req: any, res: any) {
     const hasBody =
       method !== 'GET' && method !== 'HEAD' && method !== 'DELETE';
 
-    // req.body is already parsed JSON, don't stringify again!
-    const requestBody = hasBody ? req.body : undefined;
+    // Handle body - it might be a string from squareIntegration.ts or parsed object
+    let requestBody = undefined;
+    if (hasBody) {
+      if (typeof req.body === 'string') {
+        requestBody = JSON.parse(req.body);
+      } else {
+        requestBody = req.body;
+      }
+    }
 
     console.log(`[SQUARE PROXY] ${method} ${url}`);
     if (requestBody) {
