@@ -96,7 +96,7 @@ const LoginScreen: React.FC = () => {
         console.log('Client sync succeeded');
       }
 
-      // Create a session for the real account (Melissa's Square OAuth account)
+      // Get temporary credentials for the real account
       const sessionRes = await fetch('/api/square/create-session', {
         method: 'POST',
         headers: {
@@ -112,22 +112,31 @@ const LoginScreen: React.FC = () => {
         );
       }
 
-      const { session } = await sessionRes.json();
-      if (!session?.access_token) {
-        throw new Error('No session token received from server');
+      const { email, password } = await sessionRes.json();
+      if (!email || !password) {
+        throw new Error('Failed to get session credentials');
       }
 
-      // Set the session in Supabase so the client is authenticated as the real account
-      await supabase.auth.setSession(session);
+      console.log('✓ Got temporary credentials, signing in as real account...');
+
+      // Sign in with the temporary password
+      const signInData = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInData.error) {
+        throw new Error(`Failed to sign in: ${signInData.error.message}`);
+      }
 
       // Verify the session is set
       const { data: sessionCheck } = await supabase.auth.getSession();
       if (!sessionCheck?.session) {
-        throw new Error('Failed to set session locally');
+        throw new Error('Failed to create session');
       }
 
       localStorage.removeItem('mock_admin_user');
-      console.log('✓ Session created for user:', sessionCheck.session.user.id);
+      console.log('✓ Authenticated as real account:', sessionCheck.session.user.id);
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
