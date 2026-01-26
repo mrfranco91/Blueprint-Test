@@ -190,8 +190,11 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
             throw new Error(`No service selected for this visit.`);
         }
 
+        console.log('[BOOKING] Service from plan (full object):', serviceToBook);
+
         if (!serviceToBook.name) {
-            throw new Error(`Service is missing name property. This plan may be corrupted. Please regenerate the plan.`);
+            console.error('[BOOKING] Service missing name:', serviceToBook);
+            throw new Error(`Service is missing name property: ${JSON.stringify(serviceToBook)}. This plan may be corrupted. Please regenerate the plan.`);
         }
 
         console.log('[BOOKING] Service from plan:', { name: serviceToBook.name, id: serviceToBook.id });
