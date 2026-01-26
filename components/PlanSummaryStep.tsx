@@ -297,8 +297,9 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               throw new Error("No services were selected for this visit.");
           }
 
-          // Map mock service names to real Square service variations
-          const squareServices = allServices.filter(s =>
+          // Fetch fresh catalog from Square to get real service variation IDs
+          const squareCatalog = await SquareIntegrationService.fetchCatalog();
+          const squareServices = squareCatalog.filter(s =>
               mockServices.some(ms => ms.name === s.name)
           );
 
