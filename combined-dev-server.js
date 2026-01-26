@@ -163,11 +163,17 @@ const createCombinedServer = async () => {
       });
     }
 
-    // Handle everything else through Vite
-    vite.middlewares(nodeReq, nodeRes, () => {
-      nodeRes.writeHead(404);
-      nodeRes.end('Not found');
-    });
+    // Handle everything else through Vite middleware
+    if (vite && vite.middlewares) {
+      vite.middlewares(nodeReq, nodeRes, () => {
+        nodeRes.writeHead(404);
+        nodeRes.end('Not found');
+      });
+    } else {
+      console.error('Vite middleware not available');
+      nodeRes.writeHead(500);
+      nodeRes.end('Internal server error: Vite not initialized');
+    }
   });
 
   let port = 3000;
