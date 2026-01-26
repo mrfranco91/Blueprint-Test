@@ -58,51 +58,11 @@ const LoginScreen: React.FC = () => {
     try {
       const { supabase } = await import('../lib/supabase');
 
-      // For manual token sync, use a persistent test account for authentication
-      // (The sync endpoints will store data under your real account UID)
-      const tempEmail = 'manual-sync@blueprint.local';
-      const tempPassword = 'blueprint-manual-sync';
-
-      // Try to sign in with existing account
-      let signInData = await supabase.auth.signInWithPassword({
-        email: tempEmail,
-        password: tempPassword,
-      });
-
-      // Only try to sign up if sign in fails AND it's not already registered
-      if (signInData.error && signInData.error.message !== 'Invalid login credentials') {
-        const { error: signUpErr } = await supabase.auth.signUp({
-          email: tempEmail,
-          password: tempPassword,
-        });
-
-        // If signup failed with "already registered", just try signin again
-        if (signUpErr && signUpErr.message !== 'User already registered') {
-          throw new Error(`Failed to create session: ${signUpErr.message}`);
-        }
-
-        // Try signing in again after signup
-        signInData = await supabase.auth.signInWithPassword({
-          email: tempEmail,
-          password: tempPassword,
-        });
-      }
-
-      if (signInData.error) {
-        throw new Error(`Failed to sign in: ${signInData.error.message}`);
-      }
-
-      const jwtToken = signInData?.data?.session?.access_token;
-      if (!jwtToken) {
-        throw new Error('Failed to obtain authentication token');
-      }
-
-      // Sync team members via local API endpoint
+      // Sync team members via local API endpoint (no auth needed, uses token-based UID)
       const teamRes = await fetch('/api/square/team', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwtToken}`,
         },
         body: JSON.stringify({ squareAccessToken: token }),
       });
@@ -117,12 +77,11 @@ const LoginScreen: React.FC = () => {
         console.log('Team sync succeeded');
       }
 
-      // Sync clients via local API endpoint
+      // Sync clients via local API endpoint (no auth needed, uses token-based UID)
       const clientRes = await fetch('/api/square/clients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwtToken}`,
         },
         body: JSON.stringify({ squareAccessToken: token }),
       });
@@ -137,33 +96,38 @@ const LoginScreen: React.FC = () => {
         console.log('Client sync succeeded');
       }
 
-      // Success - verify session is persisted before redirecting
-      localStorage.removeItem('mock_admin_user');
-
-      // Verify the session was actually created (with retry for timing issues)
-      let sessionCheck = null;
-      let retries = 0;
-      while (retries < 5) {
-        const { data } = await supabase.auth.getSession();
-        if (data?.session) {
-          sessionCheck = data;
-          break;
-        }
-        retries++;
-        if (retries < 5) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-
-      if (!sessionCheck?.session) {
-        console.error('Session check failed after retries', sessionCheck);
-        throw new Error('Session was not created. Please try again.');
-      }
-
-      console.log('✓ Session verified, redirecting to admin', {
-        userId: sessionCheck.session.user.id,
-        email: sessionCheck.session.user.email,
+      // Create a session for the real account (Melissa's Square OAuth account)
+      const sessionRes = await fetch('/api/square/create-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ squareAccessToken: token }),
       });
+
+      if (!sessionRes.ok) {
+        const errorData = await sessionRes.json();
+        throw new Error(
+          `Failed to create session: ${errorData.message || 'Unknown error'}`
+        );
+      }
+
+      const { session } = await sessionRes.json();
+      if (!session?.access_token) {
+        throw new Error('No session token received from server');
+      }
+
+      // Set the session in Supabase so the client is authenticated as the real account
+      await supabase.auth.setSession(session);
+
+      // Verify the session is set
+      const { data: sessionCheck } = await supabase.auth.getSession();
+      if (!sessionCheck?.session) {
+        throw new Error('Failed to set session locally');
+      }
+
+      localStorage.removeItem('mock_admin_user');
+      console.log('✓ Session created for user:', sessionCheck.session.user.id);
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
