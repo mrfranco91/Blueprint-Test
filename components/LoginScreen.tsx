@@ -16,7 +16,7 @@ const LoginScreen: React.FC = () => {
 
   const startSquareOAuth = () => {
     // Use server-side OAuth start endpoint for secure state handling
-    // This sets an HTTP-only cookie and redirects to Square
+    // Server sets state in HTTP-only cookie and redirects to Square
     window.location.href = '/api/square/oauth/start';
   };
 
