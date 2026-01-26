@@ -250,8 +250,8 @@ export const SquareIntegrationService = {
 
       // Use a 30-day window for availability search
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
-      // Format end_at as UTC with Z format (matching the working example: 2026-03-22T08:00:00.000Z)
-      const endAtFormatted = endDate.toISOString();
+      // Format end_at as UTC with Z format - must remove milliseconds to match Square API format
+      const endAtFormatted = SquareIntegrationService.formatDate(endDate);
 
       console.log('[AVAILABILITY] Searching from', params.startAt, 'to', endAtFormatted);
       console.log('[AVAILABILITY] Team Member ID received:', params.teamMemberId, '- starts with TM?', params.teamMemberId?.startsWith('TM'));
