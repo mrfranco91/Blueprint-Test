@@ -167,7 +167,18 @@ const createCombinedServer = async () => {
     });
   });
 
-  const port = 3000;
+  let port = 3000;
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      port = 3001;
+      console.log(`Port 3000 in use, trying 3001...`);
+      setTimeout(() => server.listen(port, '0.0.0.0'), 1000);
+    } else {
+      throw err;
+    }
+  });
+
   server.listen(port, '0.0.0.0', () => {
     console.log(`\n⚡ Combined dev server running at http://localhost:${port}/\n`);
   });
