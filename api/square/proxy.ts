@@ -82,18 +82,13 @@ export default async function handler(req: any, res: any) {
     const hasBody =
       method !== 'GET' && method !== 'HEAD' && method !== 'DELETE';
 
-    const requestBody = hasBody ? JSON.stringify(req.body ?? {}) : undefined;
+    // req.body is already parsed JSON, don't stringify again!
+    const requestBody = hasBody ? req.body : undefined;
 
     console.log(`[SQUARE PROXY] ${method} ${url}`);
     if (requestBody) {
-        try {
-            const parsed = JSON.parse(requestBody);
-            console.log(`[SQUARE PROXY] Request body:`);
-            console.log(JSON.stringify(parsed, null, 2));
-        } catch {
-            console.log(`[SQUARE PROXY] Request body:`);
-            console.log(requestBody);
-        }
+        console.log(`[SQUARE PROXY] Request body:`);
+        console.log(JSON.stringify(requestBody, null, 2));
     }
 
     const squareResp = await fetch(url, {
@@ -103,7 +98,7 @@ export default async function handler(req: any, res: any) {
         'Content-Type': 'application/json',
         'Square-Version': '2025-10-16',
       },
-      body: requestBody,
+      body: requestBody ? JSON.stringify(requestBody) : undefined,
     });
 
     const text = await squareResp.text();
