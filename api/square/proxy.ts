@@ -65,6 +65,7 @@ export default async function handler(req: any, res: any) {
 
     if (!squareAccessToken) {
       squareAccessToken = process.env.VITE_SQUARE_ACCESS_TOKEN;
+      console.log(`[SQUARE PROXY] Using token from environment variable`);
     }
 
     if (!squareAccessToken) {
@@ -73,6 +74,8 @@ export default async function handler(req: any, res: any) {
           'Square access token not available for proxy request. Reconnect Square in Settings and try again.',
       });
     }
+
+    console.log(`[SQUARE PROXY] Token source determined, proceeding with request`);
 
     const url = `${squareBase}${path}`;
     const method = (req.method || 'GET').toUpperCase();
