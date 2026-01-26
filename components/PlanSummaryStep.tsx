@@ -405,8 +405,15 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               if (existing) {
                   return existing; // Already has valid Square ID
               }
-              // Service ID not found - look it up by exact name match
-              const found = squareCatalog.find(s => s.name === ms.name);
+              // Service ID not found - try exact name match first, then case-insensitive
+              let found = squareCatalog.find(s => s.name === ms.name);
+
+              // If exact match fails, try case-insensitive match
+              if (!found) {
+                  const searchName = ms.name.toLowerCase();
+                  found = squareCatalog.find(s => s.name.toLowerCase() === searchName);
+              }
+
               if (!found) {
                   throw new Error(`Service "${ms.name}" not found in your Square catalog.`);
               }
