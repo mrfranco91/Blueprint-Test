@@ -66,6 +66,8 @@ export const SquareIntegrationService = {
     // If timezone is provided (like "America/Los_Angeles"), format with offset: 2026-02-20T00:00:00-08:00
     // Otherwise use UTC with Z: 2026-03-22T08:00:00.000Z
 
+    console.log('[FORMAT DATE] Timezone received:', timezone, '- includes /:', timezone?.includes('/'));
+
     if (timezone && timezone !== 'UTC' && timezone.includes('/')) {
         // Format date in the specified timezone with offset
         const formatter = new Intl.DateTimeFormat('en-US', {
@@ -94,11 +96,14 @@ export const SquareIntegrationService = {
         const sign = offsetHours >= 0 ? '+' : '-';
         const offsetStr = `${sign}${String(Math.abs(offsetHours)).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
 
+        const formatted = `${timeObj.year}-${timeObj.month}-${timeObj.day}T${timeObj.hour}:${timeObj.minute}:${timeObj.second}${offsetStr}`;
+        console.log('[FORMAT DATE] Formatted with timezone offset:', formatted);
         // Format without milliseconds, with offset
-        return `${timeObj.year}-${timeObj.month}-${timeObj.day}T${timeObj.hour}:${timeObj.minute}:${timeObj.second}${offsetStr}`;
+        return formatted;
     }
 
     // Default: UTC format with milliseconds and Z
+    console.log('[FORMAT DATE] Using UTC format (timezone was:', timezone, ')');
     return date.toISOString();
   },
   
