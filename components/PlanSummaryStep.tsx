@@ -187,7 +187,8 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         const squareCatalog = await SquareIntegrationService.fetchCatalog();
         const squareService = squareCatalog.find(s => s.name === mockService.name);
         if (!squareService || !squareService.id) {
-            throw new Error(`Could not find service "${mockService.name}" in Square catalog. Make sure your service catalog is synced in Square.`);
+            const availableServices = squareCatalog.map(s => s.name).join(', ');
+            throw new Error(`Service "${mockService.name}" not found in your Square catalog. Available services: ${availableServices || 'None'}`);
         }
 
         const searchStart = new Date(visit.date);
@@ -246,7 +247,8 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         const squareCatalog = await SquareIntegrationService.fetchCatalog();
         const squareService = squareCatalog.find(s => s.name === mockService.name);
         if (!squareService || !squareService.id) {
-            throw new Error(`Could not find service "${mockService.name}" in Square catalog. Make sure your service catalog is synced in Square.`);
+            const availableServices = squareCatalog.map(s => s.name).join(', ');
+            throw new Error(`Service "${mockService.name}" not found in your Square catalog. Available services: ${availableServices || 'None'}`);
         }
 
         const searchStart = new Date(bookingDate);
