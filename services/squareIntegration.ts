@@ -63,12 +63,12 @@ export const SquareIntegrationService = {
     }
 
     // Square Bookings API requires RFC 3339 format
-    // When timezone is provided, format with offset: 2026-02-20T00:00:00-08:00
-    // Default UTC: 2026-03-22T08:00:00.000Z
+    // If timezone is provided (like "America/Los_Angeles"), format with offset: 2026-02-20T00:00:00-08:00
+    // Otherwise use UTC with Z: 2026-03-22T08:00:00.000Z
 
-    if (timezone && timezone !== 'UTC') {
-        // Get local time in the specified timezone
-        const formatterLocal = new Intl.DateTimeFormat('en-US', {
+    if (timezone && timezone !== 'UTC' && timezone.includes('/')) {
+        // Format date in the specified timezone with offset
+        const formatter = new Intl.DateTimeFormat('en-US', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -79,46 +79,23 @@ export const SquareIntegrationService = {
             timeZone: timezone
         });
 
-        // Get UTC time for comparison
-        const formatterUTC = new Intl.DateTimeFormat('en-US', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-            timeZone: 'UTC'
-        });
-
-        const localParts = formatterLocal.formatToParts(date);
-        const utcParts = formatterUTC.formatToParts(date);
-
-        const localObj: any = {};
-        const utcObj: any = {};
-
-        localParts.forEach(p => {
+        const parts = formatter.formatToParts(date);
+        const timeObj: any = {};
+        parts.forEach(p => {
             if (['year', 'month', 'day', 'hour', 'minute', 'second'].includes(p.type)) {
-                localObj[p.type] = p.value;
-            }
-        });
-        utcParts.forEach(p => {
-            if (['year', 'month', 'day', 'hour', 'minute', 'second'].includes(p.type)) {
-                utcObj[p.type] = p.value;
+                timeObj[p.type] = p.value;
             }
         });
 
-        // Calculate offset in minutes by comparing times
-        const localTime = new Date(`${localObj.year}-${localObj.month}-${localObj.day}T${localObj.hour}:${localObj.minute}:${localObj.second}Z`).getTime();
-        const utcTime = new Date(`${utcObj.year}-${utcObj.month}-${utcObj.day}T${utcObj.hour}:${utcObj.minute}:${utcObj.second}Z`).getTime();
-        const offsetMins = (utcTime - localTime) / 60000;
-        const offsetHours = Math.floor(offsetMins / 60);
-        const offsetRemainMins = Math.abs(Math.floor(offsetMins % 60));
+        // Calculate offset by comparing date with its string representation in target timezone
+        const offsetMs = date.getTime() - new Date(timeObj.year + '-' + timeObj.month + '-' + timeObj.day + 'T' + timeObj.hour + ':' + timeObj.minute + ':' + timeObj.second).getTime();
+        const offsetHours = -Math.round(offsetMs / 3600000);
+        const offsetMins = Math.abs(Math.round((offsetMs % 3600000) / 60000));
         const sign = offsetHours >= 0 ? '+' : '-';
-        const offsetStr = `${sign}${String(Math.abs(offsetHours)).padStart(2, '0')}:${String(offsetRemainMins).padStart(2, '0')}`;
+        const offsetStr = `${sign}${String(Math.abs(offsetHours)).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
 
         // Format without milliseconds, with offset
-        return `${localObj.year}-${localObj.month}-${localObj.day}T${localObj.hour}:${localObj.minute}:${localObj.second}${offsetStr}`;
+        return `${timeObj.year}-${timeObj.month}-${timeObj.day}T${timeObj.hour}:${timeObj.minute}:${timeObj.second}${offsetStr}`;
     }
 
     // Default: UTC format with milliseconds and Z
