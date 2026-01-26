@@ -59,14 +59,62 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
 export const SquareIntegrationService = {
   formatDate(date: Date, timezone: string = 'UTC') {
     if (!date || isNaN(date.getTime())) {
-        const now = new Date();
-        return now.toISOString().split('.')[0] + 'Z';
+        return new Date().toISOString();
     }
 
-    // Square API requires RFC 3339 format without milliseconds
-    // Simply use ISO format with Z suffix for UTC
-    // The timezone parameter is accepted but we use UTC for compatibility
-    return date.toISOString().split('.')[0] + 'Z';
+    // Square Bookings API requires RFC 3339 format
+    // If timezone is provided (like "America/Los_Angeles"), format with offset: 2026-02-20T00:00:00-08:00
+    // Otherwise use UTC with Z: 2026-03-22T08:00:00.000Z
+
+    if (timezone && timezone !== 'UTC' && timezone.includes('/')) {
+        // Format date in the specified timezone with offset
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            timeZone: timezone
+        });
+
+        const parts = formatter.formatToParts(date);
+        const timeObj: any = {};
+        parts.forEach(p => {
+            if (['year', 'month', 'day', 'hour', 'minute', 'second'].includes(p.type)) {
+                timeObj[p.type] = p.value;
+            }
+        });
+
+        // Get timezone offset
+        // Create a date string in the target timezone and calculate offset
+        const formatter2 = new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+
+        // Use the system's default timezone for comparison
+        const systemParts = formatter2.formatToParts(date);
+
+        // Calculate offset by comparing the date object with its string representation
+        const offsetMs = date.getTime() - new Date(timeObj.year + '-' + timeObj.month + '-' + timeObj.day + 'T' + timeObj.hour + ':' + timeObj.minute + ':' + timeObj.second).getTime();
+        const offsetHours = -Math.round(offsetMs / 3600000);
+        const offsetMins = Math.abs(Math.round((offsetMs % 3600000) / 60000));
+        const sign = offsetHours >= 0 ? '+' : '-';
+        const offsetStr = `${sign}${String(Math.abs(offsetHours)).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+
+        // Format without milliseconds, with offset
+        return `${timeObj.year}-${timeObj.month}-${timeObj.day}T${timeObj.hour}:${timeObj.minute}:${timeObj.second}${offsetStr}`;
+    }
+
+    // Default: UTC format with milliseconds and Z
+    return date.toISOString();
   },
   
   fetchLocation: async (): Promise<SquareLocation> => {
