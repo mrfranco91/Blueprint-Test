@@ -211,12 +211,13 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         if (!serviceVariationId || serviceVariationId.startsWith('s')) {
             // Service ID is a mock ID, need to look it up by name
             const squareCatalog = await SquareIntegrationService.fetchCatalog();
-            const squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+            const squareService = findMatchingService(serviceToBook.name, squareCatalog);
             if (!squareService || !squareService.id) {
                 const availableServices = squareCatalog.map(s => s.name).join(', ');
                 throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available services: ${availableServices || 'None'}`);
             }
             serviceVariationId = squareService.id;
+            console.log('[BOOKING] Matched service:', { requested: serviceToBook.name, matched: squareService.name, id: squareService.id });
         }
 
         const searchStart = new Date(visit.date);
@@ -278,12 +279,13 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         if (!serviceVariationId || serviceVariationId.startsWith('s')) {
             // Service ID is a mock ID, need to look it up by name
             const squareCatalog = await SquareIntegrationService.fetchCatalog();
-            const squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+            const squareService = findMatchingService(serviceToBook.name, squareCatalog);
             if (!squareService || !squareService.id) {
                 const availableServices = squareCatalog.map(s => s.name).join(', ');
                 throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available services: ${availableServices || 'None'}`);
             }
             serviceVariationId = squareService.id;
+            console.log('[BOOKING] Matched service:', { requested: serviceToBook.name, matched: squareService.name, id: squareService.id });
         }
 
         const searchStart = new Date(bookingDate);
