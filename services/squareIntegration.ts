@@ -267,6 +267,7 @@ export const SquareIntegrationService = {
       }
 
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+      const endAtFormatted = SquareIntegrationService.formatDate(endDate, 'UTC');
 
       // For availability search, we don't filter by team member
       // Square's availability endpoint returns available slots regardless of team member
@@ -280,7 +281,7 @@ export const SquareIntegrationService = {
                   location_id: params.locationId,
                   start_at_range: {
                       start_at: params.startAt,
-                      end_at: endDate.toISOString()
+                      end_at: endAtFormatted
                   },
                   segment_filters: [segment_filter]
               }
