@@ -34,7 +34,7 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
     const response = await fetch(`/api/square/proxy?path=${encodeURIComponent(path)}`, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        body,
     });
 
     const text = await response.text();
