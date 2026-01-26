@@ -194,14 +194,20 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
 
         // Fetch Square catalog and validate service ID
         const squareCatalog = await SquareIntegrationService.fetchCatalog();
+        console.log('[BOOKING] Catalog has', squareCatalog.length, 'services');
+        console.log('[BOOKING] Catalog service IDs:', squareCatalog.map(s => s.id));
+
         let serviceVariationId = serviceToBook.id;
 
         // Check if service ID exists in current Square catalog
         const existingService = squareCatalog.find(s => s.id === serviceVariationId);
+        console.log('[BOOKING] Looking for service ID', serviceVariationId, '- found:', !!existingService);
 
         if (!existingService) {
             // Service ID not found - look it up by exact name match
+            console.log('[BOOKING] Trying to find by name:', serviceToBook.name);
             const squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+            console.log('[BOOKING] Found by name:', !!squareService);
             if (!squareService || !squareService.id) {
                 const availableServices = squareCatalog.map(s => s.name).join(', ');
                 throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available: ${availableServices}`);
