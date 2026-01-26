@@ -149,8 +149,17 @@ export default async function handler(req: any, res: any) {
           data: { role: 'admin', merchant_id, business_name },
         },
       });
-      if (signUp.error) throw signUp.error;
-      user = signUp.data.user;
+
+      // If user already exists, that's okay - try to sign in with the credentials
+      if (signUp.error?.message?.includes('already registered')) {
+        const retrySignIn = await supabaseAdmin.auth.signInWithPassword({ email, password });
+        if (retrySignIn.error) throw retrySignIn.error;
+        user = retrySignIn.data.user;
+      } else if (signUp.error) {
+        throw signUp.error;
+      } else {
+        user = signUp.data.user;
+      }
     }
 
     if (!user) throw new Error('Supabase auth failed');
