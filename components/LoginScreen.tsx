@@ -13,11 +13,18 @@ const LoginScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-  const squareAppId =
-    (import.meta as any).env.VITE_SQUARE_APPLICATION_ID ||
-    (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
+
+  // Detect if we're in local development
+  const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  // Use sandbox credentials locally, production credentials otherwise
+  const squareAppId = isLocalDev
+    ? 'sandbox-sq0idb-bAxH8Wu8_6HnCSCYzfPEEg'
+    : (import.meta as any).env.VITE_SQUARE_APPLICATION_ID ||
+      (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
+
   const squareRedirectUri = (import.meta as any).env.VITE_SQUARE_REDIRECT_URI;
-  const squareEnv = ((import.meta as any).env.VITE_SQUARE_ENV || 'production').toLowerCase();
+  const squareEnv = isLocalDev ? 'sandbox' : ((import.meta as any).env.VITE_SQUARE_ENV || 'production').toLowerCase();
 
   const scopes =
     ((import.meta as any).env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ??
