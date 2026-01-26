@@ -331,8 +331,15 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         const existingService = squareCatalog.find(s => s.id === serviceVariationId);
 
         if (!existingService) {
-            // Service ID not found - look it up by exact name match
-            const squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+            // Service ID not found - try exact name match first, then case-insensitive
+            let squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+
+            // If exact match fails, try case-insensitive match
+            if (!squareService) {
+                const searchName = serviceToBook.name.toLowerCase();
+                squareService = squareCatalog.find(s => s.name.toLowerCase() === searchName);
+            }
+
             if (!squareService || !squareService.id) {
                 const availableServices = squareCatalog.map(s => s.name).join(', ');
                 throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available: ${availableServices}`);
