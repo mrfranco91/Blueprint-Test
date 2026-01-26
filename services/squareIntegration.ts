@@ -255,12 +255,12 @@ export const SquareIntegrationService = {
           service_variation_id: params.serviceVariationId,
       };
 
-      const teamMemberId = params.teamMemberId;
-      const isInvalidForFilter = !teamMemberId || teamMemberId.startsWith('TM-') || teamMemberId === 'admin';
-
-      if (!isInvalidForFilter) {
-          segment_filter.team_member_id_filter = { any: [teamMemberId] };
-      }
+      // DEBUGGING: Temporarily disable team member filter to test if it's causing the 400 error
+      // const teamMemberId = params.teamMemberId;
+      // const isInvalidForFilter = !teamMemberId || teamMemberId.startsWith('TM-') || teamMemberId === 'admin';
+      // if (!isInvalidForFilter) {
+      //     segment_filter.team_member_id_filter = { any: [teamMemberId] };
+      // }
 
       // Format end_at the same way as start_at - no milliseconds, with Z
       const endAtFormatted = endDate.toISOString().split('.')[0] + 'Z';
