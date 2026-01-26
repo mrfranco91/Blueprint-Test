@@ -136,8 +136,12 @@ const LoginScreen: React.FC = () => {
         console.log('Client sync succeeded');
       }
 
-      // Success - redirect to admin without creating Supabase auth users
+      // Success - wait for auth state to propagate before redirecting
       localStorage.removeItem('mock_admin_user');
+
+      // Give Supabase time to persist the session and allow auth listeners to fire
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
