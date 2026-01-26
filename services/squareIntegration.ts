@@ -139,7 +139,7 @@ export const SquareIntegrationService = {
 
   fetchTeam: async (): Promise<Stylist[]> => {
       try {
-          const data: any = await squareApiFetch('/v2/team-members', { method: 'POST', body: { query: { filter: {} }, limit: 100 } });
+          const data: any = await squareApiFetch('/v2/team-members/search', { method: 'POST', body: { query: { filter: {} }, limit: 100 } });
           const members = data.team_members || [];
 
           if (members.length === 0) {
