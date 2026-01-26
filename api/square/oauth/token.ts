@@ -153,12 +153,24 @@ export default async function handler(req: any, res: any) {
       // If signUp failed, assume user already exists and try to update password + sign in
       console.log('[OAUTH TOKEN] SignUp failed, attempting sign in:', signUpError.message);
 
-      // Update the password for existing user
-      const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserByEmail(email, {
-        password,
-      });
+      // Update the password for existing user via REST API
+      const updateRes = await fetch(
+        `${process.env.VITE_SUPABASE_URL}/auth/v1/admin/users/by-email`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        }
+      );
 
-      if (updateError) {
+      if (!updateRes.ok) {
+        const updateError = await updateRes.json();
         console.error('[OAUTH TOKEN] Failed to update password:', updateError);
         throw new Error(`User exists but password update failed: ${updateError.message}`);
       }
