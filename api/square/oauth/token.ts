@@ -170,9 +170,41 @@ export default async function handler(req: any, res: any) {
         },
       });
 
-      if (signUpError) throw signUpError;
-      user = signUpData.user;
-      session = signUpData.session;
+      if (signUpError) {
+        // If signUp failed due to user already existing (race condition),
+        // fall back to updating the password and signing in
+        if (signUpError.message?.includes('already exists') || signUpError.message?.includes('duplicate')) {
+          console.log('[OAUTH TOKEN] User already exists (race condition), falling back to update password');
+
+          // Fetch the user again since it was created between our check and signUp attempt
+          const { data: { users: updatedUsers } } = await (supabaseAdmin.auth as any).admin.listUsers();
+          const newlyCreatedUser = updatedUsers?.find((u: any) => u.email === email);
+
+          if (newlyCreatedUser) {
+            // Update the password for the newly created user
+            const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(newlyCreatedUser.id, {
+              password,
+            });
+
+            if (updateError) {
+              throw new Error(`Failed to update password: ${updateError.message}`);
+            }
+
+            // Sign in with the updated credentials
+            const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+            if (signInError) throw signInError;
+            user = signInData.user;
+            session = signInData.session;
+          } else {
+            throw signUpError;
+          }
+        } else {
+          throw signUpError;
+        }
+      } else {
+        user = signUpData.user;
+        session = signUpData.session;
+      }
     }
 
     if (!user) throw new Error('Supabase auth failed');
