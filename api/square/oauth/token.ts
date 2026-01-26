@@ -136,13 +136,33 @@ export default async function handler(req: any, res: any) {
     const email = `${merchant_id}@square-oauth.blueprint`;
     const password = merchant_id;
 
-    let {
-      data: { user, session },
-      error,
-    } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+    // First, try to get existing user by email using admin API
+    const { data: { users: existingUsers }, error: lookupError } = await (supabaseAdmin.auth as any).admin.listUsers();
+    const existingUser = existingUsers?.find((u: any) => u.email === email);
 
-    if (error) {
-      const signUp = await supabaseAdmin.auth.signUp({
+    let user: any;
+    let session: any;
+
+    if (existingUser) {
+      console.log('[OAUTH TOKEN] User already exists, updating password');
+      // Update the password for existing user
+      const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(existingUser.id, {
+        password,
+      });
+
+      if (updateError) {
+        throw new Error(`Failed to update password: ${updateError.message}`);
+      }
+
+      // Now sign in with the updated credentials
+      const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+      user = signInData.user;
+      session = signInData.session;
+    } else {
+      console.log('[OAUTH TOKEN] Creating new user');
+      // Create new user
+      const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.signUp({
         email,
         password,
         options: {
@@ -150,18 +170,9 @@ export default async function handler(req: any, res: any) {
         },
       });
 
-      // If user already exists, that's okay - try to sign in with the credentials
-      if (signUp.error?.message?.includes('already registered')) {
-        const retrySignIn = await supabaseAdmin.auth.signInWithPassword({ email, password });
-        if (retrySignIn.error) throw retrySignIn.error;
-        user = retrySignIn.data.user;
-        session = retrySignIn.data.session;
-      } else if (signUp.error) {
-        throw signUp.error;
-      } else {
-        user = signUp.data.user;
-        session = signUp.data.session;
-      }
+      if (signUpError) throw signUpError;
+      user = signUpData.user;
+      session = signUpData.session;
     }
 
     if (!user) throw new Error('Supabase auth failed');
