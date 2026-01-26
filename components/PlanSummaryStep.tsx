@@ -197,7 +197,15 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         let serviceVariationId = serviceToBook.id;
 
         if (!serviceVariationId || serviceVariationId.startsWith('s')) {
-            throw new Error(`Invalid service ID "${serviceVariationId}" for service "${serviceToBook.name}". The plan should have been created with real Square service IDs, not mock IDs. This may indicate a problem with how the plan was saved.`);
+            // Service ID is a mock ID, need to look it up by exact name match
+            const squareCatalog = await SquareIntegrationService.fetchCatalog();
+            const squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+            if (!squareService || !squareService.id) {
+                const availableServices = squareCatalog.map(s => s.name).join(', ');
+                throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available: ${availableServices}`);
+            }
+            serviceVariationId = squareService.id;
+            console.log('[BOOKING] Mapped mock service to Square:', { name: serviceToBook.name, id: serviceVariationId });
         }
 
         const searchStart = new Date(visit.date);
@@ -257,7 +265,15 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         let serviceVariationId = serviceToBook.id;
 
         if (!serviceVariationId || serviceVariationId.startsWith('s')) {
-            throw new Error(`Invalid service ID "${serviceVariationId}" for service "${serviceToBook.name}". The plan should have been created with real Square service IDs, not mock IDs. This may indicate a problem with how the plan was saved.`);
+            // Service ID is a mock ID, need to look it up by exact name match
+            const squareCatalog = await SquareIntegrationService.fetchCatalog();
+            const squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+            if (!squareService || !squareService.id) {
+                const availableServices = squareCatalog.map(s => s.name).join(', ');
+                throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available: ${availableServices}`);
+            }
+            serviceVariationId = squareService.id;
+            console.log('[BOOKING] Mapped mock service to Square:', { name: serviceToBook.name, id: serviceVariationId });
         }
 
         const searchStart = new Date(bookingDate);
