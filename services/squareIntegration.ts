@@ -60,49 +60,9 @@ export const SquareIntegrationService = {
         return new Date().toISOString();
     }
 
-    try {
-        const formatter = new Intl.DateTimeFormat('en-US', {
-            timeZone: timezone,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-            timeZoneName: 'shortOffset'
-        });
-
-        const parts = formatter.formatToParts(date);
-        const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
-
-        const Y = getPart('year');
-        const M = getPart('month');
-        const D = getPart('day');
-        const h = getPart('hour');
-        const m = getPart('minute');
-        const s = getPart('second');
-        let tz = getPart('timeZoneName');
-
-        let offset = '+00:00';
-        if (tz === 'UTC' || tz === 'GMT') {
-            offset = '+00:00';
-        } else {
-            let numeric = tz.replace('GMT', '');
-            if (numeric.includes(':')) {
-                offset = numeric;
-            } else {
-                const sign = numeric.startsWith('-') ? '-' : '+';
-                const hours = numeric.replace(/[+-]/, '').padStart(2, '0');
-                offset = `${sign}${hours}:00`;
-            }
-        }
-
-        return `${Y}-${M}-${D}T${h}:${m}:${s}${offset}`;
-    } catch (e) {
-        console.error("[Date Formatter Error]", e);
-        return date.toISOString();
-    }
+    // Square API requires dates in RFC 3339 format with Z suffix (UTC)
+    // Convert to UTC ISO string format
+    return date.toISOString();
   },
   
   fetchLocation: async (): Promise<SquareLocation> => {
