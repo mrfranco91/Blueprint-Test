@@ -269,11 +269,15 @@ export const SquareIntegrationService = {
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
       const endAtFormatted = SquareIntegrationService.formatDate(endDate, 'UTC');
 
-      // For availability search, we don't filter by team member
-      // Square's availability endpoint returns available slots regardless of team member
-      const segment_filter = {
+      // Build segment filter with service ID
+      const segment_filter: any = {
           service_variation_id: params.serviceVariationId,
       };
+
+      // Only add team member filter if we have a valid team member ID
+      if (params.teamMemberId && !params.teamMemberId.startsWith('TM-') && params.teamMemberId !== 'admin') {
+          segment_filter.team_member_id_filter = { any: [params.teamMemberId] };
+      }
 
       const body = {
           query: {
