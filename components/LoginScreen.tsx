@@ -59,6 +59,9 @@ const LoginScreen: React.FC = () => {
       return;
     }
 
+    // Declare interval variable first
+    let checkPopupClosed: ReturnType<typeof setInterval> | null = null;
+
     // Listen for messages from the OAuth callback popup
     const handleOAuthMessage = (event: MessageEvent) => {
       // Verify the message is from our OAuth popup
@@ -73,7 +76,7 @@ const LoginScreen: React.FC = () => {
         console.log('✓ OAuth authentication successful');
         // Remove the message listener
         window.removeEventListener('message', handleOAuthMessage);
-        clearInterval(checkPopupClosed);
+        if (checkPopupClosed) clearInterval(checkPopupClosed);
 
         // Reload the page to check the session
         console.log('Reloading page...');
@@ -83,7 +86,7 @@ const LoginScreen: React.FC = () => {
       } else if (event.data?.type === 'oauth-error') {
         console.error('OAuth error:', event.data.message);
         window.removeEventListener('message', handleOAuthMessage);
-        clearInterval(checkPopupClosed);
+        if (checkPopupClosed) clearInterval(checkPopupClosed);
         setError(`OAuth authentication failed: ${event.data.message}`);
       }
     };
@@ -91,9 +94,9 @@ const LoginScreen: React.FC = () => {
     window.addEventListener('message', handleOAuthMessage);
 
     // Close popup listener if user closes it manually
-    const checkPopupClosed = setInterval(() => {
+    checkPopupClosed = setInterval(() => {
       if (popup.closed) {
-        clearInterval(checkPopupClosed);
+        if (checkPopupClosed) clearInterval(checkPopupClosed);
         window.removeEventListener('message', handleOAuthMessage);
       }
     }, 500);
