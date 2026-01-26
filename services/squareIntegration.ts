@@ -253,8 +253,8 @@ export const SquareIntegrationService = {
                   booking_id: "",
                   location_id: params.locationId,
                   start_at_range: {
-                      start_at: params.startAt,
-                      end_at: endDate.toISOString()
+                      end_at: endDate.toISOString(),
+                      start_at: params.startAt
                   },
                   segment_filters: [
                       {
