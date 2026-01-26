@@ -190,15 +190,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         let serviceVariationId = serviceToBook.id;
 
         if (!serviceVariationId || serviceVariationId.startsWith('s')) {
-            // Service ID is a mock ID, need to look it up by name
-            const squareCatalog = await SquareIntegrationService.fetchCatalog();
-            const squareService = findMatchingService(serviceToBook.name, squareCatalog);
-            if (!squareService || !squareService.id) {
-                const availableServices = squareCatalog.map(s => s.name).join(', ');
-                throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available services: ${availableServices || 'None'}`);
-            }
-            serviceVariationId = squareService.id;
-            console.log('[BOOKING] Matched service:', { requested: serviceToBook.name, matched: squareService.name, id: squareService.id });
+            throw new Error(`Invalid service ID "${serviceVariationId}" for service "${serviceToBook.name}". The plan should have been created with real Square service IDs, not mock IDs. This may indicate a problem with how the plan was saved.`);
         }
 
         const searchStart = new Date(visit.date);
@@ -258,15 +250,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         let serviceVariationId = serviceToBook.id;
 
         if (!serviceVariationId || serviceVariationId.startsWith('s')) {
-            // Service ID is a mock ID, need to look it up by name
-            const squareCatalog = await SquareIntegrationService.fetchCatalog();
-            const squareService = findMatchingService(serviceToBook.name, squareCatalog);
-            if (!squareService || !squareService.id) {
-                const availableServices = squareCatalog.map(s => s.name).join(', ');
-                throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available services: ${availableServices || 'None'}`);
-            }
-            serviceVariationId = squareService.id;
-            console.log('[BOOKING] Matched service:', { requested: serviceToBook.name, matched: squareService.name, id: squareService.id });
+            throw new Error(`Invalid service ID "${serviceVariationId}" for service "${serviceToBook.name}". The plan should have been created with real Square service IDs, not mock IDs. This may indicate a problem with how the plan was saved.`);
         }
 
         const searchStart = new Date(bookingDate);
@@ -317,23 +301,14 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               throw new Error("No services were selected for this visit.");
           }
 
-          // Use service IDs from the plan if they exist (from Square catalog)
-          // For any mock IDs, look them up by name (with fuzzy matching)
-          let squareServices = mockServices.filter(s => s.id && !s.id.startsWith('s'));
-
-          if (squareServices.length < mockServices.length) {
-              // Some services have mock IDs, need to look them up
-              const squareCatalog = await SquareIntegrationService.fetchCatalog();
-              squareServices = mockServices
-                  .map(ms => ms.id && !ms.id.startsWith('s') ? ms : findMatchingService(ms.name, squareCatalog))
-                  .filter((s): s is Service => s !== undefined);
-
-              if (squareServices.length === 0) {
-                  const availableServices = squareCatalog.map(s => s.name).join(', ');
-                  const requestedServices = mockServices.map(s => s.name).join(', ');
-                  throw new Error(`Services not found in your Square catalog.\nRequested: ${requestedServices}\nAvailable: ${availableServices || 'None'}`);
-              }
+          // Verify all services have real Square IDs (not mock IDs)
+          const mockServiceIds = mockServices.filter(s => !s.id || s.id.startsWith('s'));
+          if (mockServiceIds.length > 0) {
+              const mockNames = mockServiceIds.map(s => s.name).join(', ');
+              throw new Error(`Services have invalid IDs and cannot be booked: ${mockNames}. The plan should have been created with real Square service IDs.`);
           }
+
+          const squareServices = mockServices;
 
           const stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
 
