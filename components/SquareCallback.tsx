@@ -107,18 +107,18 @@ export default function SquareCallback() {
           // Show success message in popup
           setError(null);
 
-          // Try to close the popup after a short delay
+          // Try to close the popup after a longer delay to let user see the success
           setTimeout(() => {
             console.log('Attempting to close popup...');
             window.close();
-          }, 1500);
+          }, 5000);
 
           // If close doesn't work, show a friendly message
           setTimeout(() => {
             if (!window.closed) {
               setError('Authentication successful! You can close this window now. The main app has been updated.');
             }
-          }, 2000);
+          }, 5500);
         } else {
           // This is a direct navigation (not a popup) - redirect to admin
           console.log('Direct navigation - redirecting to /admin');
