@@ -205,34 +205,30 @@ export const SquareIntegrationService = {
   },
 
   searchCustomer: async (name: string): Promise<string | null> => {
-      const nameParts = name.trim().split(/\s+/);
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(' ');
-
       const body: any = {
           query: {
-              filter: {},
               sort: {
                   field: "CREATED_AT",
                   order: "DESC"
               }
           },
-          limit: 1
+          limit: 100
       };
-      
-      if (lastName) {
-          body.query.filter.given_name = { exact: firstName };
-          body.query.filter.family_name = { exact: lastName };
-      } else if (firstName) {
-          body.query.filter.given_name = { exact: firstName };
-      }
 
       const data: any = await squareApiFetch('/v2/customers/search', {
           method: 'POST',
           body: body
       });
-      
-      const customer = data.customers?.[0];
+
+      // Search through returned customers for name match
+      const customers = data.customers || [];
+      const searchName = name.toLowerCase();
+
+      const customer = customers.find((c: any) => {
+          const fullName = `${c.given_name || ''} ${c.family_name || ''}`.toLowerCase().trim();
+          return fullName === searchName || fullName.includes(searchName);
+      });
+
       return customer ? customer.id : null;
   },
 
