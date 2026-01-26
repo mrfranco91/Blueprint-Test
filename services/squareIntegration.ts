@@ -247,14 +247,18 @@ export const SquareIntegrationService = {
 
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
 
+      // Ensure both timestamps have milliseconds in ISO format
+      const startAtFormatted = startDate.toISOString();
+      const endAtFormatted = endDate.toISOString();
+
       const body = {
           query: {
               filter: {
                   booking_id: "",
                   location_id: params.locationId,
                   start_at_range: {
-                      end_at: endDate.toISOString(),
-                      start_at: params.startAt
+                      end_at: endAtFormatted,
+                      start_at: startAtFormatted
                   },
                   segment_filters: [
                       {
