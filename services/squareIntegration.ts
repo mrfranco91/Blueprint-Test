@@ -243,49 +243,24 @@ export const SquareIntegrationService = {
       teamMemberId: string,
       serviceVariationId: string
   }): Promise<string[]> => {
-      // startAt is already formatted by the caller, just validate it
-      if (!params.startAt || !params.startAt.includes('T')) {
-          throw new Error("Invalid start time format passed to Square.");
-      }
+      const startDate = new Date(params.startAt);
+      if (isNaN(startDate.getTime())) throw new Error("Invalid start time passed to Square.");
 
-      // Parse the start date to calculate end date
-      let startDate: Date;
-      try {
-          startDate = new Date(params.startAt);
-          if (isNaN(startDate.getTime())) throw new Error("Invalid date");
-      } catch (e) {
-          throw new Error("Invalid start time: " + params.startAt);
-      }
-
-      // Use a 30-day window for availability search
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
-      // Format end_at as UTC with Z format - must remove milliseconds to match Square API format
-      const endAtFormatted = SquareIntegrationService.formatDate(endDate);
 
-      console.log('[AVAILABILITY] Searching from', params.startAt, 'to', endAtFormatted);
-      console.log('[AVAILABILITY] Full params received:', {
-          locationId: params.locationId,
-          startAt: params.startAt,
-          teamMemberId: params.teamMemberId,
-          serviceVariationId: params.serviceVariationId,
-          teamMemberIdType: typeof params.teamMemberId,
-          teamMemberIdStartsWithTM: params.teamMemberId?.startsWith?.('TM')
-      });
-
-      // Build segment filter with service and team member
-      const segmentFilter: any = {
-          service_variation_id: params.serviceVariationId
+      const segment_filter: {
+          service_variation_id: string;
+          team_member_id_filter?: { any: string[] };
+      } = {
+          service_variation_id: params.serviceVariationId,
       };
 
-      // Add team member filter if available
-      if (params.teamMemberId && params.teamMemberId.startsWith('TM')) {
-          segmentFilter.team_member_id_filter = {
-              any: [params.teamMemberId]
-          };
-          console.log('[AVAILABILITY] Added team member filter:', params.teamMemberId);
-      }
+      const teamMemberId = params.teamMemberId;
+      const isInvalidForFilter = !teamMemberId || teamMemberId.startsWith('TM-') || teamMemberId === 'admin';
 
-      console.log('[AVAILABILITY] Using segment filter:', JSON.stringify(segmentFilter));
+      if (!isInvalidForFilter) {
+          segment_filter.team_member_id_filter = { any: [teamMemberId] };
+      }
 
       const body = {
           query: {
@@ -293,29 +268,17 @@ export const SquareIntegrationService = {
                   location_id: params.locationId,
                   start_at_range: {
                       start_at: params.startAt,
-                      end_at: endAtFormatted
+                      end_at: endDate.toISOString()
                   },
-                  segment_filters: [segmentFilter]
+                  segment_filters: [segment_filter]
               }
           }
       };
-
-      console.log('[BOOKING AVAILABILITY] Request body:');
-      console.log(JSON.stringify(body, null, 2));
-      console.log('[BOOKING AVAILABILITY] Details:');
-      console.log({
-          location_id: params.locationId,
-          service_variation_id: params.serviceVariationId,
-          team_member_id: params.teamMemberId,
-          start_at: params.startAt,
-          end_at: endAtFormatted
-      });
 
       const data: any = await squareApiFetch('/v2/bookings/availability/search', { method: 'POST', body });
       const slots = (data.availabilities || [])
           .map((a: any) => a.start_at);
 
-      console.log('[AVAILABILITY] Returned', slots.length, 'available slots');
       return slots;
   },
 
