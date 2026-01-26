@@ -123,40 +123,34 @@ const createCombinedServer = async () => {
         req.body = body;
 
         try {
+          let handler;
+
           if (pathname === '/api/square/team') {
-            const { default: handler } = await import('./api/square/team.ts');
-            return handler(req, res);
+            handler = await vite.ssrLoadModule('./api/square/team.ts');
+          } else if (pathname === '/api/square/clients') {
+            handler = await vite.ssrLoadModule('./api/square/clients.ts');
+          } else if (pathname === '/api/square/proxy') {
+            handler = await vite.ssrLoadModule('./api/square/proxy.ts');
+          } else if (pathname === '/api/square/oauth/start') {
+            handler = await vite.ssrLoadModule('./api/square/oauth/start.ts');
+          } else if (pathname === '/api/square/oauth/token') {
+            handler = await vite.ssrLoadModule('./api/square/oauth/token.ts');
+          } else if (pathname === '/api/square/get-token') {
+            handler = await vite.ssrLoadModule('./api/square/get-token.ts');
+          } else {
+            res.statusCode = 404;
+            return res.json({ message: `API endpoint ${pathname} not found` });
           }
 
-          if (pathname === '/api/square/clients') {
-            const { default: handler } = await import('./api/square/clients.ts');
-            return handler(req, res);
+          const handlerFn = handler?.default || handler;
+          if (typeof handlerFn === 'function') {
+            return handlerFn(req, res);
+          } else {
+            res.statusCode = 500;
+            return res.json({ message: 'Handler is not a function' });
           }
-
-          if (pathname === '/api/square/proxy') {
-            const { default: handler } = await import('./api/square/proxy.ts');
-            return handler(req, res);
-          }
-
-          if (pathname === '/api/square/oauth/start') {
-            const { default: handler } = await import('./api/square/oauth/start.ts');
-            return handler(req, res);
-          }
-
-          if (pathname === '/api/square/oauth/token') {
-            const { default: handler } = await import('./api/square/oauth/token.ts');
-            return handler(req, res);
-          }
-
-          if (pathname === '/api/square/get-token') {
-            const { default: handler } = await import('./api/square/get-token.ts');
-            return handler(req, res);
-          }
-
-          res.statusCode = 404;
-          res.json({ message: `API endpoint ${pathname} not found` });
         } catch (error) {
-          console.error(`Error handling API ${pathname}:`, error);
+          console.error(`Error handling API ${pathname}:`, error.message);
           res.statusCode = 500;
           res.json({ message: error.message || 'API server error' });
         }
