@@ -31,7 +31,6 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
         headers['Authorization'] = `Bearer ${session.access_token}`;
     }
 
-    // Don't stringify - send as object, let fetch and the proxy handle serialization
     const response = await fetch(`/api/square/proxy?path=${encodeURIComponent(path)}`, {
         method,
         headers,
