@@ -245,17 +245,24 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
         if (!stylistId) throw new Error("No team member selected or found.");
 
-        const mockService = selectedVisit.services[0];
-        if (!mockService) {
+        const serviceToBook = selectedVisit.services[0];
+        if (!serviceToBook) {
             throw new Error(`No service selected for this visit.`);
         }
 
-        // Fetch fresh catalog from Square to get real service variation IDs
-        const squareCatalog = await SquareIntegrationService.fetchCatalog();
-        const squareService = squareCatalog.find(s => s.name === mockService.name);
-        if (!squareService || !squareService.id) {
-            const availableServices = squareCatalog.map(s => s.name).join(', ');
-            throw new Error(`Service "${mockService.name}" not found in your Square catalog. Available services: ${availableServices || 'None'}`);
+        // Use the service ID from the plan if it exists (from Square catalog)
+        // Otherwise try to look it up by name
+        let serviceVariationId = serviceToBook.id;
+
+        if (!serviceVariationId || serviceVariationId.startsWith('s')) {
+            // Service ID is a mock ID, need to look it up by name
+            const squareCatalog = await SquareIntegrationService.fetchCatalog();
+            const squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+            if (!squareService || !squareService.id) {
+                const availableServices = squareCatalog.map(s => s.name).join(', ');
+                throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available services: ${availableServices || 'None'}`);
+            }
+            serviceVariationId = squareService.id;
         }
 
         const searchStart = new Date(bookingDate);
@@ -267,7 +274,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
             locationId: loc.id,
             startAt: SquareIntegrationService.formatDate(searchStart, loc.timezone),
             teamMemberId: stylistId,
-            serviceVariationId: squareService.id
+            serviceVariationId: serviceVariationId
         });
         setAvailableSlots(slots);
     } catch (e: any) {
