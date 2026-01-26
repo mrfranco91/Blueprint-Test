@@ -147,7 +147,10 @@ export const SquareIntegrationService = {
           const data: any = await squareApiFetch('/v2/team-members/search', { method: 'POST', body: { query: { filter: {} }, limit: 100 } });
           const members = data.team_members || [];
 
+          console.log('[TEAM] Raw response:', JSON.stringify(data, null, 2));
+
           if (members.length === 0) {
+              console.warn('[TEAM] No team members found in Square');
               return [];
           }
 
