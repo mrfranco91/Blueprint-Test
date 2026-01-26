@@ -236,12 +236,24 @@ export const SquareIntegrationService = {
       teamMemberId: string,
       serviceVariationId: string
   }): Promise<string[]> => {
-      const startDate = new Date(params.startAt);
-      if (isNaN(startDate.getTime())) throw new Error("Invalid start time passed to Square.");
+      // startAt is already formatted by the caller, just validate it
+      if (!params.startAt || !params.startAt.includes('T')) {
+          throw new Error("Invalid start time format passed to Square.");
+      }
+
+      // Parse the start date to calculate end date
+      let startDate: Date;
+      try {
+          startDate = new Date(params.startAt);
+          if (isNaN(startDate.getTime())) throw new Error("Invalid date");
+      } catch (e) {
+          throw new Error("Invalid start time: " + params.startAt);
+      }
 
       // Use a 30-day window for availability search
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
-      const endAtFormatted = SquareIntegrationService.formatDate(endDate, 'UTC');
+      // Format end_at as UTC with Z format (matching the working example: 2026-03-22T08:00:00.000Z)
+      const endAtFormatted = endDate.toISOString();
 
       console.log('[AVAILABILITY] Searching from', params.startAt, 'to', endAtFormatted);
 
@@ -270,18 +282,22 @@ export const SquareIntegrationService = {
           }
       };
 
-      console.log('[BOOKING AVAILABILITY] Request:', {
+      console.log('[BOOKING AVAILABILITY] Request body:');
+      console.log(JSON.stringify(body, null, 2));
+      console.log('[BOOKING AVAILABILITY] Details:');
+      console.log({
           location_id: params.locationId,
           service_variation_id: params.serviceVariationId,
           team_member_id: params.teamMemberId,
           start_at: params.startAt,
-          end_at: endAtFormatted,
-          body: JSON.stringify(body, null, 2)
+          end_at: endAtFormatted
       });
+
       const data: any = await squareApiFetch('/v2/bookings/availability/search', { method: 'POST', body });
       const slots = (data.availabilities || [])
           .map((a: any) => a.start_at);
 
+      console.log('[AVAILABILITY] Returned', slots.length, 'available slots');
       return slots;
   },
 
