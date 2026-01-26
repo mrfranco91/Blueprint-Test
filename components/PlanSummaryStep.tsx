@@ -192,20 +192,22 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
 
         console.log('[BOOKING] Service from plan:', { name: serviceToBook.name, id: serviceToBook.id });
 
-        // Use the service ID from the plan if it exists (from Square catalog)
-        // Otherwise try to look it up by name
+        // Fetch Square catalog and validate service ID
+        const squareCatalog = await SquareIntegrationService.fetchCatalog();
         let serviceVariationId = serviceToBook.id;
 
-        if (!serviceVariationId || serviceVariationId.startsWith('s')) {
-            // Service ID is a mock ID, need to look it up by exact name match
-            const squareCatalog = await SquareIntegrationService.fetchCatalog();
+        // Check if service ID exists in current Square catalog
+        const existingService = squareCatalog.find(s => s.id === serviceVariationId);
+
+        if (!existingService) {
+            // Service ID not found - look it up by exact name match
             const squareService = squareCatalog.find(s => s.name === serviceToBook.name);
             if (!squareService || !squareService.id) {
                 const availableServices = squareCatalog.map(s => s.name).join(', ');
                 throw new Error(`Service "${serviceToBook.name}" not found in your Square catalog. Available: ${availableServices}`);
             }
             serviceVariationId = squareService.id;
-            console.log('[BOOKING] Mapped mock service to Square:', { name: serviceToBook.name, id: serviceVariationId });
+            console.log('[BOOKING] Mapped service to Square by name:', { name: serviceToBook.name, plannedId: serviceToBook.id, squareId: serviceVariationId });
         }
 
         const searchStart = new Date(visit.date);
