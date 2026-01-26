@@ -139,19 +139,14 @@ export const SquareIntegrationService = {
 
   fetchTeam: async (): Promise<Stylist[]> => {
       try {
-          const res = await fetch('/api/square/team');
-          if (!res.ok) {
-              const errorText = await res.text();
-              console.error('Square team fetch failed via proxy:', res.status, errorText);
-              return [];
-          }
-
-          const json = await res.json();
-          const members = json.team_members || [];
+          const data: any = await squareApiFetch('/v2/team-members', { method: 'POST', body: { query: { filter: {} }, limit: 100 } });
+          const members = data.team_members || [];
 
           if (members.length === 0) {
               return [];
           }
+
+          console.log('[TEAM] Fetched team members:', members.map((m: any) => ({ id: m.id, name: `${m.given_name} ${m.family_name}` })));
 
           return members.map((member: any) => ({
               id: member.id,
@@ -171,7 +166,7 @@ export const SquareIntegrationService = {
               }
           }));
       } catch (err) {
-          console.error('Failed to load Square team members from proxy:', err);
+          console.error('Failed to load Square team members:', err);
           return [];
       }
   },
