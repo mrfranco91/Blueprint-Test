@@ -52,9 +52,13 @@ export default async function handler(req: any, res: any) {
             .eq('supabase_user_id', userId)
             .maybeSingle();
 
+          console.log(`[SQUARE PROXY] Supabase lookup for user ${userId}:`, { found: !!ms, hasToken: !!ms?.square_access_token });
           if (ms?.square_access_token) {
             squareAccessToken = ms.square_access_token;
+            console.log(`[SQUARE PROXY] Using token from Supabase merchant_settings`);
           }
+        } else {
+          console.log(`[SQUARE PROXY] Auth lookup failed:`, { userErr, userId });
         }
       }
     }
