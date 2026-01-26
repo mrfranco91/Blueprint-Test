@@ -30,29 +30,10 @@ const LoginScreen: React.FC = () => {
     ((import.meta as any).env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ??
     'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_READ APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
 
-  const startSquareOAuth = async () => {
-    if (!squareAppId) {
-      alert("Square OAuth is not configured correctly. Missing Application ID.");
-      return;
-    }
-
-    try {
-      // Use server-side OAuth start endpoint for secure state handling
-      // This sets an HTTP-only cookie and redirects to Square
-      const response = await fetch('/api/square/oauth/start', {
-        method: 'GET',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to initiate Square OAuth');
-      }
-
-      // The server will redirect, so we follow it
-      window.location.href = response.url;
-    } catch (error) {
-      console.error('OAuth start failed:', error);
-      alert('Failed to start Square OAuth. Please try again.');
-    }
+  const startSquareOAuth = () => {
+    // Use server-side OAuth start endpoint for secure state handling
+    // This sets an HTTP-only cookie and redirects to Square
+    window.location.href = '/api/square/oauth/start';
   };
 
   const handleTokenSubmit = async (e: React.FormEvent) => {
