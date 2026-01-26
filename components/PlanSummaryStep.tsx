@@ -207,7 +207,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
             locationId: loc.id,
             startAt: SquareIntegrationService.formatDate(searchStart, loc.timezone),
             teamMemberId: stylistId,
-            serviceVariationId: squareService.id
+            serviceVariationId: serviceVariationId
         });
 
         const dates = new Set<string>();
