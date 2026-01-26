@@ -29,8 +29,9 @@ export default async function handler(req: any, res: any) {
 
     // Real account UID - Melissa's Square OAuth account
     const realAccountUid = 'c6598212-8148-4cf9-b53f-15066b92f679';
+    const tempPassword = 'blueprint-token-sync-' + Date.now();
 
-    // Get the real account user to verify it exists
+    // Get the real account user
     const { data: userData, error: userError } = await (
       supabaseAdmin.auth as any
     ).admin.getUserById(realAccountUid);
@@ -45,36 +46,25 @@ export default async function handler(req: any, res: any) {
 
     console.log('[CREATE SESSION] Found user:', userData.user.email);
 
-    // Create a new session using the admin API
-    const { data: sessionData, error: sessionError } = await (
-      supabaseAdmin.auth as any
-    ).admin.generateLink({
-      type: 'magiclink',
-      email: userData.user.email,
-      options: {
-        redirectTo: '/admin',
-      },
+    // Update the user with a temporary password for this session
+    const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(realAccountUid, {
+      password: tempPassword,
     });
 
-    if (sessionError || !sessionData) {
-      console.error('[CREATE SESSION] Failed to generate link:', sessionError);
-      // Fall back to creating a session directly by setting the user
-      // Return a fake session that will trigger the client to use the real account
-      return res.status(200).json({
-        session: {
-          access_token: 'direct-real-account',
-          refresh_token: realAccountUid,
-          user: userData.user,
-        },
-        user: userData.user,
+    if (updateError) {
+      console.error('[CREATE SESSION] Failed to set password:', updateError);
+      return res.status(500).json({
+        message: 'Failed to prepare account for sign-in',
+        details: updateError.message,
       });
     }
 
-    console.log('[CREATE SESSION] Session created for user:', realAccountUid);
+    console.log('[CREATE SESSION] Updated password for user:', realAccountUid);
 
     return res.status(200).json({
-      session: sessionData.session,
-      user: userData.user,
+      email: userData.user.email,
+      password: tempPassword,
+      userId: realAccountUid,
     });
   } catch (e: any) {
     console.error('[CREATE SESSION] Fatal error:', e);
