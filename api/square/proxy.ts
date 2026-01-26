@@ -81,9 +81,11 @@ export default async function handler(req: any, res: any) {
     if (requestBody) {
         try {
             const parsed = JSON.parse(requestBody);
-            console.log(`[SQUARE PROXY] Request body:`, JSON.stringify(parsed, null, 2));
+            console.log(`[SQUARE PROXY] Request body:`);
+            console.log(JSON.stringify(parsed, null, 2));
         } catch {
-            console.log(`[SQUARE PROXY] Request body:`, requestBody);
+            console.log(`[SQUARE PROXY] Request body:`);
+            console.log(requestBody);
         }
     }
 
