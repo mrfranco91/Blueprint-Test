@@ -114,6 +114,22 @@ export default async function handler(req: any, res: any) {
         console.log('[CLIENT SYNC] Created merchant_settings with ID:', merchantId);
       } else {
         merchantId = ms.id;
+        // If token provided and merchant_settings exists, update the token
+        if (squareAccessToken && ms.id) {
+          const { error: updateErr } = await supabaseAdmin
+            .from('merchant_settings')
+            .update({
+              square_access_token: squareAccessToken,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', ms.id);
+
+          if (updateErr) {
+            console.error('[CLIENT SYNC] Failed to update merchant_settings:', updateErr);
+          } else {
+            console.log('[CLIENT SYNC] Updated merchant_settings token');
+          }
+        }
       }
     }
 
