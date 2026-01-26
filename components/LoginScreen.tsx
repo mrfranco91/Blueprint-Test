@@ -98,11 +98,29 @@ const LoginScreen: React.FC = () => {
 
     window.addEventListener('message', handleOAuthMessage);
 
+    // Also listen for localStorage changes as a backup communication method
+    const handleStorageChange = (event: StorageEvent) => {
+      console.log('Storage event:', event.key, event.newValue);
+      if (event.key === 'oauth-success' && event.newValue) {
+        console.log('✓ OAuth success detected via localStorage');
+        window.removeEventListener('storage', handleStorageChange);
+        if (checkPopupClosed) clearInterval(checkPopupClosed);
+        window.removeEventListener('message', handleOAuthMessage);
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
     // Close popup listener if user closes it manually
     checkPopupClosed = setInterval(() => {
       if (popup.closed) {
         if (checkPopupClosed) clearInterval(checkPopupClosed);
         window.removeEventListener('message', handleOAuthMessage);
+        window.removeEventListener('storage', handleStorageChange);
       }
     }, 500);
   };
