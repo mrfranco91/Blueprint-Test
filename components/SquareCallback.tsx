@@ -65,25 +65,26 @@ export default function SquareCallback() {
             throw new Error(tokenData?.message || 'Square login failed');
           }
 
-          const { access_token: squareToken, merchant_id } = tokenData;
+          const { access_token: squareToken, merchant_id, supabase_session } = tokenData;
 
           if (!squareToken) {
             throw new Error('No Square access token received');
           }
 
-          // Step 2: Sign in with Supabase
-          const { supabase } = await import('../lib/supabase');
-
-          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-            email: `${merchant_id}@square-oauth.blueprint`,
-            password: merchant_id,
-          });
-
-          if (authErr || !authData?.session?.access_token) {
-            throw new Error(authErr?.message || 'Failed to sign in');
+          if (!supabase_session?.access_token) {
+            throw new Error('No Supabase session received from server');
           }
 
-          const jwtToken = authData.session.access_token;
+          // Step 2: Use the session tokens from the server (no re-authentication needed)
+          const { supabase } = await import('../lib/supabase');
+
+          // Set the session in Supabase client
+          await supabase.auth.setSession({
+            access_token: supabase_session.access_token,
+            refresh_token: supabase_session.refresh_token,
+          });
+
+          const jwtToken = supabase_session.access_token;
 
           // Step 3: Sync team and clients
           await fetch('/api/square/team', {
