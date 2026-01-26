@@ -324,14 +324,24 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               throw new Error("No services were selected for this visit.");
           }
 
-          // Verify all services have real Square IDs (not mock IDs)
-          const mockServiceIds = mockServices.filter(s => !s.id || s.id.startsWith('s'));
-          if (mockServiceIds.length > 0) {
-              const mockNames = mockServiceIds.map(s => s.name).join(', ');
-              throw new Error(`Services have invalid IDs and cannot be booked: ${mockNames}. The plan should have been created with real Square service IDs.`);
-          }
+          // Map mock service IDs to real Square IDs if needed
+          let squareServices = mockServices.filter(s => s.id && !s.id.startsWith('s'));
 
-          const squareServices = mockServices;
+          if (squareServices.length < mockServices.length) {
+              // Some services have mock IDs, need to look them up
+              const squareCatalog = await SquareIntegrationService.fetchCatalog();
+              squareServices = mockServices.map(ms => {
+                  if (ms.id && !ms.id.startsWith('s')) {
+                      return ms; // Already has real ID
+                  }
+                  // Look up by exact name match
+                  const found = squareCatalog.find(s => s.name === ms.name);
+                  if (!found) {
+                      throw new Error(`Service "${ms.name}" not found in your Square catalog.`);
+                  }
+                  return found;
+              });
+          }
 
           const stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
 
