@@ -152,17 +152,67 @@ const LoginScreen: React.FC = () => {
     window.addEventListener('message', handleOAuthMessage);
 
     // Also listen for localStorage changes as a backup communication method
-    const handleStorageChange = (event: StorageEvent) => {
+    const handleStorageChange = async (event: StorageEvent) => {
       console.log('Storage event:', event.key, event.newValue);
-      if (event.key === 'oauth-success' && event.newValue) {
-        console.log('✓ OAuth success detected via localStorage');
+      if (event.key === 'oauth-code' && event.newValue) {
+        console.log('✓ OAuth code detected via localStorage');
+
         window.removeEventListener('storage', handleStorageChange);
         if (checkPopupClosed) clearInterval(checkPopupClosed);
         window.removeEventListener('message', handleOAuthMessage);
 
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
+        try {
+          const code = event.newValue;
+          const { supabase } = await import('../lib/supabase');
+
+          // Exchange the code (same as message handler)
+          const tokenRes = await fetch('/api/square/oauth/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+          });
+
+          const tokenData = await tokenRes.json();
+          if (!tokenRes.ok) {
+            throw new Error(tokenData?.message || 'Failed to exchange code');
+          }
+
+          const { access_token: squareToken, merchant_id } = tokenData;
+
+          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+            email: `${merchant_id}@square-oauth.blueprint`,
+            password: merchant_id,
+          });
+
+          if (authErr || !authData?.session?.access_token) {
+            throw new Error(authErr?.message || 'Failed to sign in');
+          }
+
+          const jwtToken = authData.session.access_token;
+
+          await fetch('/api/square/team', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify({ squareAccessToken: squareToken }),
+          });
+
+          await fetch('/api/square/clients', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify({ squareAccessToken: squareToken }),
+          });
+
+          window.location.href = '/admin';
+        } catch (err) {
+          console.error('OAuth via localStorage failed:', err);
+          setError(err instanceof Error ? err.message : 'Authentication failed');
+        }
       }
     };
 
