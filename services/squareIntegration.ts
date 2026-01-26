@@ -48,7 +48,9 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
     if (!response.ok) {
         const err = data.errors?.[0];
         const fieldInfo = err?.field ? ` (Field: ${err.field})` : '';
-        throw new Error(err ? `${err.detail}${fieldInfo}` : `Square API Error: ${response.status}`);
+        const errorMessage = err?.detail || 'Unknown error';
+        console.error('[SQUARE API ERROR] Full response:', JSON.stringify(data, null, 2));
+        throw new Error(`Square API Error (${response.status}): ${errorMessage}${fieldInfo}`);
     }
     return data as T;
 }
