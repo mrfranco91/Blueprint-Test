@@ -8,15 +8,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Create a unified server that handles both API and Vite
 const createCombinedServer = async () => {
-  const vite = await createViteServer({
-    server: {
-      middlewareMode: true,
-      hmr: {
-        host: 'localhost',
-        port: 3000,
+  let vite;
+  try {
+    vite = await createViteServer({
+      server: {
+        middlewareMode: true,
       }
-    }
-  });
+    });
+    console.log('✓ Vite server initialized');
+  } catch (err) {
+    console.error('Failed to initialize Vite:', err);
+    throw err;
+  }
 
   class MockRequest {
     constructor(nodeReq) {
