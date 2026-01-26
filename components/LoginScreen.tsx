@@ -58,8 +58,8 @@ const LoginScreen: React.FC = () => {
     try {
       const { supabase } = await import('../lib/supabase');
 
-      // For manual token sync, use a persistent test account
-      const tempEmail = 'manual-sync@blueprint.local';
+      // For manual token sync, use your real Square OAuth account
+      const tempEmail = '64c7491e0a21s@square-oauth.blueprint';
       const tempPassword = 'blueprint-manual-sync';
 
       // Try to sign in with existing account
