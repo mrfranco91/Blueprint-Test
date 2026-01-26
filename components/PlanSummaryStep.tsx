@@ -278,18 +278,27 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
       setIsBooking(true);
       setFetchError(null);
       try {
-          const servicesToBook = selectedVisit!.services;
-          if (!servicesToBook || servicesToBook.length === 0) {
+          const mockServices = selectedVisit!.services;
+          if (!mockServices || mockServices.length === 0) {
               throw new Error("No services were selected for this visit.");
           }
 
+          // Map mock service names to real Square service variations
+          const squareServices = allServices.filter(s =>
+              mockServices.some(ms => ms.name === s.name)
+          );
+
+          if (squareServices.length === 0) {
+              throw new Error("Could not find matching services in Square. Make sure your salon's service catalog is synced.");
+          }
+
           const stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
-          
+
           if (user?.role === 'stylist' && user.stylistData) {
               const loggedInStylist = allStylists.find(s => s.id === user.stylistData!.id);
               if (loggedInStylist) {
                   const isBookingForSelf = stylistIdToBookFor === loggedInStylist.id;
-                  
+
                   if (isBookingForSelf && !loggedInStylist.permissions.can_book_own_schedule) {
                       throw new Error("You do not have permission to book appointments for your own schedule.");
                   }
@@ -301,16 +310,16 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
           }
 
           const loc = await SquareIntegrationService.fetchLocation();
-          
+
           let customerId = plan.client.externalId || await SquareIntegrationService.searchCustomer(plan.client.name);
           if (!customerId) throw new Error(`Could not find client "${plan.client.name}" in Square.`);
-          
+
           const squareResponse = await SquareIntegrationService.createAppointment({
               locationId: loc.id,
               startAt: slotTime,
               customerId,
               teamMemberId: stylistIdToBookFor,
-              services: servicesToBook
+              services: squareServices
           });
 
           const squareBooking = squareResponse.booking;
