@@ -313,16 +313,22 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               throw new Error("No services were selected for this visit.");
           }
 
-          // Fetch fresh catalog from Square to get real service variation IDs
-          const squareCatalog = await SquareIntegrationService.fetchCatalog();
-          const squareServices = squareCatalog.filter(s =>
-              mockServices.some(ms => ms.name === s.name)
-          );
+          // Use service IDs from the plan if they exist (from Square catalog)
+          // For any mock IDs, look them up by name
+          let squareServices = mockServices.filter(s => s.id && !s.id.startsWith('s'));
 
           if (squareServices.length === 0) {
-              const availableServices = squareCatalog.map(s => s.name).join(', ');
-              const requestedServices = mockServices.map(s => s.name).join(', ');
-              throw new Error(`Services not found in your Square catalog.\nRequested: ${requestedServices}\nAvailable: ${availableServices || 'None'}`);
+              // All services have mock IDs, need to look them up
+              const squareCatalog = await SquareIntegrationService.fetchCatalog();
+              squareServices = squareCatalog.filter(s =>
+                  mockServices.some(ms => ms.name === s.name)
+              );
+
+              if (squareServices.length === 0) {
+                  const availableServices = squareCatalog.map(s => s.name).join(', ');
+                  const requestedServices = mockServices.map(s => s.name).join(', ');
+                  throw new Error(`Services not found in your Square catalog.\nRequested: ${requestedServices}\nAvailable: ${availableServices || 'None'}`);
+              }
           }
 
           const stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
