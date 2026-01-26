@@ -172,15 +172,21 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
     setFetchError(null);
     try {
         if (!visit) throw new Error("No visit selected.");
-        
+
         const loc = await SquareIntegrationService.fetchLocation();
-        
+
         const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
         if (!stylistId) throw new Error("No team member selected or found.");
-        
-        const roadmapService = visit.services[0];
-        if (!roadmapService || !roadmapService.id) {
-            throw new Error(`SYSTEM ERROR: A service in this plan is missing a valid Square ID.`);
+
+        const mockService = visit.services[0];
+        if (!mockService) {
+            throw new Error(`No service selected for this visit.`);
+        }
+
+        // Map the mock service name to a real Square service
+        const squareService = allServices.find(s => s.name === mockService.name);
+        if (!squareService || !squareService.id) {
+            throw new Error(`Could not find service "${mockService.name}" in Square catalog. Make sure your service catalog is synced.`);
         }
 
         const searchStart = new Date(visit.date);
@@ -192,7 +198,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
             locationId: loc.id,
             startAt: SquareIntegrationService.formatDate(searchStart, loc.timezone),
             teamMemberId: stylistId,
-            serviceVariationId: roadmapService.id
+            serviceVariationId: squareService.id
         });
 
         const dates = new Set<string>();
