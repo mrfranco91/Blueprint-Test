@@ -41,10 +41,10 @@ const LoginScreen: React.FC = () => {
         ? 'https://connect.squareupsandbox.com/oauth2/authorize'
         : 'https://connect.squareup.com/oauth2/authorize';
 
-    // For sandbox, use the localhost redirect URI
+    // For sandbox, use the localhost redirect URI (HTTPS required)
     // For production, use the environment variable
     const redirectUri = isLocalDev
-      ? 'http://localhost:3000/square/callback'
+      ? 'https://localhost:3000/square/callback'
       : squareRedirectUri;
 
     const url =
