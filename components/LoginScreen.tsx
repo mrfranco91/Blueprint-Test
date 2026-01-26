@@ -31,8 +31,8 @@ const LoginScreen: React.FC = () => {
     'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_READ APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
 
   const startSquareOAuth = () => {
-    if (!squareAppId || !squareRedirectUri) {
-      alert("Square OAuth is not configured correctly. Missing Application ID or Redirect URI.");
+    if (!squareAppId) {
+      alert("Square OAuth is not configured correctly. Missing Application ID.");
       return;
     }
 
@@ -41,198 +41,43 @@ const LoginScreen: React.FC = () => {
         ? 'https://connect.squareupsandbox.com/oauth2/authorize'
         : 'https://connect.squareup.com/oauth2/authorize';
 
+    // For sandbox, use the localhost redirect URI
+    // For production, use the environment variable
+    const redirectUri = isLocalDev
+      ? 'http://localhost:3000/square/callback'
+      : squareRedirectUri;
+
     const url =
       `${base}` +
       `?client_id=${encodeURIComponent(squareAppId)}` +
       `&response_type=code` +
       `&scope=${encodeURIComponent(scopes)}` +
-      `&redirect_uri=${encodeURIComponent(squareRedirectUri)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&session=false`;
 
-    // Open OAuth in a popup instead of redirecting
-    const width = 600;
-    const height = 700;
-    const left = (window.innerWidth - width) / 2;
-    const top = (window.innerHeight - height) / 2;
+    // For sandbox, just redirect (simpler since redirect URI is configured)
+    // For production, use popup to avoid losing context
+    if (isLocalDev) {
+      console.log('Sandbox mode: redirecting to Square OAuth');
+      window.location.href = url;
+    } else {
+      console.log('Production mode: opening OAuth in popup');
+      // Open OAuth in a popup for production
+      const width = 600;
+      const height = 700;
+      const left = (window.innerWidth - width) / 2;
+      const top = (window.innerHeight - height) / 2;
 
-    const popup = window.open(
-      url,
-      'SquareOAuth',
-      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-    );
+      const popup = window.open(
+        url,
+        'SquareOAuth',
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
 
-    if (!popup) {
-      alert('Failed to open OAuth popup. Please check if popups are blocked.');
-      return;
+      if (!popup) {
+        alert('Failed to open OAuth popup. Please check if popups are blocked.');
+      }
     }
-
-    // Declare interval variable first
-    let checkPopupClosed: ReturnType<typeof setInterval> | null = null;
-
-    // Listen for messages from the OAuth callback popup
-    const handleOAuthMessage = async (event: MessageEvent) => {
-      console.log('Message event received:', {
-        origin: event.origin,
-        windowOrigin: window.location.origin,
-        dataType: event.data?.type,
-      });
-
-      // Verify the message is from our OAuth popup
-      if (event.origin !== window.location.origin) {
-        console.log('Ignoring message from different origin:', event.origin);
-        return;
-      }
-
-      console.log('Processing message from popup:', event.data);
-
-      if (event.data?.type === 'SQUARE_OAUTH_SUCCESS') {
-        console.log('✓ Received OAuth authorization code from popup');
-
-        // Remove the message listeners
-        window.removeEventListener('message', handleOAuthMessage);
-        window.removeEventListener('storage', handleStorageChange);
-        if (checkPopupClosed) clearInterval(checkPopupClosed);
-
-        try {
-          // Exchange the authorization code for tokens on the parent window's session
-          const { supabase } = await import('../lib/supabase');
-          const code = event.data.code;
-
-          const tokenRes = await fetch('/api/square/oauth/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code }),
-          });
-
-          const tokenData = await tokenRes.json();
-          if (!tokenRes.ok) {
-            throw new Error(tokenData?.message || 'Failed to exchange code');
-          }
-
-          const { access_token: squareToken, merchant_id } = tokenData;
-
-          // Sign in with the merchant account
-          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-            email: `${merchant_id}@square-oauth.blueprint`,
-            password: merchant_id,
-          });
-
-          if (authErr || !authData?.session?.access_token) {
-            throw new Error(authErr?.message || 'Failed to sign in');
-          }
-
-          const jwtToken = authData.session.access_token;
-
-          // Sync team and clients
-          await fetch('/api/square/team', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${jwtToken}`,
-            },
-            body: JSON.stringify({ squareAccessToken: squareToken }),
-          });
-
-          await fetch('/api/square/clients', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${jwtToken}`,
-            },
-            body: JSON.stringify({ squareAccessToken: squareToken }),
-          });
-
-          console.log('✓ OAuth flow complete, redirecting to admin');
-          window.location.href = '/admin';
-        } catch (err) {
-          console.error('OAuth token exchange failed:', err);
-          setError(err instanceof Error ? err.message : 'Authentication failed');
-        }
-      } else if (event.data?.type === 'oauth-error') {
-        console.error('OAuth error:', event.data.message);
-        window.removeEventListener('message', handleOAuthMessage);
-        if (checkPopupClosed) clearInterval(checkPopupClosed);
-        setError(`OAuth authentication failed: ${event.data.message}`);
-      }
-    };
-
-    window.addEventListener('message', handleOAuthMessage);
-
-    // Also listen for localStorage changes as a backup communication method
-    const handleStorageChange = async (event: StorageEvent) => {
-      console.log('Storage event:', event.key, event.newValue);
-      if (event.key === 'oauth-code' && event.newValue) {
-        console.log('✓ OAuth code detected via localStorage');
-
-        window.removeEventListener('storage', handleStorageChange);
-        if (checkPopupClosed) clearInterval(checkPopupClosed);
-        window.removeEventListener('message', handleOAuthMessage);
-
-        try {
-          const code = event.newValue;
-          const { supabase } = await import('../lib/supabase');
-
-          // Exchange the code (same as message handler)
-          const tokenRes = await fetch('/api/square/oauth/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code }),
-          });
-
-          const tokenData = await tokenRes.json();
-          if (!tokenRes.ok) {
-            throw new Error(tokenData?.message || 'Failed to exchange code');
-          }
-
-          const { access_token: squareToken, merchant_id } = tokenData;
-
-          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-            email: `${merchant_id}@square-oauth.blueprint`,
-            password: merchant_id,
-          });
-
-          if (authErr || !authData?.session?.access_token) {
-            throw new Error(authErr?.message || 'Failed to sign in');
-          }
-
-          const jwtToken = authData.session.access_token;
-
-          await fetch('/api/square/team', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${jwtToken}`,
-            },
-            body: JSON.stringify({ squareAccessToken: squareToken }),
-          });
-
-          await fetch('/api/square/clients', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${jwtToken}`,
-            },
-            body: JSON.stringify({ squareAccessToken: squareToken }),
-          });
-
-          window.location.href = '/admin';
-        } catch (err) {
-          console.error('OAuth via localStorage failed:', err);
-          setError(err instanceof Error ? err.message : 'Authentication failed');
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // Close popup listener if user closes it manually
-    checkPopupClosed = setInterval(() => {
-      if (popup.closed) {
-        if (checkPopupClosed) clearInterval(checkPopupClosed);
-        window.removeEventListener('message', handleOAuthMessage);
-        window.removeEventListener('storage', handleStorageChange);
-      }
-    }, 500);
   };
 
   const handleTokenSubmit = async (e: React.FormEvent) => {
