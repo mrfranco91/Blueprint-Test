@@ -110,6 +110,12 @@ export const SquareIntegrationService = {
 
     const items = allObjects.filter((o: any) => o.type === 'ITEM');
     const variations = allObjects.filter((o: any) => o.type === 'ITEM_VARIATION');
+    console.log('[CATALOG] Breakdown - Items:', items.length, 'Variations:', variations.length);
+    console.log('[CATALOG] All items:', items.map(i => ({ id: i.id, name: i.item_data?.name })));
+    console.log('[CATALOG] All variations:', variations.map(v => ({ id: v.id, itemId: v.item_variation_data?.item_id, name: v.item_variation_data?.name })));
+
+    const items = allObjects.filter((o: any) => o.type === 'ITEM');
+    const variations = allObjects.filter((o: any) => o.type === 'ITEM_VARIATION');
     const categories = allObjects.filter((o: any) => o.type === 'CATEGORY');
 
     const services: Service[] = [];
