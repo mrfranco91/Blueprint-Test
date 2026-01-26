@@ -140,9 +140,10 @@ const StylistDashboard: React.FC<StylistDashboardProps> = ({ onLogout, role: pro
         else merged[k] = a;
     });
     const mergedList = Object.values(merged).sort((a, b) => a.date.getTime() - b.date.getTime());
+    const squareStylistId = user.stylistData?.id || user.id.toString();
     const newPlan: GeneratedPlan = {
         id: `plan_${Date.now()}`, status: 'draft', membershipStatus: 'none', createdAt: new Date().toISOString(),
-        stylistId: user.id.toString(), stylistName: user.name || 'Stylist', client: activeClient,
+        stylistId: squareStylistId, stylistName: user.name || 'Stylist', client: activeClient,
         appointments: mergedList, totalYearlyAppointments: mergedList.length,
         averageAppointmentCost: mergedList.length ? totalCost / mergedList.length : 0,
         averageMonthlySpend: totalCost / 12, totalCost
