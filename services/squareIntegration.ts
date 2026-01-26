@@ -88,17 +88,24 @@ export const SquareIntegrationService = {
   fetchCatalog: async (): Promise<Service[]> => {
     let cursor: string | undefined = undefined;
     const allObjects: any[] = [];
+    let pageCount = 0;
 
     // Fetch all pages of the catalog
     do {
         const path = `/v2/catalog/list?types=ITEM,ITEM_VARIATION,CATEGORY${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+        console.log('[CATALOG] Fetching page', pageCount + 1, 'cursor:', cursor ? cursor.substring(0, 20) + '...' : 'none');
         const data: any = await squareApiFetch(path);
 
         if (data.objects) {
+            console.log('[CATALOG] Page', pageCount + 1, 'returned', data.objects.length, 'objects');
             allObjects.push(...data.objects);
         }
         cursor = data.cursor;
+        pageCount++;
+        console.log('[CATALOG] Next cursor:', cursor ? 'exists' : 'none (end of pages)');
     } while (cursor);
+
+    console.log('[CATALOG] Total objects fetched across', pageCount, 'pages:', allObjects.length);
 
     const items = allObjects.filter((o: any) => o.type === 'ITEM');
     const variations = allObjects.filter((o: any) => o.type === 'ITEM_VARIATION');
