@@ -242,6 +242,18 @@ export const SquareIntegrationService = {
 
       console.log('[AVAILABILITY] Searching from', params.startAt, 'to', endAtFormatted);
 
+      // Build segment filter with both service and team member
+      const segmentFilter: any = {
+          service_variation_id: params.serviceVariationId
+      };
+
+      // Include team_member_id_filter if we have a valid team member ID
+      if (params.teamMemberId && params.teamMemberId.startsWith('TM')) {
+          segmentFilter.team_member_id_filter = {
+              any: [params.teamMemberId]
+          };
+      }
+
       const body = {
           query: {
               filter: {
@@ -250,9 +262,7 @@ export const SquareIntegrationService = {
                       start_at: params.startAt,
                       end_at: endAtFormatted
                   },
-                  segment_filters: [{
-                      service_variation_id: params.serviceVariationId
-                  }]
+                  segment_filters: [segmentFilter]
               }
           }
       };
@@ -263,12 +273,12 @@ export const SquareIntegrationService = {
           team_member_id: params.teamMemberId,
           start_at: params.startAt,
           end_at: endAtFormatted,
-          body: body
+          body: JSON.stringify(body, null, 2)
       });
       const data: any = await squareApiFetch('/v2/bookings/availability/search', { method: 'POST', body });
       const slots = (data.availabilities || [])
           .map((a: any) => a.start_at);
-      
+
       return slots;
   },
 
