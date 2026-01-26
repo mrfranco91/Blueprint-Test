@@ -106,7 +106,7 @@ export default async function handler(req: any, res: any) {
     }
 
     console.log(`[SQUARE PROXY] Response status: ${squareResp.status}`);
-    console.log(`[SQUARE PROXY] Response:`, JSON.stringify(payload).substring(0, 500));
+    console.log(`[SQUARE PROXY] Response:`, JSON.stringify(payload, null, 2));
 
     return res.status(squareResp.status).json(payload);
   } catch (e: any) {
