@@ -12,72 +12,12 @@ const LoginScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-
-  // Detect if we're in local development
-  const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-  // Use sandbox credentials locally, production credentials otherwise
-  const squareAppId = isLocalDev
-    ? 'sandbox-sq0idb-bAxH8Wu8_6HnCSCYzfPEEg'
-    : (import.meta as any).env.VITE_SQUARE_APPLICATION_ID ||
-      (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
-
   const squareRedirectUri = (import.meta as any).env.VITE_SQUARE_REDIRECT_URI;
-  const squareEnv = isLocalDev ? 'sandbox' : ((import.meta as any).env.VITE_SQUARE_ENV || 'production').toLowerCase();
-
-  const scopes =
-    ((import.meta as any).env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ??
-    'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_READ APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
 
   const startSquareOAuth = () => {
-    if (!squareAppId) {
-      alert("Square OAuth is not configured correctly. Missing Application ID.");
-      return;
-    }
-
-    const base =
-      squareEnv === 'sandbox'
-        ? 'https://connect.squareupsandbox.com/oauth2/authorize'
-        : 'https://connect.squareup.com/oauth2/authorize';
-
-    // For sandbox, use the localhost redirect URI (HTTPS required)
-    // For production, use the environment variable
-    const redirectUri = isLocalDev
-      ? 'https://localhost:3000/square/callback'
-      : squareRedirectUri;
-
-    const url =
-      `${base}` +
-      `?client_id=${encodeURIComponent(squareAppId)}` +
-      `&response_type=code` +
-      `&scope=${encodeURIComponent(scopes)}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&session=false`;
-
-    // For sandbox, just redirect (simpler since redirect URI is configured)
-    // For production, use popup to avoid losing context
-    if (isLocalDev) {
-      console.log('Sandbox mode: redirecting to Square OAuth');
-      window.location.href = url;
-    } else {
-      console.log('Production mode: opening OAuth in popup');
-      // Open OAuth in a popup for production
-      const width = 600;
-      const height = 700;
-      const left = (window.innerWidth - width) / 2;
-      const top = (window.innerHeight - height) / 2;
-
-      const popup = window.open(
-        url,
-        'SquareOAuth',
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-      );
-
-      if (!popup) {
-        alert('Failed to open OAuth popup. Please check if popups are blocked.');
-      }
-    }
+    // Use server-side OAuth start endpoint for secure state handling
+    // Server sets state in HTTP-only cookie and redirects to Square
+    window.location.href = '/api/square/oauth/start';
   };
 
   const handleTokenSubmit = async (e: React.FormEvent) => {
