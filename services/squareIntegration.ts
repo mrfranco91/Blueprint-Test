@@ -221,11 +221,6 @@ export const SquareIntegrationService = {
       const startDate = new Date(params.startAt);
       if (isNaN(startDate.getTime())) throw new Error("Invalid start time passed to Square.");
 
-      // Validate that service variation ID doesn't start with 's' (mock ID)
-      if (params.serviceVariationId.startsWith('s')) {
-          throw new Error(`Invalid service ID: ${params.serviceVariationId}. Service catalog may not be synced from Square. Please ensure your salon's services are synced in Square Bookings settings.`);
-      }
-
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
       const endAtFormatted = SquareIntegrationService.formatDate(endDate, 'UTC');
 
