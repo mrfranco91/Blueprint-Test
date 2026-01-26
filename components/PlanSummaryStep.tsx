@@ -183,6 +183,13 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         const loc = await SquareIntegrationService.fetchLocation();
 
         const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+        console.log('[BOOKING CALENDAR] Stylist lookup:', {
+            isClient,
+            planStylistId: plan.stylistId,
+            userStylistDataId: user?.stylistData?.id,
+            allStylists: allStylists.map(s => ({ id: s.id, name: s.name })),
+            resolvedId: stylistId
+        });
         if (!stylistId) throw new Error("No team member selected or found.");
 
         const serviceToBook = visit.services[0];
@@ -268,6 +275,13 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         const loc = await SquareIntegrationService.fetchLocation();
 
         const stylistId = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+        console.log('[BOOKING PERIOD] Stylist lookup:', {
+            isClient,
+            planStylistId: plan.stylistId,
+            userStylistDataId: user?.stylistData?.id,
+            allStylists: allStylists.map(s => ({ id: s.id, name: s.name })),
+            resolvedId: stylistId
+        });
         if (!stylistId) throw new Error("No team member selected or found.");
 
         const serviceToBook = selectedVisit.services[0];
