@@ -254,7 +254,14 @@ export const SquareIntegrationService = {
       const endAtFormatted = SquareIntegrationService.formatDate(endDate);
 
       console.log('[AVAILABILITY] Searching from', params.startAt, 'to', endAtFormatted);
-      console.log('[AVAILABILITY] Team Member ID received:', params.teamMemberId, '- starts with TM?', params.teamMemberId?.startsWith('TM'));
+      console.log('[AVAILABILITY] Full params received:', {
+          locationId: params.locationId,
+          startAt: params.startAt,
+          teamMemberId: params.teamMemberId,
+          serviceVariationId: params.serviceVariationId,
+          teamMemberIdType: typeof params.teamMemberId,
+          teamMemberIdStartsWithTM: params.teamMemberId?.startsWith?.('TM')
+      });
 
       // Build segment filter with both service and team member
       const segmentFilter: any = {
@@ -262,13 +269,13 @@ export const SquareIntegrationService = {
       };
 
       // Include team_member_id_filter if we have a valid team member ID (MUST start with TM)
-      if (params.teamMemberId && params.teamMemberId.startsWith('TM')) {
+      if (params.teamMemberId && String(params.teamMemberId).startsWith('TM')) {
           segmentFilter.team_member_id_filter = {
               any: [params.teamMemberId]
           };
           console.log('[AVAILABILITY] Added team_member_id_filter:', params.teamMemberId);
       } else {
-          console.warn('[AVAILABILITY] Team member ID invalid or missing:', params.teamMemberId);
+          console.warn('[AVAILABILITY] Team member ID invalid or missing:', params.teamMemberId, 'type:', typeof params.teamMemberId);
       }
 
       const body = {
