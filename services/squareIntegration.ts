@@ -69,7 +69,9 @@ export const SquareIntegrationService = {
   
   fetchLocation: async (): Promise<SquareLocation> => {
       const data: any = await squareApiFetch('/v2/locations');
+      console.log('[LOCATION] Full locations response:', JSON.stringify(data, null, 2));
       const activeLocation = data.locations?.find((loc: any) => loc.status === 'ACTIVE');
+      console.log('[LOCATION] Active location selected:', JSON.stringify(activeLocation, null, 2));
       if (!activeLocation) throw new Error("No active location found.");
       return activeLocation;
   },
