@@ -396,7 +396,16 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
               return found;
           });
 
-          const stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+          // Resolve stylist ID: prefer Square Team Member ID (starts with TM), fall back to allStylists
+          let stylistIdToBookFor = isClient ? plan.stylistId : (user?.stylistData?.id || allStylists[0]?.id);
+
+          // If stylistId doesn't start with 'TM', it's an old Supabase UUID - resolve it to the first stylist with a valid Square ID
+          if (stylistIdToBookFor && !String(stylistIdToBookFor).startsWith('TM')) {
+              const validStylist = allStylists.find(s => String(s.id).startsWith('TM'));
+              if (validStylist) {
+                  stylistIdToBookFor = validStylist.id;
+              }
+          }
 
           if (user?.role === 'stylist' && user.stylistData) {
               const loggedInStylist = allStylists.find(s => s.id === user.stylistData!.id);
