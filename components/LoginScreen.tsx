@@ -112,9 +112,13 @@ const LoginScreen: React.FC = () => {
       });
 
       const teamText = await teamRes.text();
+      console.log('Team sync response:', { status: teamRes.status, text: teamText });
       if (!teamRes.ok) {
         const data = teamText ? JSON.parse(teamText) : {};
-        throw new Error(data?.message || `Team sync failed (${teamRes.status})`);
+        console.warn('Team sync failed:', data?.message || `Team sync failed (${teamRes.status})`);
+        // Don't throw - team sync is not critical
+      } else {
+        console.log('Team sync succeeded');
       }
 
       // Sync clients via local API endpoint
@@ -128,9 +132,13 @@ const LoginScreen: React.FC = () => {
       });
 
       const clientText = await clientRes.text();
+      console.log('Client sync response:', { status: clientRes.status, text: clientText });
       if (!clientRes.ok) {
         const data = clientText ? JSON.parse(clientText) : {};
-        throw new Error(data?.message || `Client sync failed (${clientRes.status})`);
+        console.warn('Client sync failed:', data?.message || `Client sync failed (${clientRes.status})`);
+        // Don't throw - client sync is not critical
+      } else {
+        console.log('Client sync succeeded');
       }
 
       // Success - user is already authenticated via Supabase session
