@@ -62,8 +62,8 @@ export default async function handler(req: any, res: any) {
         return res.status(401).json({ message: 'Invalid user.' });
       }
     } else if (squareAccessToken) {
-      // Development mode: use a UUID-formatted dev user ID when token is provided directly
-      supabaseUserId = generateUUIDFromToken(squareAccessToken);
+      // For token-based sync, use the real admin account UID
+      supabaseUserId = '8766f1e4-4b99-4ea4-bf12-8ec8b6f59e53';
     } else {
       return res.status(401).json({ message: 'Missing auth token.' });
     }
