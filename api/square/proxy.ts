@@ -75,6 +75,11 @@ export default async function handler(req: any, res: any) {
     const hasBody =
       method !== 'GET' && method !== 'HEAD' && method !== 'DELETE';
 
+    const requestBody = hasBody ? JSON.stringify(req.body ?? {}) : undefined;
+
+    console.log(`[SQUARE PROXY] ${method} ${url}`);
+    console.log(`[SQUARE PROXY] Request body:`, requestBody);
+
     const squareResp = await fetch(url, {
       method,
       headers: {
@@ -82,7 +87,7 @@ export default async function handler(req: any, res: any) {
         'Content-Type': 'application/json',
         'Square-Version': '2023-10-20',
       },
-      body: hasBody ? JSON.stringify(req.body ?? {}) : undefined,
+      body: requestBody,
     });
 
     const text = await squareResp.text();
@@ -92,6 +97,9 @@ export default async function handler(req: any, res: any) {
     } catch {
       payload = { raw: text };
     }
+
+    console.log(`[SQUARE PROXY] Response status: ${squareResp.status}`);
+    console.log(`[SQUARE PROXY] Response:`, JSON.stringify(payload).substring(0, 500));
 
     return res.status(squareResp.status).json(payload);
   } catch (e: any) {
