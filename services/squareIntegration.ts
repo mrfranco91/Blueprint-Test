@@ -278,7 +278,6 @@ export const SquareIntegrationService = {
       // Add team member filter if available
       if (params.teamMemberId && params.teamMemberId.startsWith('TM')) {
           segmentFilter.team_member_id_filter = {
-              all: false,
               any: [params.teamMemberId]
           };
           console.log('[AVAILABILITY] Added team member filter:', params.teamMemberId);
