@@ -63,7 +63,7 @@ const LoginScreen: React.FC = () => {
     try {
       const { supabase } = await import('../lib/supabase');
 
-      // For manual token sync, we need to create a temporary user or use an existing session
+      // For manual token sync, we need a persistent Supabase user account
       let jwtToken: string | null = null;
 
       // Try to get existing session first
@@ -71,30 +71,39 @@ const LoginScreen: React.FC = () => {
       if (session?.session?.access_token) {
         jwtToken = session.session.access_token;
       } else {
-        // Create a temporary test account for manual sync
-        const tempEmail = `manual-sync-${Date.now()}@blueprint.local`;
-        const tempPassword = Math.random().toString(36).slice(-12);
+        // Use a persistent test account for manual sync (same credentials each time)
+        const tempEmail = 'manual-sync@blueprint.local';
+        const tempPassword = 'blueprint-manual-sync';
 
-        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+        // Try to sign in first (account may already exist)
+        let signInData = await supabase.auth.signInWithPassword({
           email: tempEmail,
           password: tempPassword,
         });
 
-        if (signUpErr && signUpErr.message !== 'User already registered') {
-          throw new Error(`Failed to create session: ${signUpErr.message}`);
+        // If sign in fails, create the account
+        if (signInData.error) {
+          const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+            email: tempEmail,
+            password: tempPassword,
+          });
+
+          if (signUpErr && signUpErr.message !== 'User already registered') {
+            throw new Error(`Failed to create session: ${signUpErr.message}`);
+          }
+
+          // Try signing in again after signup
+          signInData = await supabase.auth.signInWithPassword({
+            email: tempEmail,
+            password: tempPassword,
+          });
         }
 
-        // Sign in
-        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-          email: tempEmail,
-          password: tempPassword,
-        });
-
-        if (signInErr) {
-          throw new Error(`Failed to sign in: ${signInErr.message}`);
+        if (signInData.error) {
+          throw new Error(`Failed to sign in: ${signInData.error.message}`);
         }
 
-        jwtToken = signInData?.session?.access_token;
+        jwtToken = signInData?.data?.session?.access_token;
       }
 
       if (!jwtToken) {
