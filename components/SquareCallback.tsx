@@ -98,21 +98,27 @@ export default function SquareCallback() {
           console.warn('Client sync error:', syncErr);
         }
 
-        // Step 4: Send success message to opener window and close popup
+        // Step 4: Send success message to opener window
         if (window.opener && !window.opener.closed) {
           // This is a popup - send message to main window
+          console.log('Sending oauth-success message to opener...');
           window.opener.postMessage({ type: 'oauth-success' }, window.location.origin);
 
-          // Give the main window time to receive the message, then close popup
+          // Show success message in popup and try to close
+          setError(null);
+
+          // Try to close the popup after a short delay
           setTimeout(() => {
-            try {
-              window.close();
-            } catch (e) {
-              console.error('Could not close popup:', e);
-              // If we can't close, at least show a message
-              setError('Authentication successful! You can close this window.');
+            console.log('Attempting to close popup...');
+            window.close();
+          }, 2000);
+
+          // If close doesn't work, show a friendly message
+          setTimeout(() => {
+            if (!window.closed) {
+              setError('Authentication successful! You can close this window now.');
             }
-          }, 1000);
+          }, 2500);
         } else {
           // This is a direct navigation - redirect to admin
           window.location.replace('/admin');
