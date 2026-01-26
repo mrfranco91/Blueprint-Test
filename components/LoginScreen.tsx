@@ -65,7 +65,6 @@ const LoginScreen: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwtToken}`,
         },
         body: JSON.stringify({ squareAccessToken: token }),
       });
@@ -85,7 +84,6 @@ const LoginScreen: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwtToken}`,
         },
         body: JSON.stringify({ squareAccessToken: token }),
       });
@@ -100,8 +98,7 @@ const LoginScreen: React.FC = () => {
         console.log('Client sync succeeded');
       }
 
-      // Success - user is already authenticated via Supabase session
-      // Don't call login('admin') - that would create a mock user and lose the real session
+      // Success - redirect to admin without creating Supabase auth users
       localStorage.removeItem('mock_admin_user');
       window.location.href = '/admin';
     } catch (err) {
