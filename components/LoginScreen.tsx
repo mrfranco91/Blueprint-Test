@@ -12,23 +12,7 @@ const LoginScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-
-  // Detect if we're in local development
-  const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-  // Use sandbox credentials locally, production credentials otherwise
-  const squareAppId = isLocalDev
-    ? 'sandbox-sq0idb-bAxH8Wu8_6HnCSCYzfPEEg'
-    : (import.meta as any).env.VITE_SQUARE_APPLICATION_ID ||
-      (import.meta as any).env.VITE_SQUARE_CLIENT_ID;
-
   const squareRedirectUri = (import.meta as any).env.VITE_SQUARE_REDIRECT_URI;
-  const squareEnv = isLocalDev ? 'sandbox' : ((import.meta as any).env.VITE_SQUARE_ENV || 'production').toLowerCase();
-
-  const scopes =
-    ((import.meta as any).env.VITE_SQUARE_OAUTH_SCOPES as string | undefined) ??
-    'MERCHANT_PROFILE_READ EMPLOYEES_READ ITEMS_READ CUSTOMERS_READ CUSTOMERS_WRITE APPOINTMENTS_READ APPOINTMENTS_ALL_READ APPOINTMENTS_WRITE SUBSCRIPTIONS_READ SUBSCRIPTIONS_WRITE';
 
   const startSquareOAuth = () => {
     // Use server-side OAuth start endpoint for secure state handling
