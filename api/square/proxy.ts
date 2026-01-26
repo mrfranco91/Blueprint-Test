@@ -78,7 +78,14 @@ export default async function handler(req: any, res: any) {
     const requestBody = hasBody ? JSON.stringify(req.body ?? {}) : undefined;
 
     console.log(`[SQUARE PROXY] ${method} ${url}`);
-    console.log(`[SQUARE PROXY] Request body:`, requestBody?.substring(0, 500));
+    if (requestBody) {
+        try {
+            const parsed = JSON.parse(requestBody);
+            console.log(`[SQUARE PROXY] Request body:`, JSON.stringify(parsed, null, 2));
+        } catch {
+            console.log(`[SQUARE PROXY] Request body:`, requestBody);
+        }
+    }
 
     const squareResp = await fetch(url, {
       method,
