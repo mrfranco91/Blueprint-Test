@@ -23,7 +23,7 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
     const headers: any = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Square-Version': '2023-10-20',
+        'Square-Version': '2025-10-16',
     };
 
     // If we have a Supabase session, use it; otherwise the proxy will fall back to stored token
