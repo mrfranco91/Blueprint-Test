@@ -64,25 +64,30 @@ const LoginScreen: React.FC = () => {
 
     // Listen for messages from the OAuth callback popup
     const handleOAuthMessage = (event: MessageEvent) => {
+      console.log('Message event received:', {
+        origin: event.origin,
+        windowOrigin: window.location.origin,
+        data: event.data,
+      });
+
       // Verify the message is from our OAuth popup
       if (event.origin !== window.location.origin) {
         console.log('Ignoring message from different origin:', event.origin);
         return;
       }
 
-      console.log('Received message from popup:', event.data);
+      console.log('Processing message from popup:', event.data);
 
       if (event.data?.type === 'oauth-success') {
-        console.log('✓ OAuth authentication successful');
+        console.log('✓ OAuth authentication successful, reloading...');
         // Remove the message listener
         window.removeEventListener('message', handleOAuthMessage);
         if (checkPopupClosed) clearInterval(checkPopupClosed);
 
         // Reload the page to check the session
-        console.log('Reloading page...');
         setTimeout(() => {
           window.location.reload();
-        }, 500);
+        }, 100);
       } else if (event.data?.type === 'oauth-error') {
         console.error('OAuth error:', event.data.message);
         window.removeEventListener('message', handleOAuthMessage);
