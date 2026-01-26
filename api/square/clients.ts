@@ -68,21 +68,53 @@ export default async function handler(req: any, res: any) {
       return res.status(401).json({ message: 'Missing auth token.' });
     }
 
+    // If token not provided in request, try to fetch from merchant_settings
+    let merchantId: string | undefined;
+
     if (!squareAccessToken) {
       const { data: ms, error: msErr } = await supabaseAdmin
         .from('merchant_settings')
-        .select('square_access_token')
+        .select('id, square_access_token')
         .eq('supabase_user_id', supabaseUserId)
         .maybeSingle();
 
       if (msErr || !ms?.square_access_token) {
         console.error('[CLIENT SYNC] merchant_settings lookup failed:', msErr);
         return res.status(401).json({
-          message: 'Missing Square connection for user.',
+          message: 'Missing Square access token in request or merchant settings.',
         });
       }
 
       squareAccessToken = ms.square_access_token;
+      merchantId = ms.id;
+      console.log('[CLIENT SYNC] Token from merchant_settings:', squareAccessToken ? '✓' : '✗');
+    } else {
+      console.log('[CLIENT SYNC] Token from request body:', squareAccessToken ? '✓' : '✗');
+
+      // If token provided but no merchant_settings exists, create it
+      const { data: ms } = await supabaseAdmin
+        .from('merchant_settings')
+        .select('id')
+        .eq('supabase_user_id', supabaseUserId)
+        .maybeSingle();
+
+      if (!ms?.id) {
+        const { data: newMerchant } = await supabaseAdmin
+          .from('merchant_settings')
+          .insert([{
+            supabase_user_id: supabaseUserId,
+            square_access_token: squareAccessToken,
+            settings: {},
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }])
+          .select('id')
+          .single();
+        merchantId = newMerchant?.id;
+        console.log('[CLIENT SYNC] Created merchant_settings with ID:', merchantId);
+      } else {
+        merchantId = ms.id;
+      }
     }
 
     const squareRes = await fetch(
