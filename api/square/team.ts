@@ -134,7 +134,6 @@ export default async function handler(req: any, res: any) {
         .from('merchant_settings')
         .update({
           square_access_token: squareAccessToken,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', merchantId);
 
