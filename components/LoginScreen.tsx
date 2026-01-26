@@ -139,13 +139,30 @@ const LoginScreen: React.FC = () => {
       // Success - verify session is persisted before redirecting
       localStorage.removeItem('mock_admin_user');
 
-      // Verify the session was actually created
-      const { data: sessionCheck } = await supabase.auth.getSession();
+      // Verify the session was actually created (with retry for timing issues)
+      let sessionCheck = null;
+      let retries = 0;
+      while (retries < 5) {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+          sessionCheck = data;
+          break;
+        }
+        retries++;
+        if (retries < 5) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
       if (!sessionCheck?.session) {
+        console.error('Session check failed after retries', sessionCheck);
         throw new Error('Session was not created. Please try again.');
       }
 
-      console.log('✓ Session verified, redirecting to admin');
+      console.log('✓ Session verified, redirecting to admin', {
+        userId: sessionCheck.session.user.id,
+        email: sessionCheck.session.user.email,
+      });
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
