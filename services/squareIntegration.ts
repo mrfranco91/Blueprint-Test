@@ -266,7 +266,10 @@ export const SquareIntegrationService = {
       console.log('[BOOKING AVAILABILITY] Request:', {
           location_id: params.locationId,
           service_variation_id: params.serviceVariationId,
-          start_at: params.startAt
+          team_member_id: params.teamMemberId,
+          start_at: params.startAt,
+          end_at: endAtFormatted,
+          body: body
       });
       const data: any = await squareApiFetch('/v2/bookings/availability/search', { method: 'POST', body });
       const slots = (data.availabilities || [])
