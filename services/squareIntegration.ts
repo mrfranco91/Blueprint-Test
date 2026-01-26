@@ -264,21 +264,11 @@ export const SquareIntegrationService = {
 
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
 
-      const segment_filter: {
-          service_variation_id: string;
-          team_member_id_filter?: { any: string[] };
-      } = {
+      // For availability search, we don't filter by team member
+      // Square's availability endpoint returns available slots regardless of team member
+      const segment_filter = {
           service_variation_id: params.serviceVariationId,
       };
-
-      const teamMemberId = params.teamMemberId;
-      const isInvalidForFilter = !teamMemberId || teamMemberId.startsWith('TM-') || teamMemberId === 'admin' || teamMemberId.length < 10;
-
-      console.log('[BOOKING] Team member ID:', teamMemberId, 'isInvalidForFilter:', isInvalidForFilter);
-
-      if (!isInvalidForFilter) {
-          segment_filter.team_member_id_filter = { any: [teamMemberId] };
-      }
 
       const body = {
           query: {
@@ -293,7 +283,11 @@ export const SquareIntegrationService = {
           }
       };
 
-      console.log('[BOOKING AVAILABILITY] Request body:', JSON.stringify(body, null, 2));
+      console.log('[BOOKING AVAILABILITY] Request:', {
+          location_id: params.locationId,
+          service_variation_id: params.serviceVariationId,
+          start_at: params.startAt
+      });
       const data: any = await squareApiFetch('/v2/bookings/availability/search', { method: 'POST', body });
       const slots = (data.availabilities || [])
           .map((a: any) => a.start_at);
