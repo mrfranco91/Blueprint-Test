@@ -63,11 +63,11 @@ const LoginScreen: React.FC = () => {
     let checkPopupClosed: ReturnType<typeof setInterval> | null = null;
 
     // Listen for messages from the OAuth callback popup
-    const handleOAuthMessage = (event: MessageEvent) => {
+    const handleOAuthMessage = async (event: MessageEvent) => {
       console.log('Message event received:', {
         origin: event.origin,
         windowOrigin: window.location.origin,
-        data: event.data,
+        dataType: event.data?.type,
       });
 
       // Verify the message is from our OAuth popup
@@ -78,16 +78,69 @@ const LoginScreen: React.FC = () => {
 
       console.log('Processing message from popup:', event.data);
 
-      if (event.data?.type === 'oauth-success') {
-        console.log('✓ OAuth authentication successful, reloading...');
-        // Remove the message listener
+      if (event.data?.type === 'SQUARE_OAUTH_SUCCESS') {
+        console.log('✓ Received OAuth authorization code from popup');
+
+        // Remove the message listeners
         window.removeEventListener('message', handleOAuthMessage);
+        window.removeEventListener('storage', handleStorageChange);
         if (checkPopupClosed) clearInterval(checkPopupClosed);
 
-        // Reload the page to check the session
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
+        try {
+          // Exchange the authorization code for tokens on the parent window's session
+          const { supabase } = await import('../lib/supabase');
+          const code = event.data.code;
+
+          const tokenRes = await fetch('/api/square/oauth/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+          });
+
+          const tokenData = await tokenRes.json();
+          if (!tokenRes.ok) {
+            throw new Error(tokenData?.message || 'Failed to exchange code');
+          }
+
+          const { access_token: squareToken, merchant_id } = tokenData;
+
+          // Sign in with the merchant account
+          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+            email: `${merchant_id}@square-oauth.blueprint`,
+            password: merchant_id,
+          });
+
+          if (authErr || !authData?.session?.access_token) {
+            throw new Error(authErr?.message || 'Failed to sign in');
+          }
+
+          const jwtToken = authData.session.access_token;
+
+          // Sync team and clients
+          await fetch('/api/square/team', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify({ squareAccessToken: squareToken }),
+          });
+
+          await fetch('/api/square/clients', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify({ squareAccessToken: squareToken }),
+          });
+
+          console.log('✓ OAuth flow complete, redirecting to admin');
+          window.location.href = '/admin';
+        } catch (err) {
+          console.error('OAuth token exchange failed:', err);
+          setError(err instanceof Error ? err.message : 'Authentication failed');
+        }
       } else if (event.data?.type === 'oauth-error') {
         console.error('OAuth error:', event.data.message);
         window.removeEventListener('message', handleOAuthMessage);
