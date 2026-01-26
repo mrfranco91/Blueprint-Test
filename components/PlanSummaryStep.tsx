@@ -21,6 +21,13 @@ type TimePeriod = 'morning' | 'afternoon' | 'evening' | 'all';
 type DeliveryMethod = 'sms' | 'email' | 'link';
 
 const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPlan }) => {
+  // Log plan details for debugging
+  console.log('[PLAN SUMMARY] Plan loaded:', {
+    clientName: plan.client.name,
+    appointmentCount: plan.appointments.length,
+    services: plan.appointments[0]?.services.map(s => ({ name: s.name, id: s.id })) || []
+  });
+
   const [isMembershipModalOpen, setMembershipModalOpen] = useState(false);
   const [isBookingModalOpen, setBookingModalOpen] = useState(false);
   
