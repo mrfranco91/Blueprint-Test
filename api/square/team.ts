@@ -130,6 +130,23 @@ export default async function handler(req: any, res: any) {
         merchantId = newMerchant?.id;
         console.log('[TEAM SYNC] Created merchant_settings with ID:', merchantId);
       }
+    } else if (squareAccessToken && merchantId) {
+      // If token was provided and merchant_settings already exists, update the token
+      console.log('[TEAM SYNC] Updating merchant_settings token for user:', supabaseUserId);
+      const { error: updateErr } = await supabaseAdmin
+        .from('merchant_settings')
+        .update({
+          square_access_token: squareAccessToken,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', merchantId);
+
+      if (updateErr) {
+        console.error('[TEAM SYNC] Failed to update merchant_settings:', updateErr);
+        // Continue anyway - we have the token
+      } else {
+        console.log('[TEAM SYNC] Updated merchant_settings token');
+      }
     }
 
     /* -------------------------------------------------
