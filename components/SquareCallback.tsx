@@ -104,6 +104,14 @@ export default function SquareCallback() {
           console.log('Sending oauth-success message to opener...');
           window.opener.postMessage({ type: 'oauth-success' }, window.location.origin);
 
+          // Also use localStorage as a backup communication method
+          try {
+            localStorage.setItem('oauth-success', Date.now().toString());
+            console.log('Set localStorage oauth-success flag');
+          } catch (e) {
+            console.error('Could not set localStorage:', e);
+          }
+
           // Show success message in popup
           setError(null);
 
