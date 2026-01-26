@@ -20,25 +20,6 @@ type BookingStep = 'select-visit' | 'select-date' | 'select-period' | 'select-sl
 type TimePeriod = 'morning' | 'afternoon' | 'evening' | 'all';
 type DeliveryMethod = 'sms' | 'email' | 'link';
 
-// Helper function to find matching service with fuzzy matching
-const findMatchingService = (requestedName: string, catalog: Service[]): Service | undefined => {
-  // Try exact match first
-  let match = catalog.find(s => s.name === requestedName);
-  if (match) return match;
-
-  // Try fuzzy matching by looking for key words
-  const requestedWords = requestedName.toLowerCase().split(/\s+/);
-  match = catalog.find(s => {
-    const catalogName = s.name.toLowerCase();
-    // Check if first word matches and at least one other word matches
-    return requestedWords.length > 0 &&
-           catalogName.includes(requestedWords[0]) &&
-           requestedWords.some(word => catalogName.includes(word));
-  });
-
-  return match;
-};
-
 const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPlan }) => {
   const [isMembershipModalOpen, setMembershipModalOpen] = useState(false);
   const [isBookingModalOpen, setBookingModalOpen] = useState(false);
