@@ -1,119 +1,150 @@
-import express from 'express';
-import { createServer as createViteServer } from 'vite';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import http from 'http';
+import url from 'url';
+import { readFileSync } from 'fs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Simple request/response wrapper to mimic Node.js HTTP API
+class MockRequest {
+  constructor(nodeReq) {
+    this.method = nodeReq.method;
+    this.url = nodeReq.url;
+    this.headers = nodeReq.headers;
+    this.query = {};
+    this.body = null;
 
-// Create Express app for API routes
-const apiApp = express();
-apiApp.use(express.json());
-apiApp.use(express.text({ type: 'text/plain' }));
-
-// CORS middleware
-apiApp.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-square-access-token');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    const parsed = url.parse(nodeReq.url, true);
+    this.query = parsed.query;
   }
-  next();
-});
 
-// Import API handlers
-const loadHandler = async (modulePath) => {
-  try {
-    const module = await import(modulePath);
-    return module.default;
-  } catch (err) {
-    console.error(`Failed to load handler from ${modulePath}:`, err);
-    throw err;
+  async json() {
+    if (!this.body) {
+      this.body = '';
+    }
+    return JSON.parse(this.body);
   }
-};
 
-// API Routes
-apiApp.post('/api/square/team', async (req, res) => {
-  try {
-    const handler = await loadHandler(path.join(__dirname, 'api/square/team.ts'));
-    return handler(req, res);
-  } catch (err) {
-    console.error('Team endpoint error:', err);
-    res.status(500).json({ message: err.message });
+  async text() {
+    if (!this.body) {
+      this.body = '';
+    }
+    return this.body;
   }
-});
+}
 
-apiApp.post('/api/square/clients', async (req, res) => {
-  try {
-    const handler = await loadHandler(path.join(__dirname, 'api/square/clients.ts'));
-    return handler(req, res);
-  } catch (err) {
-    console.error('Clients endpoint error:', err);
-    res.status(500).json({ message: err.message });
+class MockResponse {
+  constructor(nodeRes) {
+    this.nodeRes = nodeRes;
+    this.statusCode = 200;
+    this.headers = {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-square-access-token',
+    };
   }
-});
 
-apiApp.all('/api/square/proxy', async (req, res) => {
-  try {
-    const handler = await loadHandler(path.join(__dirname, 'api/square/proxy.ts'));
-    return handler(req, res);
-  } catch (err) {
-    console.error('Proxy endpoint error:', err);
-    res.status(500).json({ message: err.message });
+  setHeader(key, value) {
+    this.headers[key] = value;
   }
-});
 
-apiApp.get('/api/square/oauth/start', async (req, res) => {
-  try {
-    const handler = await loadHandler(path.join(__dirname, 'api/square/oauth/start.ts'));
-    return handler(req, res);
-  } catch (err) {
-    console.error('OAuth start endpoint error:', err);
-    res.status(500).json({ message: err.message });
+  writeHead(statusCode, headers) {
+    this.statusCode = statusCode;
+    if (headers) {
+      Object.assign(this.headers, headers);
+    }
   }
-});
 
-apiApp.post('/api/square/oauth/token', async (req, res) => {
-  try {
-    const handler = await loadHandler(path.join(__dirname, 'api/square/oauth/token.ts'));
-    return handler(req, res);
-  } catch (err) {
-    console.error('OAuth token endpoint error:', err);
-    res.status(500).json({ message: err.message });
+  status(code) {
+    this.statusCode = code;
+    return this;
   }
-});
 
-apiApp.get('/api/square/get-token', async (req, res) => {
-  try {
-    const handler = await loadHandler(path.join(__dirname, 'api/square/get-token.ts'));
-    return handler(req, res);
-  } catch (err) {
-    console.error('Get token endpoint error:', err);
-    res.status(500).json({ message: err.message });
+  json(data) {
+    this.setHeader('Content-Type', 'application/json');
+    this.nodeRes.writeHead(this.statusCode, this.headers);
+    this.nodeRes.end(JSON.stringify(data));
   }
-});
 
-// Start API server
-const apiPort = 3001;
-apiApp.listen(apiPort, '0.0.0.0', () => {
-  console.log(`API server running on http://localhost:${apiPort}`);
-});
+  end(data) {
+    this.nodeRes.writeHead(this.statusCode, this.headers);
+    this.nodeRes.end(data);
+  }
 
-// Also create a combined dev server that proxies to Vite
-const createDevServer = async () => {
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
+  redirect(code, url) {
+    this.statusCode = code;
+    this.setHeader('Location', url);
+    this.nodeRes.writeHead(this.statusCode, this.headers);
+    this.nodeRes.end();
+  }
+}
+
+const server = http.createServer(async (nodeReq, nodeRes) => {
+  // CORS preflight
+  if (nodeReq.method === 'OPTIONS') {
+    nodeRes.writeHead(200, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-square-access-token',
+    });
+    nodeRes.end();
+    return;
+  }
+
+  const pathname = url.parse(nodeReq.url, true).pathname;
+  const req = new MockRequest(nodeReq);
+  const res = new MockResponse(nodeRes);
+
+  // Read body
+  let body = '';
+  nodeReq.on('data', (chunk) => {
+    body += chunk.toString();
   });
 
-  const app = express();
-  app.use(apiApp);
-  app.use(vite.middlewares);
+  nodeReq.on('end', async () => {
+    req.body = body;
 
-  const devPort = 3000;
-  app.listen(devPort, '0.0.0.0', () => {
-    console.log(`Dev server running on http://localhost:${devPort}`);
+    try {
+      // Load and execute handler
+      if (pathname === '/api/square/team') {
+        const { default: handler } = await import('./api/square/team.ts');
+        return handler(req, res);
+      }
+
+      if (pathname === '/api/square/clients') {
+        const { default: handler } = await import('./api/square/clients.ts');
+        return handler(req, res);
+      }
+
+      if (pathname === '/api/square/proxy') {
+        const { default: handler } = await import('./api/square/proxy.ts');
+        return handler(req, res);
+      }
+
+      if (pathname === '/api/square/oauth/start') {
+        const { default: handler } = await import('./api/square/oauth/start.ts');
+        return handler(req, res);
+      }
+
+      if (pathname === '/api/square/oauth/token') {
+        const { default: handler } = await import('./api/square/oauth/token.ts');
+        return handler(req, res);
+      }
+
+      if (pathname === '/api/square/get-token') {
+        const { default: handler } = await import('./api/square/get-token.ts');
+        return handler(req, res);
+      }
+
+      res.statusCode = 404;
+      res.json({ message: `Endpoint ${pathname} not found` });
+    } catch (error) {
+      console.error(`Error handling ${pathname}:`, error);
+      res.statusCode = 500;
+      res.json({ message: error.message || 'Internal server error' });
+    }
   });
-};
+});
 
-createDevServer().catch(console.error);
+const port = 3001;
+server.listen(port, '0.0.0.0', () => {
+  console.log(`API server ready on http://localhost:${port}`);
+});
