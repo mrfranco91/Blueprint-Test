@@ -137,7 +137,7 @@ export default async function handler(req: any, res: any) {
     const password = merchant_id;
 
     let {
-      data: { user },
+      data: { user, session },
       error,
     } = await supabaseAdmin.auth.signInWithPassword({ email, password });
 
@@ -155,10 +155,12 @@ export default async function handler(req: any, res: any) {
         const retrySignIn = await supabaseAdmin.auth.signInWithPassword({ email, password });
         if (retrySignIn.error) throw retrySignIn.error;
         user = retrySignIn.data.user;
+        session = retrySignIn.data.session;
       } else if (signUp.error) {
         throw signUp.error;
       } else {
         user = signUp.data.user;
+        session = signUp.data.session;
       }
     }
 
@@ -176,32 +178,17 @@ export default async function handler(req: any, res: any) {
         { onConflict: 'supabase_user_id' }
       );
 
-    // Get the session for the authenticated user
-    const { data: { session } } = await supabaseAdmin.auth.getSession();
-
-    // If no session, create one by getting the user's tokens
-    let authSession = session;
-    if (!authSession) {
-      // Directly create tokens for this user
-      const { data: tokenData, error: tokenError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        email,
-      });
-
-      if (tokenError) {
-        console.error('Could not generate token:', tokenError);
-      }
-    }
-
-    // ✅ RESTORED: payload frontend expects to bootstrap app state
+    // ✅ Return session tokens so frontend can authenticate without re-signing-in
     return res.status(200).json({
       merchant_id,
       business_name,
       access_token,
-      user: {
-        id: user.id,
-        email: user.email,
-      },
+      supabase_session: session
+        ? {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          }
+        : null,
     });
 
   } catch (e: any) {
