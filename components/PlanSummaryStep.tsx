@@ -242,10 +242,11 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
             throw new Error(`No service selected for this visit.`);
         }
 
-        // Map the mock service name to a real Square service
-        const squareService = allServices.find(s => s.name === mockService.name);
+        // Fetch fresh catalog from Square to get real service variation IDs
+        const squareCatalog = await SquareIntegrationService.fetchCatalog();
+        const squareService = squareCatalog.find(s => s.name === mockService.name);
         if (!squareService || !squareService.id) {
-            throw new Error(`Could not find service "${mockService.name}" in Square catalog. Make sure your service catalog is synced.`);
+            throw new Error(`Could not find service "${mockService.name}" in Square catalog. Make sure your service catalog is synced in Square.`);
         }
 
         const searchStart = new Date(bookingDate);
