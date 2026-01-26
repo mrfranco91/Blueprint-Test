@@ -274,10 +274,8 @@ export const SquareIntegrationService = {
           service_variation_id: params.serviceVariationId,
       };
 
-      // Only add team member filter if we have a valid team member ID
-      if (params.teamMemberId && !params.teamMemberId.startsWith('TM-') && params.teamMemberId !== 'admin') {
-          segment_filter.team_member_id_filter = { any: [params.teamMemberId] };
-      }
+      // Note: Removed team_member_id_filter due to Square API 400 errors
+      // Will fetch all available slots and filter on client side if needed
 
       const body = {
           query: {
