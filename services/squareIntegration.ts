@@ -58,60 +58,12 @@ export const SquareIntegrationService = {
   formatDate(date: Date, timezone: string = 'UTC') {
     if (!date || isNaN(date.getTime())) {
         const now = new Date();
-        // Return default format for invalid dates
         return now.toISOString().split('.')[0] + 'Z';
     }
 
-    // Square API requires dates in RFC 3339 format without milliseconds
-    // For local times with timezone, format: 2026-02-20T00:00:00-08:00
-    // For UTC times, format: 2026-03-22T08:00:00Z
-
-    if (timezone && timezone !== 'UTC') {
-        // Get date/time parts in the specified timezone
-        const formatter = new Intl.DateTimeFormat('en-CA', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hourCycle: 'h23',
-            timeZone: timezone
-        });
-
-        const parts = formatter.formatToParts(date);
-        const dateObj: any = {};
-        parts.forEach(part => {
-            if (['year', 'month', 'day', 'hour', 'minute', 'second'].includes(part.type)) {
-                dateObj[part.type] = part.value;
-            }
-        });
-
-        // Calculate timezone offset by comparing UTC and local time
-        // Create a reference date in UTC
-        const utcString = date.getUTCFullYear() + '-' +
-            String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
-            String(date.getUTCDate()).padStart(2, '0') + 'T' +
-            String(date.getUTCHours()).padStart(2, '0') + ':' +
-            String(date.getUTCMinutes()).padStart(2, '0') + ':' +
-            String(date.getUTCSeconds()).padStart(2, '0');
-
-        // Compare to get offset
-        const utcDate = new Date(utcString);
-        const localStr = dateObj.year + '-' + dateObj.month + '-' + dateObj.day + 'T' +
-            dateObj.hour + ':' + dateObj.minute + ':' + dateObj.second;
-        const localDate = new Date(localStr);
-
-        const offsetMs = localDate.getTime() - utcDate.getTime();
-        const offsetHours = Math.floor(offsetMs / (60 * 60 * 1000));
-        const offsetMins = Math.floor(Math.abs(offsetMs % (60 * 60 * 1000)) / (60 * 1000));
-        const offsetSign = offsetHours >= 0 ? '+' : '-';
-        const offsetStr = `${offsetSign}${String(Math.abs(offsetHours)).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
-
-        return `${dateObj.year}-${dateObj.month}-${dateObj.day}T${dateObj.hour}:${dateObj.minute}:${dateObj.second}${offsetStr}`;
-    }
-
-    // UTC format with Z suffix, no milliseconds
+    // Square API requires RFC 3339 format without milliseconds
+    // Simply use ISO format with Z suffix for UTC
+    // The timezone parameter is accepted but we use UTC for compatibility
     return date.toISOString().split('.')[0] + 'Z';
   },
   
