@@ -140,16 +140,20 @@ export const SquareIntegrationService = {
             const priceMoney = variation.item_variation_data.price_money;
             const durationMs = variation.item_variation_data.service_duration;
 
+            const serviceName = `${item.item_data.name}${variation.item_variation_data.name !== 'Regular' ? ` - ${variation.item_variation_data.name}` : ''}`.trim();
+
             services.push({
                 id: variation.id,
                 version: variation.version,
-                name: `${item.item_data.name}${variation.item_variation_data.name !== 'Regular' ? ` - ${variation.item_variation_data.name}` : ''}`.trim(),
+                name: serviceName,
                 category: categoryObj?.category_data?.name || 'Uncategorized',
                 cost: priceMoney ? Number(priceMoney.amount) / 100 : 0,
                 duration: durationMs ? durationMs / 1000 / 60 : 0,
             });
         }
     });
+
+    console.log('[CATALOG] Available services:', services.map(s => ({ name: s.name, id: s.id })));
     return services;
   },
 
