@@ -257,7 +257,12 @@ export const SquareIntegrationService = {
       const startDate = new Date(params.startAt);
       if (isNaN(startDate.getTime())) throw new Error("Invalid start time passed to Square.");
 
-      const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000)); 
+      // Validate that service variation ID doesn't start with 's' (mock ID)
+      if (params.serviceVariationId.startsWith('s')) {
+          throw new Error(`Invalid service ID: ${params.serviceVariationId}. Service catalog may not be synced from Square. Please ensure your salon's services are synced in Square Bookings settings.`);
+      }
+
+      const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
 
       const segment_filter: {
           service_variation_id: string;
@@ -267,7 +272,9 @@ export const SquareIntegrationService = {
       };
 
       const teamMemberId = params.teamMemberId;
-      const isInvalidForFilter = !teamMemberId || teamMemberId.startsWith('TM-') || teamMemberId === 'admin';
+      const isInvalidForFilter = !teamMemberId || teamMemberId.startsWith('TM-') || teamMemberId === 'admin' || teamMemberId.length < 10;
+
+      console.log('[BOOKING] Team member ID:', teamMemberId, 'isInvalidForFilter:', isInvalidForFilter);
 
       if (!isInvalidForFilter) {
           segment_filter.team_member_id_filter = { any: [teamMemberId] };
