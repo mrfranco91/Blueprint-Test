@@ -111,9 +111,19 @@ export default function SquareCallback() {
         }
       } catch (err) {
         console.error('Square OAuth callback failed:', err);
-        setError(
-          err instanceof Error ? err.message : 'Square login failed. Please return to the app and try connecting again.'
-        );
+        const errorMessage = err instanceof Error ? err.message : 'Square login failed';
+        setError(errorMessage + '. Please return to the app and try connecting again.');
+
+        // Send error message to opener if this is a popup
+        if (window.opener) {
+          window.opener.postMessage(
+            { type: 'oauth-error', message: errorMessage },
+            window.location.origin
+          );
+          setTimeout(() => {
+            window.close();
+          }, 2000);
+        }
       }
     })();
   }, []);
