@@ -94,7 +94,7 @@ export default async function handler(req: any, res: any) {
       headers: {
         Authorization: `Bearer ${squareAccessToken}`,
         'Content-Type': 'application/json',
-        'Square-Version': '2023-10-20',
+        'Square-Version': '2025-10-16',
       },
       body: requestBody,
     });
