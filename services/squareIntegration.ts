@@ -258,7 +258,12 @@ export const SquareIntegrationService = {
                   start_at_range: {
                       start_at: params.startAt,
                       end_at: endAtFormatted
-                  }
+                  },
+                  segment_filters: [
+                      {
+                          service_variation_id: params.serviceVariationId
+                      }
+                  ]
               }
           }
       };
