@@ -136,12 +136,16 @@ const LoginScreen: React.FC = () => {
         console.log('Client sync succeeded');
       }
 
-      // Success - wait for auth state to propagate before redirecting
+      // Success - verify session is persisted before redirecting
       localStorage.removeItem('mock_admin_user');
 
-      // Give Supabase time to persist the session and allow auth listeners to fire
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Verify the session was actually created
+      const { data: sessionCheck } = await supabase.auth.getSession();
+      if (!sessionCheck?.session) {
+        throw new Error('Session was not created. Please try again.');
+      }
 
+      console.log('✓ Session verified, redirecting to admin');
       window.location.href = '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
