@@ -230,9 +230,19 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
         console.log('[BOOKING] Looking for service ID', serviceVariationId, '- found:', !!existingService);
 
         if (!existingService) {
-            // Service ID not found - look it up by exact name match
+            // Service ID not found - try exact name match first, then case-insensitive
             console.log('[BOOKING] Trying to find by name:', serviceToBook.name);
-            const squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+            let squareService = squareCatalog.find(s => s.name === serviceToBook.name);
+
+            // If exact match fails, try case-insensitive match
+            if (!squareService) {
+                const searchName = serviceToBook.name.toLowerCase();
+                squareService = squareCatalog.find(s => s.name.toLowerCase() === searchName);
+                if (squareService) {
+                    console.log('[BOOKING] Found by case-insensitive name match:', serviceToBook.name, '->', squareService.name);
+                }
+            }
+
             console.log('[BOOKING] Found by name:', !!squareService);
             if (!squareService || !squareService.id) {
                 const availableServices = squareCatalog.map(s => s.name).join(', ');
