@@ -262,13 +262,16 @@ export const SquareIntegrationService = {
           segment_filter.team_member_id_filter = { any: [teamMemberId] };
       }
 
+      // Format end_at the same way as start_at - no milliseconds, with Z
+      const endAtFormatted = endDate.toISOString().split('.')[0] + 'Z';
+
       const body = {
           query: {
               filter: {
                   location_id: params.locationId,
                   start_at_range: {
                       start_at: params.startAt,
-                      end_at: endDate.toISOString()
+                      end_at: endAtFormatted
                   },
                   segment_filters: [segment_filter]
               }
