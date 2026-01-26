@@ -248,6 +248,20 @@ export const SquareIntegrationService = {
 
       const endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
 
+      const segment_filter: {
+          service_variation_id: string;
+          team_member_id_filter?: { any: string[] };
+      } = {
+          service_variation_id: params.serviceVariationId,
+      };
+
+      const teamMemberId = params.teamMemberId;
+      const isInvalidForFilter = !teamMemberId || teamMemberId.startsWith('TM-') || teamMemberId === 'admin';
+
+      if (!isInvalidForFilter) {
+          segment_filter.team_member_id_filter = { any: [teamMemberId] };
+      }
+
       // Format end_at the same way as start_at - no milliseconds, with Z
       const endAtFormatted = endDate.toISOString().split('.')[0] + 'Z';
 
@@ -259,11 +273,7 @@ export const SquareIntegrationService = {
                       start_at: params.startAt,
                       end_at: endAtFormatted
                   },
-                  segment_filters: [
-                      {
-                          service_variation_id: params.serviceVariationId
-                      }
-                  ]
+                  segment_filters: [segment_filter]
               }
           }
       };
