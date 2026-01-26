@@ -52,63 +52,13 @@ const LoginScreen: React.FC = () => {
       return;
     }
 
-    if (!supabaseUrl) {
-      setError('Supabase URL is not configured');
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      const { supabase } = await import('../lib/supabase');
-
-      // For manual token sync, we need a persistent Supabase user account
-      let jwtToken: string | null = null;
-
-      // Try to get existing session first
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session?.access_token) {
-        jwtToken = session.session.access_token;
-      } else {
-        // Use a persistent test account for manual sync (same credentials each time)
-        const tempEmail = 'manual-sync@blueprint.local';
-        const tempPassword = 'blueprint-manual-sync';
-
-        // Try to sign in first (account may already exist)
-        let signInData = await supabase.auth.signInWithPassword({
-          email: tempEmail,
-          password: tempPassword,
-        });
-
-        // If sign in fails, create the account
-        if (signInData.error) {
-          const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-            email: tempEmail,
-            password: tempPassword,
-          });
-
-          if (signUpErr && signUpErr.message !== 'User already registered') {
-            throw new Error(`Failed to create session: ${signUpErr.message}`);
-          }
-
-          // Try signing in again after signup
-          signInData = await supabase.auth.signInWithPassword({
-            email: tempEmail,
-            password: tempPassword,
-          });
-        }
-
-        if (signInData.error) {
-          throw new Error(`Failed to sign in: ${signInData.error.message}`);
-        }
-
-        jwtToken = signInData?.data?.session?.access_token;
-      }
-
-      if (!jwtToken) {
-        throw new Error('Failed to obtain authentication token');
-      }
+      // For manual token sync, use the token directly without creating Supabase auth users
+      // This prevents duplicate user creation on each sync
+      // The team.ts and clients.ts endpoints will use generateUUIDFromToken for consistent identification
 
       // Sync team members via local API endpoint
       const teamRes = await fetch('/api/square/team', {
