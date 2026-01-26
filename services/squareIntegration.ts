@@ -86,11 +86,23 @@ export const SquareIntegrationService = {
   },
 
   fetchCatalog: async (): Promise<Service[]> => {
-    const data: any = await squareApiFetch('/v2/catalog/list?types=ITEM,ITEM_VARIATION,CATEGORY');
-    const objects = data.objects || [];
-    const items = objects.filter((o: any) => o.type === 'ITEM');
-    const variations = objects.filter((o: any) => o.type === 'ITEM_VARIATION');
-    const categories = objects.filter((o: any) => o.type === 'CATEGORY');
+    let cursor: string | undefined = undefined;
+    const allObjects: any[] = [];
+
+    // Fetch all pages of the catalog
+    do {
+        const path = `/v2/catalog/list?types=ITEM,ITEM_VARIATION,CATEGORY${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+        const data: any = await squareApiFetch(path);
+
+        if (data.objects) {
+            allObjects.push(...data.objects);
+        }
+        cursor = data.cursor;
+    } while (cursor);
+
+    const items = allObjects.filter((o: any) => o.type === 'ITEM');
+    const variations = allObjects.filter((o: any) => o.type === 'ITEM_VARIATION');
+    const categories = allObjects.filter((o: any) => o.type === 'CATEGORY');
 
     const services: Service[] = [];
 
@@ -114,7 +126,7 @@ export const SquareIntegrationService = {
         }
     });
 
-    console.log('[CATALOG] Available services:', services.map(s => ({ name: s.name, id: s.id })));
+    console.log('[CATALOG] Available services (total):', services.length, services.map(s => ({ name: s.name, id: s.id })));
     return services;
   },
 
