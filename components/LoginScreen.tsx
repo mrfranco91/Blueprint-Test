@@ -239,7 +239,7 @@ const LoginScreen: React.FC = () => {
 
         <div className="p-10" style={{ backgroundColor: `rgba(${parseInt(branding.primaryColor.slice(1, 3), 16)}, ${parseInt(branding.primaryColor.slice(3, 5), 16)}, ${parseInt(branding.primaryColor.slice(5, 7), 16)}, 0.08)` }}>
 
-          {squareRedirectUri && (
+          {squareRedirectUri && false && (
             <div className="mb-6">
               <button
                 onClick={startSquareOAuth}
@@ -250,11 +250,13 @@ const LoginScreen: React.FC = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
-            <span className="text-xs font-semibold" style={{ color: '#374151' }}>or</span>
-            <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
-          </div>
+          {squareRedirectUri && false && (
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
+              <span className="text-xs font-semibold" style={{ color: '#374151' }}>or</span>
+              <div className="flex-1" style={{ height: '2px', backgroundColor: branding.primaryColor }}></div>
+            </div>
+          )}
 
           <p className="text-center text-sm font-bold mb-6" style={{ color: '#374151' }}>
             Enter your Square access token to sync your team and clients
