@@ -104,9 +104,6 @@ export default async function handler(req: any, res: any) {
           .insert([{
             supabase_user_id: supabaseUserId,
             square_access_token: squareAccessToken,
-            settings: {},
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           }])
           .select('id')
           .single();
