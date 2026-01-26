@@ -242,15 +242,11 @@ export const SquareIntegrationService = {
 
       console.log('[AVAILABILITY] Searching from', params.startAt, 'to', endAtFormatted);
 
-      // Build segment filter with service ID
+      // Build segment filter with service ID only
+      // Removed team_member_id_filter - it was causing 400 errors and isn't required
       const segment_filter: any = {
           service_variation_id: params.serviceVariationId,
       };
-
-      // Add team member filter if provided
-      if (params.teamMemberId && params.teamMemberId !== 'admin') {
-          segment_filter.team_member_id_filter = { any: [params.teamMemberId] };
-      }
 
       const body = {
           query: {
