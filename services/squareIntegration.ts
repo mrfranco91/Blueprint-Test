@@ -59,12 +59,11 @@ async function squareApiFetch<T>(path: string, options: { method?: string, body?
 export const SquareIntegrationService = {
   formatDate(date: Date, timezone?: string) {
     if (!date || isNaN(date.getTime())) {
-        return new Date().toISOString().split('.')[0] + 'Z';
+        return new Date().toISOString();
     }
 
-    // Square Bookings API requires RFC 3339 format: YYYY-MM-DDTHH:mm:ssZ (UTC, no milliseconds)
-    // This matches the official Square API documentation format
-    return date.toISOString().split('.')[0] + 'Z';
+    // Square Bookings API requires RFC 3339 format with milliseconds: YYYY-MM-DDTHH:mm:ss.sssZ
+    return date.toISOString();
   },
   
   fetchLocation: async (): Promise<SquareLocation> => {
