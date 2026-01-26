@@ -262,8 +262,8 @@ export const SquareIntegrationService = {
           segment_filter.team_member_id_filter = { any: [teamMemberId] };
       }
 
-      // Format end_at the same way as start_at - no milliseconds, with Z
-      const endAtFormatted = endDate.toISOString().split('.')[0] + 'Z';
+      // Format end_at with milliseconds as required by Square API
+      const endAtFormatted = endDate.toISOString();
 
       const body = {
           query: {
