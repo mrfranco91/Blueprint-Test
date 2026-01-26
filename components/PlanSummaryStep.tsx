@@ -342,7 +342,7 @@ const PlanSummaryStep: React.FC<PlanSummaryStepProps> = ({ plan, role, onEditPla
                   stylist_id: stylistIdToBookFor,
                   start_time: slotTime,
                   status: squareBooking.status,
-                  services: servicesToBook.map(s => ({ variation_id: s.id, name: s.name })),
+                  services: squareServices.map(s => ({ variation_id: s.id, name: s.name })),
                   source: 'square'
               });
           }
