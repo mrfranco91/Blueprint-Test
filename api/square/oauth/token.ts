@@ -205,8 +205,11 @@ export default async function handler(req: any, res: any) {
       console.log('[OAUTH TOKEN] Creating or retrieving user by email');
 
       // First, try to retrieve user by email (in case they were soft-deleted or exist elsewhere)
-      const { data: listUsersData } = await (supabaseAdmin.auth as any).admin.listUsers();
-      const existingUserByEmail = listUsersData?.users?.find((u: any) => u.email === email);
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      const existingUserByEmail = existingUsers?.users?.find((u: any) => u.email === email);
 
       if (existingUserByEmail) {
         console.log('[OAUTH TOKEN] Found existing user by email:', existingUserByEmail.id);
