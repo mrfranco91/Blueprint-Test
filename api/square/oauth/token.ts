@@ -150,64 +150,68 @@ export default async function handler(req: any, res: any) {
       }
     );
 
+    // 🔍 First, check if this Square merchant already has settings
+    console.log('[OAUTH TOKEN] Checking for existing merchant_settings with merchant_id:', merchant_id);
+
+    const { data: existingSettings, error: settingsLookupError } = await supabaseAdmin
+      .from('merchant_settings')
+      .select('supabase_user_id')
+      .eq('square_merchant_id', merchant_id)
+      .maybeSingle();
+
+    if (settingsLookupError) {
+      console.error('[OAUTH TOKEN] Error looking up existing settings:', settingsLookupError);
+      throw new Error(`Failed to check existing merchant settings: ${settingsLookupError.message}`);
+    }
+
+    // Standard OAuth user credentials (merchant_id based)
     const email = `${merchant_id}@square-oauth.blueprint`;
     const password = merchant_id;
 
     let user: any;
 
-    console.log('[OAUTH TOKEN] Attempting to create/update user with email:', email);
+    // If merchant already has settings, use that existing user
+    if (existingSettings?.supabase_user_id) {
+      console.log('[OAUTH TOKEN] Found existing merchant_settings, using user:', existingSettings.supabase_user_id);
 
-    // Try to create user with admin API (pre-confirmed, no email verification required)
-    const { data: createData, error: createError } = await (supabaseAdmin.auth as any).admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Pre-confirm email for OAuth users
-      user_metadata: { role: 'admin', merchant_id, business_name },
-    });
+      const { data: existingUserData, error: getUserError } = await (supabaseAdmin.auth as any).admin.getUserById(
+        existingSettings.supabase_user_id
+      );
 
-    if (createError) {
-      // Check if user already exists
-      if (createError.message?.includes('already registered') || createError.status === 422) {
-        console.log('[OAUTH TOKEN] User already exists, fetching by email...');
+      if (getUserError || !existingUserData?.user) {
+        console.error('[OAUTH TOKEN] Failed to get existing user:', getUserError);
+        throw new Error(`Failed to retrieve existing user: ${getUserError?.message}`);
+      }
 
-        // First, try to sign in to get the user ID
-        const tempClient = createClient(supabaseUrl, serviceRoleKey, {
-          auth: { autoRefreshToken: false, persistSession: false }
-        });
+      user = existingUserData.user;
 
-        const { data: tempSignIn, error: tempSignInError } = await tempClient.auth.signInWithPassword({
-          email,
-          password,
-        });
+      // Update user metadata for existing user
+      const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
+        user.id,
+        { user_metadata: { role: 'admin', merchant_id, business_name } }
+      );
 
-        if (tempSignInError) {
-          console.error('[OAUTH TOKEN] Failed to sign in existing user:', tempSignInError);
-          throw new Error(`User exists but sign in failed: ${tempSignInError.message}`);
-        }
+      if (updateError) {
+        console.warn('[OAUTH TOKEN] Failed to update user metadata:', updateError.message);
+        // Continue anyway - this is not critical
+      }
+    } else {
+      // No existing merchant settings, create new user
+      console.log('[OAUTH TOKEN] No existing settings found, creating new user');
 
-        if (!tempSignIn?.user) {
-          console.error('[OAUTH TOKEN] User should exist but sign in returned no user');
-          throw new Error('User exists but could not be retrieved');
-        }
+      // Try to create user with admin API (pre-confirmed, no email verification required)
+      const { data: createData, error: createError } = await (supabaseAdmin.auth as any).admin.createUser({
+        email,
+        password,
+        email_confirm: true, // Pre-confirm email for OAuth users
+        user_metadata: { role: 'admin', merchant_id, business_name },
+      });
 
-        console.log('[OAUTH TOKEN] Found existing user:', tempSignIn.user.id);
-        user = tempSignIn.user;
-
-        // Update user metadata for existing user
-        const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
-          user.id,
-          { user_metadata: { role: 'admin', merchant_id, business_name } }
-        );
-
-        if (updateError) {
-          console.warn('[OAUTH TOKEN] Failed to update user metadata:', updateError.message);
-          // Continue anyway - this is not critical
-        }
-      } else {
+      if (createError) {
         console.error('[OAUTH TOKEN] Failed to create user:', createError);
         throw new Error(`Failed to create user: ${createError.message}`);
       }
-    } else {
+
       console.log('[OAUTH TOKEN] User created successfully via admin API:', createData.user?.id);
       user = createData.user;
     }
@@ -244,6 +248,7 @@ export default async function handler(req: any, res: any) {
 
     console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
 
+    // Use upsert with square_merchant_id as conflict target since it's the unique business key
     const { data: upsertData, error: upsertError } = await supabaseAdmin
       .from('merchant_settings')
       .upsert(
@@ -253,7 +258,7 @@ export default async function handler(req: any, res: any) {
           square_access_token: access_token,
           square_connected_at: new Date().toISOString(),
         },
-        { onConflict: 'supabase_user_id' }
+        { onConflict: 'square_merchant_id' }
       )
       .select();
 
