@@ -97,7 +97,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for any future auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthContext] Auth state changed:', { event, hasSession: !!session });
       if (session) {
         // Real session active - clear mock user
         localStorage.removeItem('mock_admin_user');
