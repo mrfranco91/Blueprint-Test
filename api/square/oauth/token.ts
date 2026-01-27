@@ -120,6 +120,12 @@ export default async function handler(req: any, res: any) {
 
     const { access_token, merchant_id } = tokenData;
 
+    console.log('[OAUTH TOKEN] ✅ Square OAuth token exchanged successfully:', {
+      merchant_id,
+      hasAccessToken: !!access_token,
+    });
+
+    console.log('[OAUTH TOKEN] Fetching merchant details from Square:', merchant_id);
     const merchantData = await squareApiFetch(
       `${baseUrl}/v2/merchants/${merchant_id}`,
       access_token
@@ -128,11 +134,16 @@ export default async function handler(req: any, res: any) {
     const business_name =
       merchantData?.merchant?.business_name || 'Admin';
 
+    console.log('[OAUTH TOKEN] ✅ Merchant details retrieved:', {
+      merchant_id,
+      business_name,
+    });
+
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error('[OAUTH TOKEN] Missing Supabase credentials:', {
+      console.error('[OAUTH TOKEN] ❌ Missing Supabase credentials:', {
         hasUrl: !!supabaseUrl,
         hasServiceKey: !!serviceRoleKey,
       });
@@ -151,7 +162,10 @@ export default async function handler(req: any, res: any) {
     );
 
     // 🔍 First, check if this Square merchant already has settings
-    console.log('[OAUTH TOKEN] Checking for existing merchant_settings with merchant_id:', merchant_id);
+    console.log('[OAUTH TOKEN] Checking for existing merchant_settings:', {
+      merchant_id,
+      step: 'lookup_existing_settings',
+    });
 
     const { data: existingSettings, error: settingsLookupError } = await supabaseAdmin
       .from('merchant_settings')
@@ -159,14 +173,29 @@ export default async function handler(req: any, res: any) {
       .eq('square_merchant_id', merchant_id)
       .maybeSingle();
 
+    console.log('[OAUTH TOKEN] Merchant settings lookup result:', {
+      foundExistingSettings: !!existingSettings,
+      existingUserId: existingSettings?.supabase_user_id,
+      hasError: !!settingsLookupError,
+      errorMessage: settingsLookupError?.message,
+    });
+
     if (settingsLookupError) {
-      console.error('[OAUTH TOKEN] Error looking up existing settings:', settingsLookupError);
+      console.error('[OAUTH TOKEN] ❌ Error looking up existing settings:', {
+        merchant_id,
+        error: settingsLookupError.message,
+      });
       throw new Error(`Failed to check existing merchant settings: ${settingsLookupError.message}`);
     }
 
     // Standard OAuth user credentials (merchant_id based)
     const email = `${merchant_id}@square-oauth.blueprint`;
     const password = merchant_id;
+
+    console.log('[OAUTH TOKEN] Using standard OAuth credentials:', {
+      email,
+      passwordLength: password.length,
+    });
 
     let user: any;
 
