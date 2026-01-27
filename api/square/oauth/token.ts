@@ -170,23 +170,28 @@ export default async function handler(req: any, res: any) {
       if (createError.message?.includes('already registered') || createError.status === 422) {
         console.log('[OAUTH TOKEN] User already exists, fetching by email...');
 
-        // List users filtered by email using admin API
-        const { data: { users }, error: listError } = await (supabaseAdmin.auth as any).admin.listUsers();
+        // First, try to sign in to get the user ID
+        const tempClient = createClient(supabaseUrl, serviceRoleKey, {
+          auth: { autoRefreshToken: false, persistSession: false }
+        });
 
-        if (listError) {
-          console.error('[OAUTH TOKEN] Failed to list users:', listError);
-          throw new Error(`Failed to fetch existing user: ${listError.message}`);
+        const { data: tempSignIn, error: tempSignInError } = await tempClient.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (tempSignInError) {
+          console.error('[OAUTH TOKEN] Failed to sign in existing user:', tempSignInError);
+          throw new Error(`User exists but sign in failed: ${tempSignInError.message}`);
         }
 
-        const existingUser = users?.find((u: any) => u.email === email);
-
-        if (!existingUser) {
-          console.error('[OAUTH TOKEN] User should exist but not found in list');
+        if (!tempSignIn?.user) {
+          console.error('[OAUTH TOKEN] User should exist but sign in returned no user');
           throw new Error('User exists but could not be retrieved');
         }
 
-        console.log('[OAUTH TOKEN] Found existing user:', existingUser.id);
-        user = existingUser;
+        console.log('[OAUTH TOKEN] Found existing user:', tempSignIn.user.id);
+        user = tempSignIn.user;
 
         // Update user metadata for existing user
         const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
