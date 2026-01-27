@@ -178,51 +178,32 @@ export default async function handler(req: any, res: any) {
     } catch (createErr: any) {
       console.log('[OAUTH TOKEN] Create user failed, looking up existing user...');
 
-      // Get the user ID by email using Supabase Management API
-      console.log('[OAUTH TOKEN] Attempting to lookup existing user by email:', email);
+      // Try to sign in with the credentials - if user exists, this will work
+      console.log('[OAUTH TOKEN] Attempting to sign in with existing credentials');
 
-      const getUserResponse = await fetch(
-        `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${serviceRoleKey}`,
-          },
-        }
-      );
-
-      console.log('[OAUTH TOKEN] User lookup response status:', getUserResponse.status);
-
-      if (!getUserResponse.ok) {
-        const responseText = await getUserResponse.text();
-        console.error('[OAUTH TOKEN] Failed to fetch user by email:', {
-          status: getUserResponse.status,
-          statusText: getUserResponse.statusText,
-          response: responseText,
-        });
-        throw new Error(`Failed to create or fetch user: ${getUserResponse.statusText}`);
-      }
-
-      const users = await getUserResponse.json();
-      console.log('[OAUTH TOKEN] User lookup returned:', {
-        count: users?.length || 0,
-        users: users?.map((u: any) => ({ id: u.id, email: u.email })) || [],
+      const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const existingUser = users && users.length > 0 ? users[0] : null;
-
-      if (!existingUser) {
-        console.error('[OAUTH TOKEN] User creation failed and user not found by email', {
-          email,
+      if (signInError) {
+        console.error('[OAUTH TOKEN] User creation and sign-in both failed:', {
           createError: createErr.message,
+          signInError: signInError.message,
         });
         throw new Error(
-          `Failed to create user account: ${createErr.message}`
+          `Failed to create or authenticate user: ${signInError.message}`
         );
       }
 
-      console.log('[OAUTH TOKEN] Found existing user, will sign in...');
-      user = existingUser;
+      if (!signInData.user) {
+        console.error('[OAUTH TOKEN] Sign in succeeded but no user returned');
+        throw new Error('Failed to get user after sign-in');
+      }
+
+      console.log('[OAUTH TOKEN] Found and signed in existing user:', signInData.user.id);
+      user = signInData.user;
+      session = signInData.session;
     }
 
     // Now get a session for this user
