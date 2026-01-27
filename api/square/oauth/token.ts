@@ -204,62 +204,68 @@ export default async function handler(req: any, res: any) {
     if (!user) {
       console.log('[OAUTH TOKEN] Creating or retrieving user by email');
 
-      // First, try to retrieve user by email (in case they were soft-deleted or exist elsewhere)
-      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
+      // Strategy: Try to sign in first. If that works, user exists (even if soft-deleted).
+      // This avoids the listUsers pagination and soft-delete issues.
+      const signInClient = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
       });
-      const existingUserByEmail = existingUsers?.users?.find((u: any) => u.email === email);
 
-      if (existingUserByEmail) {
-        console.log('[OAUTH TOKEN] Found existing user by email:', existingUserByEmail.id);
-        user = existingUserByEmail;
+      const { data: signInAttempt, error: signInAttemptError } = await signInClient.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        // Update user metadata and password for existing user
+      if (signInAttempt?.user && !signInAttemptError) {
+        // User exists and credentials work - use this user
+        console.log('[OAUTH TOKEN] User found via sign-in:', signInAttempt.user.id);
+        user = signInAttempt.user;
+
+        // Update metadata for this existing user
         const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
           user.id,
           {
-            password,
             email_confirm: true,
             user_metadata: { role: 'admin', merchant_id, business_name }
           }
         );
 
         if (updateError) {
-          console.warn('[OAUTH TOKEN] Failed to update existing user:', updateError.message);
-          // Continue anyway - user exists
+          console.warn('[OAUTH TOKEN] Failed to update user metadata:', updateError.message);
         }
       } else {
-        // Try to create user with admin API (pre-confirmed, no email verification required)
+        // User doesn't exist or credentials don't work - create new user
+        console.log('[OAUTH TOKEN] Sign-in failed, creating new user. Error:', signInAttemptError?.message);
+
         const { data: createData, error: createError } = await (supabaseAdmin.auth as any).admin.createUser({
           email,
           password,
-          email_confirm: true, // Pre-confirm email for OAuth users
+          email_confirm: true,
           user_metadata: { role: 'admin', merchant_id, business_name },
         });
 
         if (createError) {
           console.error('[OAUTH TOKEN] Failed to create user:', createError);
 
-          // If user already exists (duplicate email), try to find them
+          // If creation failed due to existing email, the user might exist but password doesn't match
+          // This could happen if merchant_id was reused or password changed
           if (createError.message?.includes('already been registered') || createError.message?.includes('already exists')) {
-            console.log('[OAUTH TOKEN] User already exists, searching again with expanded pagination');
+            // Update the password to match and try sign-in again
+            console.log('[OAUTH TOKEN] User exists but password mismatch. Attempting to reset password.');
 
-            // Try with larger pagination to find the user
-            const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({
+            // Try to list users to find the existing one (one last attempt)
+            const { data: usersList } = await supabaseAdmin.auth.admin.listUsers({
               page: 1,
-              perPage: 10000,
+              perPage: 1000,
             });
 
-            const foundUser = allUsers?.users?.find((u: any) => u.email === email);
+            const existingUser = usersList?.users?.find((u: any) => u.email === email);
 
-            if (foundUser) {
-              console.log('[OAUTH TOKEN] Found existing user after creation failed:', foundUser.id);
-              user = foundUser;
+            if (existingUser) {
+              console.log('[OAUTH TOKEN] Found existing user, updating password:', existingUser.id);
 
-              // Update the found user's metadata and password
-              const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
-                user.id,
+              // Update password to match expected password
+              const { error: passwordUpdateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
+                existingUser.id,
                 {
                   password,
                   email_confirm: true,
@@ -267,17 +273,25 @@ export default async function handler(req: any, res: any) {
                 }
               );
 
-              if (updateError) {
-                console.warn('[OAUTH TOKEN] Failed to update found user:', updateError.message);
+              if (passwordUpdateError) {
+                console.error('[OAUTH TOKEN] Failed to update password:', passwordUpdateError);
+                throw new Error(`Failed to update existing user password: ${passwordUpdateError.message}`);
               }
+
+              user = existingUser;
             } else {
-              throw new Error(`User exists but could not be found: ${createError.message}`);
+              // User exists according to Supabase but we can't find them - likely soft-deleted
+              // Log the issue and fail gracefully
+              console.error('[OAUTH TOKEN] User email is registered but user not found in list (likely soft-deleted)');
+              throw new Error(
+                'This account cannot be accessed. Please contact support to restore your account or use a different Square merchant account.'
+              );
             }
           } else {
             throw new Error(`Failed to create user: ${createError.message}`);
           }
         } else {
-          console.log('[OAUTH TOKEN] User created successfully via admin API:', createData.user?.id);
+          console.log('[OAUTH TOKEN] User created successfully:', createData.user?.id);
           user = createData.user;
         }
       }
