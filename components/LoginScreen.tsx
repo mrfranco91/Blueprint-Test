@@ -130,29 +130,60 @@ const LoginScreen: React.FC = () => {
       className="min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500"
       style={{ backgroundColor: branding.primaryColor }}
     >
-      <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-gray-950">
-        <div className="bg-gray-50 p-10 text-center border-b-4" style={{ borderColor: branding.primaryColor }}>
-          {branding.logoUrl ? (
-            <img
-              src={branding.logoUrl}
-              alt={`${branding.salonName} Logo`}
-              className="login-logo w-20 h-20 object-contain mx-auto mb-4"
-            />
-          ) : (
-            <div
-              className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-xl transform -rotate-3"
-              style={{ backgroundColor: branding.accentColor }}
-            >
-              <SettingsIcon className="w-10 h-10 text-white" />
-            </div>
-          )}
+      <div
+        className="bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-gray-950"
+        style={{
+          "@media (max-width: 991px)": {
+            maxWidth: "656px",
+          },
+        } as any}
+      >
+        <div
+          className="bg-gray-50 p-10 text-center border-b-4"
+          style={{
+            borderColor: branding.primaryColor,
+            "@media (max-width: 991px)": {
+              backgroundImage:
+                "url(https://cdn.builder.io/api/v1/image/assets%2F8d6a989189ff4d9e8633804d5d0dbd86%2F6d20c9ec074b40608799512dc6ed08ca)",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              backgroundSize: "cover",
+              paddingTop: "63px",
+              display: "flex",
+              flexDirection: "column",
+            },
+          } as any}
+        >
+          <img
+            src="https://cdn.builder.io/api/v1/image/assets%2F8d6a989189ff4d9e8633804d5d0dbd86%2F7093acbcb2ca4ac783c4b84bc621e52f"
+            alt="Blueprint Logo"
+            className="login-logo object-contain mx-auto mb-4"
+            style={{
+              maxWidth: "90%",
+              width: "300px",
+              display: "block",
+              "@media (max-width: 991px)": {
+                maxWidth: "522px",
+                width: "974px",
+              },
+            } as any}
+          />
 
-          <h1 className="text-3xl font-black tracking-tighter" style={{ color: branding.primaryColor }}>
+          <h1
+            className="text-3xl font-black tracking-tighter"
+            style={{
+              color: branding.primaryColor,
+              "@media (max-width: 991px)": {
+                color: "rgba(11, 52, 88, 1)",
+                fontFamily: "Alexandria, sans-serif",
+                fontWeight: "400",
+                textAlign: "left",
+                margin: "0 auto 0 27px",
+              },
+            } as any}
+          >
             Pro Access
           </h1>
-          <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ color: branding.primaryColor }}>
-            Internal Management
-          </p>
         </div>
 
         <div className="p-10" style={{ backgroundColor: `rgba(${parseInt(branding.primaryColor.slice(1, 3), 16)}, ${parseInt(branding.primaryColor.slice(3, 5), 16)}, ${parseInt(branding.primaryColor.slice(5, 7), 16)}, 0.08)` }}>
