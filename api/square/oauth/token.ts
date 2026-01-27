@@ -206,29 +206,33 @@ export default async function handler(req: any, res: any) {
       session = signInData.session;
     }
 
-    // Now get a session for this user
+    // Now get a session for this user (if we don't already have one)
     if (!user) {
       throw new Error('User creation/lookup failed');
     }
 
-    console.log('[OAUTH TOKEN] Getting session for user:', user.id);
-
-    // Sign in to get a session
-    const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      console.error('[OAUTH TOKEN] Sign in failed:', signInError);
-      throw signInError;
-    }
-
-    session = signInData.session;
-
     if (!session) {
-      console.error('[OAUTH TOKEN] Sign in succeeded but no session returned');
-      throw new Error('Failed to create session for user');
+      console.log('[OAUTH TOKEN] Getting session for user:', user.id);
+
+      // Sign in to get a session
+      const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        console.error('[OAUTH TOKEN] Sign in failed:', signInError);
+        throw signInError;
+      }
+
+      session = signInData.session;
+
+      if (!session) {
+        console.error('[OAUTH TOKEN] Sign in succeeded but no session returned');
+        throw new Error('Failed to create session for user');
+      }
+    } else {
+      console.log('[OAUTH TOKEN] Already have session for user:', user.id);
     }
 
     if (!user) throw new Error('Supabase auth failed');
