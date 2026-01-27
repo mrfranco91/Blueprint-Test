@@ -143,6 +143,12 @@ const LoginScreen: React.FC = () => {
           style={{
             borderColor: branding.primaryColor,
             "@media (max-width: 991px)": {
+              backgroundImage:
+                "url(https://cdn.builder.io/api/v1/image/assets%2F8d6a989189ff4d9e8633804d5d0dbd86%2F6d20c9ec074b40608799512dc6ed08ca)",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              backgroundSize: "cover",
+              paddingTop: "63px",
               display: "flex",
               flexDirection: "column",
             },
