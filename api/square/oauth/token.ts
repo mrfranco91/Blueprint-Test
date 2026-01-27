@@ -201,32 +201,57 @@ export default async function handler(req: any, res: any) {
 
     // If merchant already has settings, try to use that existing user
     if (existingSettings?.supabase_user_id) {
-      console.log('[OAUTH TOKEN] Found existing merchant_settings, checking user:', existingSettings.supabase_user_id);
+      console.log('[OAUTH TOKEN] Existing merchant_settings found, checking if user still exists:', {
+        userId: existingSettings.supabase_user_id,
+        step: 'lookup_existing_user',
+      });
 
       const { data: existingUserData, error: getUserError } = await (supabaseAdmin.auth as any).admin.getUserById(
         existingSettings.supabase_user_id
       );
 
+      console.log('[OAUTH TOKEN] Existing user lookup result:', {
+        foundUser: !!existingUserData?.user,
+        userId: existingUserData?.user?.id,
+        email: existingUserData?.user?.email,
+        hasError: !!getUserError,
+        errorMessage: getUserError?.message,
+      });
+
       // If user exists, use it and update metadata
       if (existingUserData?.user && !getUserError) {
-        console.log('[OAUTH TOKEN] Existing user found, updating metadata');
+        console.log('[OAUTH TOKEN] ✅ Existing user found, reusing for OAuth reconnection:', {
+          userId: existingUserData.user.id,
+          email: existingUserData.user.email,
+        });
         user = existingUserData.user;
 
         // Update user metadata for existing user
+        console.log('[OAUTH TOKEN] Updating metadata for existing user:', user.id);
         const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
           user.id,
           { user_metadata: { role: 'admin', merchant_id, business_name } }
         );
 
         if (updateError) {
-          console.warn('[OAUTH TOKEN] Failed to update user metadata:', updateError.message);
+          console.warn('[OAUTH TOKEN] ⚠️ Failed to update user metadata:', {
+            userId: user.id,
+            error: updateError.message,
+          });
           // Continue anyway - this is not critical
+        } else {
+          console.log('[OAUTH TOKEN] ✅ User metadata updated successfully');
         }
       } else {
         // User was deleted but merchant_settings still exists - create new user
-        console.log('[OAUTH TOKEN] Existing user not found (may have been deleted), creating new user');
+        console.log('[OAUTH TOKEN] 🔄 Existing user not found (may have been deleted), will create new user:', {
+          userId: existingSettings.supabase_user_id,
+          error: getUserError?.message,
+        });
         user = null; // Will be created below
       }
+    } else {
+      console.log('[OAUTH TOKEN] No existing merchant_settings found, will create new user');
     }
 
     // Create new user if needed (either no settings found OR user was deleted)
