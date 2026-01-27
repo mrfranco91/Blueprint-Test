@@ -170,34 +170,39 @@ export default async function handler(req: any, res: any) {
 
     let user: any;
 
-    // If merchant already has settings, use that existing user
+    // If merchant already has settings, try to use that existing user
     if (existingSettings?.supabase_user_id) {
-      console.log('[OAUTH TOKEN] Found existing merchant_settings, using user:', existingSettings.supabase_user_id);
+      console.log('[OAUTH TOKEN] Found existing merchant_settings, checking user:', existingSettings.supabase_user_id);
 
       const { data: existingUserData, error: getUserError } = await (supabaseAdmin.auth as any).admin.getUserById(
         existingSettings.supabase_user_id
       );
 
-      if (getUserError || !existingUserData?.user) {
-        console.error('[OAUTH TOKEN] Failed to get existing user:', getUserError);
-        throw new Error(`Failed to retrieve existing user: ${getUserError?.message}`);
+      // If user exists, use it and update metadata
+      if (existingUserData?.user && !getUserError) {
+        console.log('[OAUTH TOKEN] Existing user found, updating metadata');
+        user = existingUserData.user;
+
+        // Update user metadata for existing user
+        const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
+          user.id,
+          { user_metadata: { role: 'admin', merchant_id, business_name } }
+        );
+
+        if (updateError) {
+          console.warn('[OAUTH TOKEN] Failed to update user metadata:', updateError.message);
+          // Continue anyway - this is not critical
+        }
+      } else {
+        // User was deleted but merchant_settings still exists - create new user
+        console.log('[OAUTH TOKEN] Existing user not found (may have been deleted), creating new user');
+        user = null; // Will be created below
       }
+    }
 
-      user = existingUserData.user;
-
-      // Update user metadata for existing user
-      const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
-        user.id,
-        { user_metadata: { role: 'admin', merchant_id, business_name } }
-      );
-
-      if (updateError) {
-        console.warn('[OAUTH TOKEN] Failed to update user metadata:', updateError.message);
-        // Continue anyway - this is not critical
-      }
-    } else {
-      // No existing merchant settings, create new user
-      console.log('[OAUTH TOKEN] No existing settings found, creating new user');
+    // Create new user if needed (either no settings found OR user was deleted)
+    if (!user) {
+      console.log('[OAUTH TOKEN] Creating new user');
 
       // Try to create user with admin API (pre-confirmed, no email verification required)
       const { data: createData, error: createError } = await (supabaseAdmin.auth as any).admin.createUser({
