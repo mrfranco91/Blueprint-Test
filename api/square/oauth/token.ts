@@ -352,10 +352,15 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!user) {
+      console.error('[OAUTH TOKEN] ❌ CRITICAL: User is null after creation/lookup');
       throw new Error('User creation/lookup failed');
     }
 
-    console.log('[OAUTH TOKEN] Generating session for user:', user.id);
+    console.log('[OAUTH TOKEN] ✅ User ready for session:', {
+      userId: user.id,
+      email: user.email,
+      step: 'creating_session',
+    });
 
     // Create a new session for the user using admin API (without signing in the admin client)
     // Note: We'll use a separate client instance for this to avoid affecting the admin client
@@ -363,25 +368,48 @@ export default async function handler(req: any, res: any) {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
+    console.log('[OAUTH TOKEN] Attempting to create session with sign-in:', email);
     const { data: signInData, error: signInError } = await userClient.auth.signInWithPassword({
       email,
       password,
     });
 
+    console.log('[OAUTH TOKEN] Session creation attempt result:', {
+      hasSession: !!signInData?.session,
+      sessionUserId: signInData?.session?.user?.id,
+      hasUser: !!signInData?.user,
+      hasError: !!signInError,
+      errorMessage: signInError?.message,
+    });
+
     if (signInError) {
-      console.error('[OAUTH TOKEN] Failed to create session:', signInError);
+      console.error('[OAUTH TOKEN] ❌ Failed to create session:', {
+        email,
+        error: signInError.message,
+        errorCode: (signInError as any)?.status,
+      });
       throw new Error(`Failed to create session: ${signInError.message}`);
     }
 
     const session = signInData.session;
 
     if (!session) {
+      console.error('[OAUTH TOKEN] ❌ CRITICAL: Session object is null after sign-in');
       throw new Error('Failed to create session for user');
     }
 
-    console.log('[OAUTH TOKEN] Session created successfully');
+    console.log('[OAUTH TOKEN] ✅ Session created successfully:', {
+      userId: session.user?.id,
+      expiresIn: session.expires_in,
+      hasAccessToken: !!session.access_token,
+      hasRefreshToken: !!session.refresh_token,
+    });
 
-    console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
+    console.log('[OAUTH TOKEN] Upserting merchant_settings:', {
+      supabase_user_id: user.id,
+      square_merchant_id: merchant_id,
+      hasAccessToken: !!access_token,
+    });
 
     // Use upsert with square_merchant_id as conflict target since it's the unique business key
     const { data: upsertData, error: upsertError } = await supabaseAdmin
@@ -397,12 +425,28 @@ export default async function handler(req: any, res: any) {
       )
       .select();
 
+    console.log('[OAUTH TOKEN] Upsert result:', {
+      success: !upsertError,
+      rowCount: upsertData?.length,
+      errorMessage: upsertError?.message,
+      upsertedData: upsertData?.[0] ? {
+        userId: upsertData[0].supabase_user_id,
+        merchantId: upsertData[0].square_merchant_id,
+        connectedAt: upsertData[0].square_connected_at,
+      } : null,
+    });
+
     if (upsertError) {
-      console.error('[OAUTH TOKEN] Failed to upsert merchant_settings:', upsertError);
+      console.error('[OAUTH TOKEN] ❌ Failed to upsert merchant_settings:', {
+        userId: user.id,
+        merchantId: merchant_id,
+        error: upsertError.message,
+        errorCode: (upsertError as any)?.code,
+      });
       throw new Error(`Failed to save merchant settings: ${upsertError.message}`);
     }
 
-    console.log('[OAUTH TOKEN] Merchant settings upserted successfully:', upsertData);
+    console.log('[OAUTH TOKEN] ✅ OAuth flow completed successfully');
 
     // ✅ Return session tokens so frontend can authenticate without re-signing-in
     return res.status(200).json({
