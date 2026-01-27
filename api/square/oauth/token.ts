@@ -140,13 +140,21 @@ export default async function handler(req: any, res: any) {
     let session: any;
 
     // Try to sign up first
-    console.log('[OAUTH TOKEN] Attempting to create new user');
+    console.log('[OAUTH TOKEN] Attempting to create new user with email:', email);
     const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.signUp({
       email,
       password,
       options: {
         data: { role: 'admin', merchant_id, business_name },
       },
+    });
+
+    console.log('[OAUTH TOKEN] SignUp response:', {
+      hasError: !!signUpError,
+      hasUser: !!signUpData?.user,
+      hasSession: !!signUpData?.session,
+      userEmail: signUpData?.user?.email,
+      signUpError: signUpError ? { code: signUpError.code, message: signUpError.message } : null,
     });
 
     if (signUpError) {
