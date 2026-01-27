@@ -213,9 +213,22 @@ export default async function handler(req: any, res: any) {
       console.log('[OAUTH TOKEN] User created successfully');
       user = signUpData.user;
       session = signUpData.session;
+
+      // If signUp didn't return a session, sign in to get one
+      // (This happens when email confirmation is required)
+      if (!session) {
+        console.log('[OAUTH TOKEN] SignUp did not return session, signing in...');
+        const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          console.error('[OAUTH TOKEN] Failed to sign in new user:', signInError);
+          throw signInError;
+        }
+        session = signInData.session;
+      }
     }
 
     if (!user) throw new Error('Supabase auth failed');
+    if (!session) throw new Error('Failed to create session for user');
 
     console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
 
