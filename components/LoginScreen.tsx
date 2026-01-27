@@ -175,13 +175,13 @@ const LoginScreen: React.FC = () => {
               color: branding.primaryColor,
               fontFamily: "Quicksand, sans-serif",
               fontWeight: "600",
-              textAlign: "right",
+              textAlign: "left",
               "@media (max-width: 991px)": {
                 color: "rgba(11, 52, 88, 1)",
                 fontFamily: "Quicksand, sans-serif",
                 fontWeight: "400",
-                textAlign: "right",
-                margin: "0 27px 0 auto",
+                textAlign: "left",
+                margin: "0 auto 0 27px",
               },
             } as any}
           >
