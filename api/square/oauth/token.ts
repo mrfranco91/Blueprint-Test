@@ -195,7 +195,7 @@ export default async function handler(req: any, res: any) {
 
         // Update user metadata for existing user
         const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
-          existingUser.id,
+          user.id,
           { user_metadata: { role: 'admin', merchant_id, business_name } }
         );
 
