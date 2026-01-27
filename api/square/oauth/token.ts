@@ -164,6 +164,10 @@ export default async function handler(req: any, res: any) {
       throw new Error(`Failed to check existing merchant settings: ${settingsLookupError.message}`);
     }
 
+    // Standard OAuth user credentials (merchant_id based)
+    const email = `${merchant_id}@square-oauth.blueprint`;
+    const password = merchant_id;
+
     let user: any;
 
     // If merchant already has settings, use that existing user
@@ -195,9 +199,6 @@ export default async function handler(req: any, res: any) {
       // No existing merchant settings, create new user
       console.log('[OAUTH TOKEN] No existing settings found, creating new user');
 
-      const email = `${merchant_id}@square-oauth.blueprint`;
-      const password = merchant_id;
-
       // Try to create user with admin API (pre-confirmed, no email verification required)
       const { data: createData, error: createError } = await (supabaseAdmin.auth as any).admin.createUser({
         email,
@@ -226,10 +227,6 @@ export default async function handler(req: any, res: any) {
     const userClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     });
-
-    // Use the merchant_id as password (set during user creation)
-    const email = `${merchant_id}@square-oauth.blueprint`;
-    const password = merchant_id;
 
     const { data: signInData, error: signInError } = await userClient.auth.signInWithPassword({
       email,
