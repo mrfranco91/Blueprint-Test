@@ -97,6 +97,7 @@ export default async function handler(req: any, res: any) {
     );
 
     let user: any;
+    let session: any;
     const users = await getUserResponse.json();
     const existingUser = users && users.length > 0 ? users[0] : null;
 
@@ -117,6 +118,17 @@ export default async function handler(req: any, res: any) {
           details: updateError.message,
         });
       }
+
+      // Sign in to get a valid session
+      const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({ email, password: tempPassword });
+      if (signInError) {
+        console.error('[CREATE SESSION] Sign in failed after password update:', signInError);
+        return res.status(500).json({
+          message: 'Failed to create session',
+          details: signInError.message,
+        });
+      }
+      session = signInData.session;
     } else {
       console.log('[CREATE SESSION] Creating new user for merchant');
 
@@ -167,11 +179,32 @@ export default async function handler(req: any, res: any) {
       }
 
       console.log('[CREATE SESSION] Merchant settings upserted for user:', user.id);
+
+      // After creating new user, sign them in to get a session
+      const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({ email, password: tempPassword });
+      if (signInError) {
+        console.error('[CREATE SESSION] Failed to sign in new user:', signInError);
+        return res.status(500).json({
+          message: 'User created but failed to create session',
+          details: signInError.message,
+        });
+      }
+      session = signInData.session;
     }
 
+    if (!session) {
+      console.error('[CREATE SESSION] No session created');
+      return res.status(500).json({
+        message: 'Failed to create session',
+      });
+    }
+
+    // Return session tokens so frontend can set them directly
     return res.status(200).json({
-      email: user.email,
-      password: tempPassword,
+      supabase_session: {
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      },
       userId: user.id,
     });
   } catch (e: any) {
