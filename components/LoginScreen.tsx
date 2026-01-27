@@ -203,12 +203,10 @@ const LoginScreen: React.FC = () => {
                 className="blueprint-button font-black"
                 style={{
                   "@media (max-width: 991px)": {
-                    backgroundColor: "rgba(255, 255, 255, 1)",
+                    borderStyle: "dashed",
                     borderWidth: "1px",
-                    borderStyle: "solid",
-                    fontWeight: "600",
-                    lineHeight: "20px",
-                    fontSize: "20px",
+                    fontWeight: "400",
+                    fontSize: "27px",
                   },
                 } as any}
               >
