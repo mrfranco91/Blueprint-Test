@@ -174,8 +174,11 @@ const LoginScreen: React.FC = () => {
             style={{
               color: branding.primaryColor,
               "@media (max-width: 991px)": {
+                color: "rgba(11, 52, 88, 1)",
+                fontFamily: "Alexandria, sans-serif",
                 fontWeight: "400",
-                margin: "0 auto 0 15px",
+                textAlign: "left",
+                margin: "0 auto 0 27px",
               },
             } as any}
           >
