@@ -159,12 +159,12 @@ const LoginScreen: React.FC = () => {
             alt="Blueprint Logo"
             className="login-logo object-contain mx-auto mb-4"
             style={{
-              maxWidth: "90%",
-              width: "900px",
+              maxWidth: "100%",
+              width: "100%",
               display: "block",
               "@media (max-width: 991px)": {
-                maxWidth: "522px",
-                width: "1600px",
+                maxWidth: "100%",
+                width: "100%",
               },
             } as any}
           />
