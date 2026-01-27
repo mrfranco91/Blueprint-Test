@@ -160,11 +160,11 @@ const LoginScreen: React.FC = () => {
             className="login-logo object-contain mx-auto mb-4"
             style={{
               maxWidth: "90%",
-              width: "500px",
+              width: "600px",
               display: "block",
               "@media (max-width: 991px)": {
                 maxWidth: "522px",
-                width: "1000px",
+                width: "1200px",
               },
             } as any}
           />
