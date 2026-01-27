@@ -89,14 +89,13 @@
 
 /* Submit Button Styles */
 .sync-button {
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .sync-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  background-color: rgba(11, 52, 88, 0.9);
 }
 
 .sync-button:active:not(:disabled) {
-  transform: scale(0.98);
+  background-color: rgba(11, 52, 88, 0.8);
 }
