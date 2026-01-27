@@ -176,8 +176,12 @@ export default async function handler(req: any, res: any) {
       const existingUser = users && users.length > 0 ? users[0] : null;
 
       if (!existingUser) {
-        console.error('[OAUTH TOKEN] User not found by email');
-        throw new Error('User exists but could not be found');
+        console.error('[OAUTH TOKEN] User not found by email:', {
+          email,
+          usersFound: users?.length || 0,
+          responseStatus: getUserResponse.status,
+        });
+        throw new Error(`User exists but could not be found for email: ${email}`);
       }
 
       // Update the password using admin SDK
