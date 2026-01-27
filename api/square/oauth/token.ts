@@ -146,6 +146,8 @@ export default async function handler(req: any, res: any) {
       password,
       options: {
         data: { role: 'admin', merchant_id, business_name },
+        // Auto-confirm OAuth users since they're verified by Square
+        emailRedirectTo: undefined,
       },
     });
 
