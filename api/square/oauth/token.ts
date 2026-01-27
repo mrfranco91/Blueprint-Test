@@ -227,6 +227,10 @@ export default async function handler(req: any, res: any) {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
+    // Use the merchant_id as password (set during user creation)
+    const email = `${merchant_id}@square-oauth.blueprint`;
+    const password = merchant_id;
+
     const { data: signInData, error: signInError } = await userClient.auth.signInWithPassword({
       email,
       password,
