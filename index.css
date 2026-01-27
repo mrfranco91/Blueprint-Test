@@ -85,3 +85,17 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Submit Button Styles */
+.sync-button {
+  transition: all 0.2s ease;
+}
+
+.sync-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.sync-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
