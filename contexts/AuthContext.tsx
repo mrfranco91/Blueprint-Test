@@ -51,22 +51,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setAuthInitialized(true);
     };
 
-    // Check for mock admin session in localStorage first
-    const savedMockUser = localStorage.getItem('mock_admin_user');
-    if (savedMockUser) {
-      try {
-        const user = JSON.parse(savedMockUser);
-        if (active) {
-          setUser(user);
-          setAuthInitialized(true);
-        }
-      } catch (e) {
-        console.error('Failed to restore mock user session:', e);
-        setAuthInitialized(true);
-      }
-      return;
-    }
-
     if (!supabase) {
       setAuthInitialized(true);
       return;
@@ -74,13 +58,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // IMPORTANT: hydrate existing session immediately on mount
     supabase.auth.getSession().then(({ data }) => {
-      hydrateFromSession(data.session);
+      if (data.session) {
+        // Real Supabase session exists - clear any mock user
+        localStorage.removeItem('mock_admin_user');
+        hydrateFromSession(data.session);
+      } else {
+        // No real session - check for mock admin session in localStorage
+        const savedMockUser = localStorage.getItem('mock_admin_user');
+        if (savedMockUser) {
+          try {
+            const user = JSON.parse(savedMockUser);
+            if (active) {
+              setUser(user);
+              setAuthInitialized(true);
+            }
+          } catch (e) {
+            console.error('Failed to restore mock user session:', e);
+            setAuthInitialized(true);
+          }
+        } else {
+          setAuthInitialized(true);
+        }
+      }
     });
 
     // Listen for any future auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        // Real session active - clear mock user
+        localStorage.removeItem('mock_admin_user');
+      }
       hydrateFromSession(session);
     });
 

@@ -176,8 +176,12 @@ export default async function handler(req: any, res: any) {
       const existingUser = users && users.length > 0 ? users[0] : null;
 
       if (!existingUser) {
-        console.error('[OAUTH TOKEN] User not found by email');
-        throw new Error('User exists but could not be found');
+        console.error('[OAUTH TOKEN] User not found by email:', {
+          email,
+          usersFound: users?.length || 0,
+          responseStatus: getUserResponse.status,
+        });
+        throw new Error(`User exists but could not be found for email: ${email}`);
       }
 
       // Update the password using admin SDK
@@ -209,7 +213,9 @@ export default async function handler(req: any, res: any) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    await supabaseAdmin
+    console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
+
+    const { data: upsertData, error: upsertError } = await supabaseAdmin
       .from('merchant_settings')
       .upsert(
         {
@@ -219,7 +225,15 @@ export default async function handler(req: any, res: any) {
           square_connected_at: new Date().toISOString(),
         },
         { onConflict: 'supabase_user_id' }
-      );
+      )
+      .select();
+
+    if (upsertError) {
+      console.error('[OAUTH TOKEN] Failed to upsert merchant_settings:', upsertError);
+      throw new Error(`Failed to save merchant settings: ${upsertError.message}`);
+    }
+
+    console.log('[OAUTH TOKEN] Merchant settings upserted successfully:', upsertData);
 
     // ✅ Return session tokens so frontend can authenticate without re-signing-in
     return res.status(200).json({
