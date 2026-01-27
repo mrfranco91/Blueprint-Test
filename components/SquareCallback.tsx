@@ -46,11 +46,20 @@ export default function SquareCallback() {
         // Step 2: Use the session tokens from the server (no re-authentication needed)
         const { supabase } = await import('../lib/supabase');
 
+        // Clear any mock user session before setting real session
+        localStorage.removeItem('mock_admin_user');
+
         // Set the session in Supabase client
         await supabase.auth.setSession({
           access_token: supabase_session.access_token,
           refresh_token: supabase_session.refresh_token,
         });
+
+        // Verify session was set
+        const { data: sessionCheck } = await supabase.auth.getSession();
+        if (!sessionCheck?.session) {
+          throw new Error('Failed to set Supabase session');
+        }
 
         const jwtToken = supabase_session.access_token;
 
