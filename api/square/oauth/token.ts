@@ -205,8 +205,11 @@ export default async function handler(req: any, res: any) {
       console.log('[OAUTH TOKEN] Creating or retrieving user by email');
 
       // First, try to retrieve user by email (in case they were soft-deleted or exist elsewhere)
-      const { data: listUsersData } = await (supabaseAdmin.auth as any).admin.listUsers();
-      const existingUserByEmail = listUsersData?.users?.find((u: any) => u.email === email);
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      const existingUserByEmail = existingUsers?.users?.find((u: any) => u.email === email);
 
       if (existingUserByEmail) {
         console.log('[OAUTH TOKEN] Found existing user by email:', existingUserByEmail.id);
@@ -237,11 +240,46 @@ export default async function handler(req: any, res: any) {
 
         if (createError) {
           console.error('[OAUTH TOKEN] Failed to create user:', createError);
-          throw new Error(`Failed to create user: ${createError.message}`);
-        }
 
-        console.log('[OAUTH TOKEN] User created successfully via admin API:', createData.user?.id);
-        user = createData.user;
+          // If user already exists (duplicate email), try to find them
+          if (createError.message?.includes('already been registered') || createError.message?.includes('already exists')) {
+            console.log('[OAUTH TOKEN] User already exists, searching again with expanded pagination');
+
+            // Try with larger pagination to find the user
+            const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({
+              page: 1,
+              perPage: 10000,
+            });
+
+            const foundUser = allUsers?.users?.find((u: any) => u.email === email);
+
+            if (foundUser) {
+              console.log('[OAUTH TOKEN] Found existing user after creation failed:', foundUser.id);
+              user = foundUser;
+
+              // Update the found user's metadata and password
+              const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
+                user.id,
+                {
+                  password,
+                  email_confirm: true,
+                  user_metadata: { role: 'admin', merchant_id, business_name }
+                }
+              );
+
+              if (updateError) {
+                console.warn('[OAUTH TOKEN] Failed to update found user:', updateError.message);
+              }
+            } else {
+              throw new Error(`User exists but could not be found: ${createError.message}`);
+            }
+          } else {
+            throw new Error(`Failed to create user: ${createError.message}`);
+          }
+        } else {
+          console.log('[OAUTH TOKEN] User created successfully via admin API:', createData.user?.id);
+          user = createData.user;
+        }
       }
     }
 
