@@ -246,7 +246,7 @@ const LoginScreen: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full font-black py-4 rounded-2xl border-4 border-gray-950 uppercase tracking-widest text-sm shadow-lg active:scale-95 transition-all"
+              className="w-full font-black py-4 rounded-2xl border-4 border-gray-950 uppercase tracking-widest text-sm shadow-lg sync-button"
               style={{
                 backgroundColor: branding.accentColor,
                 color: '#FFFFFF',
