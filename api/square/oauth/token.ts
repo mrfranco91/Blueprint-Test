@@ -153,14 +153,31 @@ export default async function handler(req: any, res: any) {
       // If signUp failed, assume user already exists and try to update password + sign in
       console.log('[OAUTH TOKEN] SignUp failed, attempting sign in:', signUpError.message);
 
-      // Get the user ID by email using admin SDK
-      const { data: { user: existingUser }, error: getUserError } = await (
-        supabaseAdmin.auth as any
-      ).admin.getUserByEmail(email);
+      // Get the user ID by email using Supabase Management API
+      const supabaseUrl = process.env.VITE_SUPABASE_URL!;
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-      if (getUserError || !existingUser) {
-        console.error('[OAUTH TOKEN] Failed to find existing user:', getUserError);
-        throw new Error(`User exists but could not retrieve user details: ${getUserError?.message || 'User not found'}`);
+      const getUserResponse = await fetch(
+        `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
+        {
+          method: 'GET',
+          headers: {
+            'apikey': serviceRoleKey,
+            'Authorization': `Bearer ${serviceRoleKey}`,
+          },
+        }
+      );
+
+      if (!getUserResponse.ok) {
+        throw new Error(`Failed to fetch user by email: ${getUserResponse.statusText}`);
+      }
+
+      const users = await getUserResponse.json();
+      const existingUser = users && users.length > 0 ? users[0] : null;
+
+      if (!existingUser) {
+        console.error('[OAUTH TOKEN] User not found by email');
+        throw new Error('User exists but could not be found');
       }
 
       // Update the password using admin SDK
