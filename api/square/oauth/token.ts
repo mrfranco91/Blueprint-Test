@@ -180,8 +180,12 @@ export default async function handler(req: any, res: any) {
           email,
           usersFound: users?.length || 0,
           responseStatus: getUserResponse.status,
+          searchUrl: `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
         });
-        throw new Error(`User exists but could not be found for email: ${email}`);
+        throw new Error(
+          `Initial signup failed and user cannot be found by email. ` +
+          `This may indicate the user was deleted. Please try signing up again. (Email: ${email})`
+        );
       }
 
       // Update the password using admin SDK
