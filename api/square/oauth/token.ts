@@ -202,23 +202,47 @@ export default async function handler(req: any, res: any) {
 
     // Create new user if needed (either no settings found OR user was deleted)
     if (!user) {
-      console.log('[OAUTH TOKEN] Creating new user');
+      console.log('[OAUTH TOKEN] Creating or retrieving user by email');
 
-      // Try to create user with admin API (pre-confirmed, no email verification required)
-      const { data: createData, error: createError } = await (supabaseAdmin.auth as any).admin.createUser({
-        email,
-        password,
-        email_confirm: true, // Pre-confirm email for OAuth users
-        user_metadata: { role: 'admin', merchant_id, business_name },
-      });
+      // First, try to retrieve user by email (in case they were soft-deleted or exist elsewhere)
+      const { data: listUsersData } = await (supabaseAdmin.auth as any).admin.listUsers();
+      const existingUserByEmail = listUsersData?.users?.find((u: any) => u.email === email);
 
-      if (createError) {
-        console.error('[OAUTH TOKEN] Failed to create user:', createError);
-        throw new Error(`Failed to create user: ${createError.message}`);
+      if (existingUserByEmail) {
+        console.log('[OAUTH TOKEN] Found existing user by email:', existingUserByEmail.id);
+        user = existingUserByEmail;
+
+        // Update user metadata and password for existing user
+        const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
+          user.id,
+          {
+            password,
+            email_confirm: true,
+            user_metadata: { role: 'admin', merchant_id, business_name }
+          }
+        );
+
+        if (updateError) {
+          console.warn('[OAUTH TOKEN] Failed to update existing user:', updateError.message);
+          // Continue anyway - user exists
+        }
+      } else {
+        // Try to create user with admin API (pre-confirmed, no email verification required)
+        const { data: createData, error: createError } = await (supabaseAdmin.auth as any).admin.createUser({
+          email,
+          password,
+          email_confirm: true, // Pre-confirm email for OAuth users
+          user_metadata: { role: 'admin', merchant_id, business_name },
+        });
+
+        if (createError) {
+          console.error('[OAUTH TOKEN] Failed to create user:', createError);
+          throw new Error(`Failed to create user: ${createError.message}`);
+        }
+
+        console.log('[OAUTH TOKEN] User created successfully via admin API:', createData.user?.id);
+        user = createData.user;
       }
-
-      console.log('[OAUTH TOKEN] User created successfully via admin API:', createData.user?.id);
-      user = createData.user;
     }
 
     if (!user) {
