@@ -186,13 +186,29 @@ const LoginScreen: React.FC = () => {
           </h1>
         </div>
 
-        <div className="p-10" style={{ backgroundColor: `rgba(${parseInt(branding.primaryColor.slice(1, 3), 16)}, ${parseInt(branding.primaryColor.slice(3, 5), 16)}, ${parseInt(branding.primaryColor.slice(5, 7), 16)}, 0.08)` }}>
+        <div
+          className="p-10"
+          style={{
+            backgroundColor: `rgba(${parseInt(branding.primaryColor.slice(1, 3), 16)}, ${parseInt(branding.primaryColor.slice(3, 5), 16)}, ${parseInt(branding.primaryColor.slice(5, 7), 16)}, 0.08)`,
+            "@media (max-width: 991px)": {
+              marginTop: "-3px",
+            },
+          } as any}
+        >
 
           {squareRedirectUri && (
             <div className="mb-6">
               <button
                 onClick={startSquareOAuth}
                 className="blueprint-button font-black"
+                style={{
+                  "@media (max-width: 991px)": {
+                    borderStyle: "dashed",
+                    borderWidth: "1px",
+                    fontWeight: "400",
+                    fontSize: "27px",
+                  },
+                } as any}
               >
                 Login with Square
               </button>
