@@ -71,7 +71,7 @@ const LoginScreen: React.FC = () => {
         console.log('Client sync succeeded');
       }
 
-      // Get temporary credentials for the real account
+      // Get session from server
       const sessionRes = await fetch('/api/square/create-session', {
         method: 'POST',
         headers: {
@@ -87,27 +87,27 @@ const LoginScreen: React.FC = () => {
         );
       }
 
-      const { email, password } = await sessionRes.json();
-      if (!email || !password) {
-        throw new Error('Failed to get session credentials');
+      const { supabase_session } = await sessionRes.json();
+      if (!supabase_session?.access_token || !supabase_session?.refresh_token) {
+        throw new Error('Failed to get session tokens from server');
       }
 
-      console.log('✓ Got temporary credentials, signing in as real account...');
+      console.log('✓ Got session from server, setting session...');
 
-      // Sign in with the temporary password
-      const signInData = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Set the session directly from the server tokens
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: supabase_session.access_token,
+        refresh_token: supabase_session.refresh_token,
       });
 
-      if (signInData.error) {
-        throw new Error(`Failed to sign in: ${signInData.error.message}`);
+      if (setSessionError) {
+        throw new Error(`Failed to set session: ${setSessionError.message}`);
       }
 
       // Verify the session is set
       const { data: sessionCheck } = await supabase.auth.getSession();
       if (!sessionCheck?.session) {
-        throw new Error('Failed to create session');
+        throw new Error('Failed to verify session');
       }
 
       localStorage.removeItem('mock_admin_user');

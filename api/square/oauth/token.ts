@@ -180,8 +180,12 @@ export default async function handler(req: any, res: any) {
           email,
           usersFound: users?.length || 0,
           responseStatus: getUserResponse.status,
+          searchUrl: `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
         });
-        throw new Error(`User exists but could not be found for email: ${email}`);
+        throw new Error(
+          `Initial signup failed and user cannot be found by email. ` +
+          `This may indicate the user was deleted. Please try signing up again. (Email: ${email})`
+        );
       }
 
       // Update the password using admin SDK
@@ -209,9 +213,22 @@ export default async function handler(req: any, res: any) {
       console.log('[OAUTH TOKEN] User created successfully');
       user = signUpData.user;
       session = signUpData.session;
+
+      // If signUp didn't return a session, sign in to get one
+      // (This happens when email confirmation is required)
+      if (!session) {
+        console.log('[OAUTH TOKEN] SignUp did not return session, signing in...');
+        const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          console.error('[OAUTH TOKEN] Failed to sign in new user:', signInError);
+          throw signInError;
+        }
+        session = signInData.session;
+      }
     }
 
     if (!user) throw new Error('Supabase auth failed');
+    if (!session) throw new Error('Failed to create session for user');
 
     console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
 

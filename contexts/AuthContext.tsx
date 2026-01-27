@@ -57,12 +57,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     // IMPORTANT: hydrate existing session immediately on mount
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error('[AuthContext] Error getting session:', error);
+        setAuthInitialized(true);
+        return;
+      }
+
       if (data.session) {
+        console.log('[AuthContext] Session found, user ID:', data.session.user.id);
         // Real Supabase session exists - clear any mock user
         localStorage.removeItem('mock_admin_user');
         hydrateFromSession(data.session);
       } else {
+        console.log('[AuthContext] No session found, checking for mock user');
         // No real session - check for mock admin session in localStorage
         const savedMockUser = localStorage.getItem('mock_admin_user');
         if (savedMockUser) {
@@ -77,15 +85,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setAuthInitialized(true);
           }
         } else {
+          console.log('[AuthContext] No session or mock user found');
           setAuthInitialized(true);
         }
       }
+    }).catch(err => {
+      console.error('[AuthContext] Fatal error during session hydration:', err);
+      setAuthInitialized(true);
     });
 
     // Listen for any future auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthContext] Auth state changed:', { event, hasSession: !!session });
       if (session) {
         // Real session active - clear mock user
         localStorage.removeItem('mock_admin_user');

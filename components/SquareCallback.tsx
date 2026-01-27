@@ -46,44 +46,67 @@ export default function SquareCallback() {
         // Step 2: Use the session tokens from the server (no re-authentication needed)
         const { supabase } = await import('../lib/supabase');
 
+        if (!supabase) {
+          throw new Error('Supabase client not initialized');
+        }
+
         // Clear any mock user session before setting real session
         localStorage.removeItem('mock_admin_user');
 
+        console.log('[OAuth Callback] Setting Supabase session...');
+
         // Set the session in Supabase client
-        await supabase.auth.setSession({
+        const { error: setSessionError } = await supabase.auth.setSession({
           access_token: supabase_session.access_token,
           refresh_token: supabase_session.refresh_token,
         });
 
+        if (setSessionError) {
+          throw new Error(`Failed to set session: ${setSessionError.message}`);
+        }
+
+        // Give the browser a moment to persist the session to localStorage
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // Verify session was set
-        const { data: sessionCheck } = await supabase.auth.getSession();
+        const { data: sessionCheck, error: getSessionError } = await supabase.auth.getSession();
+        if (getSessionError) {
+          console.error('[OAuth Callback] Error checking session:', getSessionError);
+        }
         if (!sessionCheck?.session) {
+          console.error('[OAuth Callback] Session check failed. Session data:', sessionCheck);
           throw new Error('Failed to set Supabase session');
         }
 
+        console.log('[OAuth Callback] Session verified. User ID:', sessionCheck.session.user.id);
+
         const jwtToken = supabase_session.access_token;
 
-        // Step 3: Sync team and clients
-        await fetch('/api/square/team', {
+        // Step 3: Sync team and clients (non-blocking - don't wait for these to complete)
+        console.log('[OAuth Callback] Syncing team and clients...');
+
+        fetch('/api/square/team', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${jwtToken}`,
           },
           body: JSON.stringify({ squareAccessToken: squareToken }),
-        });
+        }).catch(err => console.warn('[OAuth Callback] Team sync failed:', err));
 
-        await fetch('/api/square/clients', {
+        fetch('/api/square/clients', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${jwtToken}`,
           },
           body: JSON.stringify({ squareAccessToken: squareToken }),
-        });
+        }).catch(err => console.warn('[OAuth Callback] Clients sync failed:', err));
 
-        // Redirect to admin
-        window.location.replace('/admin');
+        console.log('[OAuth Callback] Redirecting to /admin');
+
+        // Use regular redirect instead of replace to ensure session is persisted
+        window.location.href = '/admin';
       } catch (err) {
         console.error('OAuth callback failed:', err);
         setError(err instanceof Error ? err.message : 'Authentication failed');
