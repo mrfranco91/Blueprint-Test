@@ -154,104 +154,88 @@ export default async function handler(req: any, res: any) {
     const password = merchant_id;
 
     let user: any;
-    let session: any;
 
     console.log('[OAUTH TOKEN] Attempting to create/update user with email:', email);
 
     // Try to create user with admin API (pre-confirmed, no email verification required)
-    try {
-      const { data: createData, error: createError } = await (supabaseAdmin.auth as any).admin.createUser({
-        email,
-        password,
-        email_confirm: true, // Pre-confirm email for OAuth users
-        user_metadata: { role: 'admin', merchant_id, business_name },
-      });
+    const { data: createData, error: createError } = await (supabaseAdmin.auth as any).admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Pre-confirm email for OAuth users
+      user_metadata: { role: 'admin', merchant_id, business_name },
+    });
 
-      if (createError) {
-        // User might already exist - try to get it
-        console.log('[OAUTH TOKEN] Admin user creation failed, attempting to find existing user:', createError.message);
-        throw createError;
+    if (createError) {
+      // Check if user already exists
+      if (createError.message?.includes('already registered') || createError.status === 422) {
+        console.log('[OAUTH TOKEN] User already exists, fetching by email...');
+
+        // List users filtered by email using admin API
+        const { data: { users }, error: listError } = await (supabaseAdmin.auth as any).admin.listUsers();
+
+        if (listError) {
+          console.error('[OAUTH TOKEN] Failed to list users:', listError);
+          throw new Error(`Failed to fetch existing user: ${listError.message}`);
+        }
+
+        const existingUser = users?.find((u: any) => u.email === email);
+
+        if (!existingUser) {
+          console.error('[OAUTH TOKEN] User should exist but not found in list');
+          throw new Error('User exists but could not be retrieved');
+        }
+
+        console.log('[OAUTH TOKEN] Found existing user:', existingUser.id);
+        user = existingUser;
+
+        // Update user metadata for existing user
+        const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
+          existingUser.id,
+          { user_metadata: { role: 'admin', merchant_id, business_name } }
+        );
+
+        if (updateError) {
+          console.warn('[OAUTH TOKEN] Failed to update user metadata:', updateError.message);
+          // Continue anyway - this is not critical
+        }
+      } else {
+        console.error('[OAUTH TOKEN] Failed to create user:', createError);
+        throw new Error(`Failed to create user: ${createError.message}`);
       }
-
+    } else {
       console.log('[OAUTH TOKEN] User created successfully via admin API:', createData.user?.id);
       user = createData.user;
-    } catch (createErr: any) {
-      console.log('[OAUTH TOKEN] Create user failed, looking up existing user...');
-
-      // Get the user ID by email using Supabase Management API
-      console.log('[OAUTH TOKEN] Attempting to lookup existing user by email:', email);
-
-      const getUserResponse = await fetch(
-        `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${serviceRoleKey}`,
-          },
-        }
-      );
-
-      console.log('[OAUTH TOKEN] User lookup response status:', getUserResponse.status);
-
-      if (!getUserResponse.ok) {
-        const responseText = await getUserResponse.text();
-        console.error('[OAUTH TOKEN] Failed to fetch user by email:', {
-          status: getUserResponse.status,
-          statusText: getUserResponse.statusText,
-          response: responseText,
-        });
-        throw new Error(`Failed to create or fetch user: ${getUserResponse.statusText}`);
-      }
-
-      const users = await getUserResponse.json();
-      console.log('[OAUTH TOKEN] User lookup returned:', {
-        count: users?.length || 0,
-        users: users?.map((u: any) => ({ id: u.id, email: u.email })) || [],
-      });
-
-      const existingUser = users && users.length > 0 ? users[0] : null;
-
-      if (!existingUser) {
-        console.error('[OAUTH TOKEN] User creation failed and user not found by email', {
-          email,
-          createError: createErr.message,
-        });
-        throw new Error(
-          `Failed to create user account: ${createErr.message}`
-        );
-      }
-
-      console.log('[OAUTH TOKEN] Found existing user, will sign in...');
-      user = existingUser;
     }
 
-    // Now get a session for this user
     if (!user) {
       throw new Error('User creation/lookup failed');
     }
 
-    console.log('[OAUTH TOKEN] Getting session for user:', user.id);
+    console.log('[OAUTH TOKEN] Generating session for user:', user.id);
 
-    // Sign in to get a session
-    const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+    // Create a new session for the user using admin API (without signing in the admin client)
+    // Note: We'll use a separate client instance for this to avoid affecting the admin client
+    const userClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    const { data: signInData, error: signInError } = await userClient.auth.signInWithPassword({
       email,
       password,
     });
 
     if (signInError) {
-      console.error('[OAUTH TOKEN] Sign in failed:', signInError);
-      throw signInError;
+      console.error('[OAUTH TOKEN] Failed to create session:', signInError);
+      throw new Error(`Failed to create session: ${signInError.message}`);
     }
 
-    session = signInData.session;
+    const session = signInData.session;
 
     if (!session) {
-      console.error('[OAUTH TOKEN] Sign in succeeded but no session returned');
       throw new Error('Failed to create session for user');
     }
 
-    if (!user) throw new Error('Supabase auth failed');
-    if (!session) throw new Error('Failed to create session for user');
+    console.log('[OAUTH TOKEN] Session created successfully');
 
     console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
 
