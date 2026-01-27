@@ -151,40 +151,59 @@ export default async function handler(req: any, res: any) {
 
     if (signUpError) {
       // If signUp failed, assume user already exists and try to update password + sign in
-      console.log('[OAUTH TOKEN] SignUp failed, attempting sign in:', signUpError.message);
+      console.error('[OAUTH TOKEN] SignUp failed with error:', {
+        code: signUpError.code,
+        message: signUpError.message,
+        status: signUpError.status,
+      });
 
       // Get the user ID by email using Supabase Management API
       const supabaseUrl = process.env.VITE_SUPABASE_URL!;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+      console.log('[OAUTH TOKEN] Attempting to lookup existing user by email:', email);
 
       const getUserResponse = await fetch(
         `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
         {
           method: 'GET',
           headers: {
-            'apikey': serviceRoleKey,
             'Authorization': `Bearer ${serviceRoleKey}`,
           },
         }
       );
 
+      console.log('[OAUTH TOKEN] User lookup response status:', getUserResponse.status);
+
       if (!getUserResponse.ok) {
-        throw new Error(`Failed to fetch user by email: ${getUserResponse.statusText}`);
+        const responseText = await getUserResponse.text();
+        console.error('[OAUTH TOKEN] Failed to fetch user by email:', {
+          status: getUserResponse.status,
+          statusText: getUserResponse.statusText,
+          response: responseText,
+        });
+        throw new Error(`Failed to fetch user by email: ${getUserResponse.statusText} - ${responseText}`);
       }
 
       const users = await getUserResponse.json();
+      console.log('[OAUTH TOKEN] User lookup returned:', {
+        count: users?.length || 0,
+        users: users?.map((u: any) => ({ id: u.id, email: u.email })) || [],
+      });
+
       const existingUser = users && users.length > 0 ? users[0] : null;
 
       if (!existingUser) {
-        console.error('[OAUTH TOKEN] User not found by email:', {
+        console.error('[OAUTH TOKEN] User not found by email - cannot proceed', {
           email,
           usersFound: users?.length || 0,
-          responseStatus: getUserResponse.status,
-          searchUrl: `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
+          signUpError: signUpError.message,
         });
+        // If signup failed and user doesn't exist, something went wrong during signup
+        // Don't suppress the signup error - report it
         throw new Error(
-          `Initial signup failed and user cannot be found by email. ` +
-          `This may indicate the user was deleted. Please try signing up again. (Email: ${email})`
+          `Failed to create user account: ${signUpError.message}. ` +
+          `Please ensure your Supabase auth configuration allows user signups.`
         );
       }
 
