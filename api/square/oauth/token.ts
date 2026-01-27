@@ -179,9 +179,6 @@ export default async function handler(req: any, res: any) {
       console.log('[OAUTH TOKEN] Create user failed, looking up existing user...');
 
       // Get the user ID by email using Supabase Management API
-      const supabaseUrl = process.env.VITE_SUPABASE_URL!;
-      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
       console.log('[OAUTH TOKEN] Attempting to lookup existing user by email:', email);
 
       const getUserResponse = await fetch(
