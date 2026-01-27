@@ -128,9 +128,20 @@ export default async function handler(req: any, res: any) {
     const business_name =
       merchantData?.merchant?.business_name || 'Admin';
 
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('[OAUTH TOKEN] Missing Supabase credentials:', {
+        hasUrl: !!supabaseUrl,
+        hasServiceKey: !!serviceRoleKey,
+      });
+      return res.status(500).json({ message: 'Supabase credentials not configured on server.' });
+    }
+
     const supabaseAdmin = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      supabaseUrl,
+      serviceRoleKey,
       {
         auth: {
           autoRefreshToken: false,
