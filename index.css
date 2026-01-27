@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
 
 :root {
   /* Blueprint Brand Colors - Heritage Blue, Classic Blue, Sky Blue, Campanula */
@@ -43,14 +44,14 @@
 
 /* LoginScreen responsive logo */
 .login-logo {
-  width: 300px;
+  width: 100%;
   height: auto;
-  max-width: 90%;
+  max-width: 100%;
 }
 
 @media (max-width: 991px) {
   .login-logo {
-    width: 280px;
+    width: 100%;
     height: auto;
   }
 }
@@ -84,4 +85,17 @@
 .blueprint-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Submit Button Styles */
+.sync-button {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sync-button:hover:not(:disabled) {
+  background-color: rgba(11, 52, 88, 0.9);
+}
+
+.sync-button:active:not(:disabled) {
+  background-color: rgba(11, 52, 88, 0.8);
 }
