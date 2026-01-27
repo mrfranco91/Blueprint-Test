@@ -44,14 +44,14 @@
 
 /* LoginScreen responsive logo */
 .login-logo {
-  width: 750px;
+  width: 900px;
   height: auto;
   max-width: 90%;
 }
 
 @media (max-width: 991px) {
   .login-logo {
-    width: 750px;
+    width: 900px;
     height: auto;
   }
 }
