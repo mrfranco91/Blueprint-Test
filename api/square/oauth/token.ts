@@ -516,7 +516,19 @@ export default async function handler(req: any, res: any) {
     });
 
   } catch (e: any) {
-    console.error('OAuth Token/Sync Error:', e);
-    return res.status(500).json({ message: e.message });
+    console.error('[OAUTH TOKEN] ❌ CRITICAL ERROR in OAuth flow:', {
+      message: e.message,
+      stack: e.stack,
+      errorCode: (e as any)?.code,
+      errorStatus: (e as any)?.status,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Return helpful error message
+    const errorMessage = e.message || 'An unknown error occurred during OAuth';
+    return res.status(500).json({
+      message: errorMessage,
+      timestamp: new Date().toISOString(),
+    });
   }
 }
