@@ -153,27 +153,28 @@ export default async function handler(req: any, res: any) {
       // If signUp failed, assume user already exists and try to update password + sign in
       console.log('[OAUTH TOKEN] SignUp failed, attempting sign in:', signUpError.message);
 
-      // Update the password for existing user via REST API
-      const updateRes = await fetch(
-        `${process.env.VITE_SUPABASE_URL}/auth/v1/admin/users/by-email`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-        }
+      // Get the user ID by email using admin SDK
+      const { data: { user: existingUser }, error: getUserError } = await (
+        supabaseAdmin.auth as any
+      ).admin.getUserByEmail(email);
+
+      if (getUserError || !existingUser) {
+        console.error('[OAUTH TOKEN] Failed to find existing user:', getUserError);
+        throw new Error(`User exists but could not retrieve user details: ${getUserError?.message || 'User not found'}`);
+      }
+
+      // Update the password using admin SDK
+      const { error: updateError } = await (supabaseAdmin.auth as any).admin.updateUserById(
+        existingUser.id,
+        { password }
       );
 
-      if (!updateRes.ok) {
-        const updateError = await updateRes.json();
+      if (updateError) {
         console.error('[OAUTH TOKEN] Failed to update password:', updateError);
         throw new Error(`User exists but password update failed: ${updateError.message}`);
       }
+
+      console.log('[OAUTH TOKEN] Password updated for existing user');
 
       // Now sign in with the updated credentials
       const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
