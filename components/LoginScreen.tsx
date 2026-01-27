@@ -247,7 +247,15 @@ const LoginScreen: React.FC = () => {
               type="submit"
               disabled={loading}
               className="w-full font-black py-4 rounded-2xl border-4 border-gray-950 uppercase tracking-widest text-sm shadow-lg active:scale-95 transition-all"
-              style={{ backgroundColor: branding.accentColor, color: '#FFFFFF' }}
+              style={{
+                backgroundColor: branding.accentColor,
+                color: '#FFFFFF',
+                "@media (max-width: 991px)": {
+                  backgroundColor: "rgba(11, 67, 97, 1)",
+                  fontWeight: "500",
+                  fontSize: "19px",
+                },
+              } as any}
             >
               {loading ? 'Syncing...' : 'Sync with Token'}
             </button>
