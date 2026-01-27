@@ -247,6 +247,7 @@ export default async function handler(req: any, res: any) {
 
     console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
 
+    // Use upsert with square_merchant_id as conflict target since it's the unique business key
     const { data: upsertData, error: upsertError } = await supabaseAdmin
       .from('merchant_settings')
       .upsert(
@@ -256,7 +257,7 @@ export default async function handler(req: any, res: any) {
           square_access_token: access_token,
           square_connected_at: new Date().toISOString(),
         },
-        { onConflict: 'supabase_user_id' }
+        { onConflict: 'square_merchant_id' }
       )
       .select();
 
