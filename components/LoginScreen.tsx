@@ -170,12 +170,14 @@ const LoginScreen: React.FC = () => {
           />
 
           <h1
-            className="text-3xl font-black tracking-tighter"
+            className="text-3xl tracking-tighter"
             style={{
               color: branding.primaryColor,
+              fontFamily: "Quicksand, sans-serif",
+              fontWeight: "600",
               "@media (max-width: 991px)": {
                 color: "rgba(11, 52, 88, 1)",
-                fontFamily: "Alexandria, sans-serif",
+                fontFamily: "Quicksand, sans-serif",
                 fontWeight: "400",
                 textAlign: "left",
                 margin: "0 auto 0 27px",
