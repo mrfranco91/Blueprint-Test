@@ -209,7 +209,9 @@ export default async function handler(req: any, res: any) {
 
     if (!user) throw new Error('Supabase auth failed');
 
-    await supabaseAdmin
+    console.log('[OAUTH TOKEN] Upserting merchant settings for user:', user.id);
+
+    const { data: upsertData, error: upsertError } = await supabaseAdmin
       .from('merchant_settings')
       .upsert(
         {
@@ -219,7 +221,15 @@ export default async function handler(req: any, res: any) {
           square_connected_at: new Date().toISOString(),
         },
         { onConflict: 'supabase_user_id' }
-      );
+      )
+      .select();
+
+    if (upsertError) {
+      console.error('[OAUTH TOKEN] Failed to upsert merchant_settings:', upsertError);
+      throw new Error(`Failed to save merchant settings: ${upsertError.message}`);
+    }
+
+    console.log('[OAUTH TOKEN] Merchant settings upserted successfully:', upsertData);
 
     // ✅ Return session tokens so frontend can authenticate without re-signing-in
     return res.status(200).json({
