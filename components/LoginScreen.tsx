@@ -143,12 +143,6 @@ const LoginScreen: React.FC = () => {
           style={{
             borderColor: branding.primaryColor,
             "@media (max-width: 991px)": {
-              backgroundImage:
-                "url(https://cdn.builder.io/api/v1/image/assets%2F8d6a989189ff4d9e8633804d5d0dbd86%2F6d20c9ec074b40608799512dc6ed08ca)",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              paddingTop: "63px",
               display: "flex",
               flexDirection: "column",
             },
@@ -163,8 +157,9 @@ const LoginScreen: React.FC = () => {
               width: "300px",
               display: "block",
               "@media (max-width: 991px)": {
-                maxWidth: "522px",
-                width: "974px",
+                width: "344px",
+                maxWidth: "445px",
+                marginTop: "1px",
               },
             } as any}
           />
@@ -174,11 +169,8 @@ const LoginScreen: React.FC = () => {
             style={{
               color: branding.primaryColor,
               "@media (max-width: 991px)": {
-                color: "rgba(11, 52, 88, 1)",
-                fontFamily: "Alexandria, sans-serif",
                 fontWeight: "400",
-                textAlign: "left",
-                margin: "0 auto 0 27px",
+                margin: "0 auto 0 15px",
               },
             } as any}
           >
@@ -203,10 +195,12 @@ const LoginScreen: React.FC = () => {
                 className="blueprint-button font-black"
                 style={{
                   "@media (max-width: 991px)": {
-                    borderStyle: "dashed",
+                    backgroundColor: "rgba(255, 255, 255, 1)",
                     borderWidth: "1px",
-                    fontWeight: "400",
-                    fontSize: "27px",
+                    borderStyle: "solid",
+                    fontWeight: "600",
+                    lineHeight: "20px",
+                    fontSize: "20px",
                   },
                 } as any}
               >
