@@ -157,9 +157,8 @@ const LoginScreen: React.FC = () => {
               width: "300px",
               display: "block",
               "@media (max-width: 991px)": {
-                width: "344px",
-                maxWidth: "445px",
-                marginTop: "1px",
+                maxWidth: "522px",
+                width: "974px",
               },
             } as any}
           />
