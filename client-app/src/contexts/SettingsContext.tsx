@@ -124,6 +124,24 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [teamError, setTeamError] = useState<string | null>(null);
   const [needsSquareConnect, setNeedsSquareConnect] = useState<boolean>(false);
 
+  useEffect(() => {
+    const storedBranding = localStorage.getItem('admin_branding');
+    const storedTextSize = localStorage.getItem('admin_text_size');
+
+    if (storedBranding) {
+      try {
+        const parsedBranding = JSON.parse(storedBranding) as BrandingSettings;
+        setBranding((prev) => ({ ...prev, ...parsedBranding }));
+      } catch (error) {
+        console.warn('[Settings] Failed to load stored branding', error);
+      }
+    }
+
+    if (storedTextSize === 'S' || storedTextSize === 'M' || storedTextSize === 'L') {
+      setTextSize(storedTextSize);
+    }
+  }, []);
+
   // Load data once per auth session; no loops, no state that triggers re-subscribe.
   useEffect(() => {
     if (!supabase) return;
