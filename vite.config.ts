@@ -18,6 +18,14 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve('.'),
         }
-      }
+      },
+      build: {
+        rollupOptions: {
+          input: {
+            stylist: path.resolve('index.html'),
+            client: path.resolve('client.html'),
+          },
+        },
+      },
     };
 });
